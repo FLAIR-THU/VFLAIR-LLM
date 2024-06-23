@@ -52,9 +52,11 @@ class MessageService:
             result = self._task_service.run_specific(task, config, data=data)
             value = fpm.Value()
             if result is None:
-                result = {}
+                return None
             if isinstance(result, fpm.Value):
                 value = result
+            elif isinstance(result, list):
+                return result
             else:
                 value.string = json.dumps(result)
             return {"test_logit": value}  # todo change name

@@ -124,9 +124,14 @@ class GrpcServer(fps.MessageServiceServicer):
         result = self._message_service.parse_message(msg)
         if result is None:
             response = mu.MessageUtil.create(self._node, {})
-        else:
+            yield response
+        elif isinstance(result, dict):
             response = mu.MessageUtil.create(self._node, result)
-        yield response
+            yield response
+        else:
+            for item in result:
+                response = mu.MessageUtil.create(self._node, item)
+                yield response
 
 
 def main(main_args):
@@ -139,7 +144,7 @@ def main(main_args):
     else:
         raise ValueError("Please specify --config")
 
-    MAX_MESSAGE_LENGTH = 2000 * 1024 * 1000
+    MAX_MESSAGE_LENGTH = 500 * 1024 * 1000
     server_credentials = grpc.ssl_server_credentials(
         (
             (

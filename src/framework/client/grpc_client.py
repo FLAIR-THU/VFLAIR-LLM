@@ -10,6 +10,7 @@ import json
 from framework.common.yaml_loader import load_yaml
 from framework.database.repository.JobRepository import job_repository
 from framework.database.model.Task import Task
+from framework.client.DistributedCommunication import merge_tensor_data
 import framework.credentials.credentials as credentials
 
 logger = logger_util.get_logger("grpc_client")
@@ -18,7 +19,7 @@ channel_credential = grpc.ssl_channel_credentials(
     credentials.ROOT_CERTIFICATE
 )
 
-MAX_MESSAGE_LENGTH = 2000 * 1024 * 1000
+MAX_MESSAGE_LENGTH = 500 * 1024 * 1000
 
 
 class GrpcClient():
@@ -62,7 +63,7 @@ class GrpcClient():
                 yield self._create_msg(task, msg)
 
         response_iterator = self.stub.send_batch(request_messages())
-        return next(response_iterator).data
+        return merge_tensor_data(response_iterator)
 
     def send_stream(self, messages):
         def request_messages():

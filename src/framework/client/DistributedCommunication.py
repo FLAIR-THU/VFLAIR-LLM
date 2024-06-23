@@ -7,7 +7,9 @@ from framework.database.model.Task import Task
 from framework.protos.message_pb2 import Value
 from party.ICommunication import ICommunication
 from utils import timer, get_total_size
+import math
 
+SPLIT_SIZE = 100
 
 @timer()
 def convert_tensor_to_msg(logits):
@@ -22,6 +24,56 @@ def convert_tensor_to_msg(logits):
 
 
 @timer()
+def convert_tensor_to_batch_msg(logits, key=None):
+    total_size = get_total_size({'tensor': logits})
+    batch_size = int(total_size / SPLIT_SIZE) + 1
+    logger.info(f"split tensor data into {batch_size} parts")
+
+    result = []
+    arr = logits.flatten().tolist()
+    for i in range(batch_size):
+        data_value = Value()
+        data_value.tensor.data.shape.extend(logits.shape)
+        start, end = _compute_range(i, len(arr), batch_size)
+        data_value.tensor.data.value.extend(arr[start:end])
+        data_value.tensor.data.dtype = str(logits.dtype)
+        data_value.tensor.requires_grad = logits.requires_grad
+        if key:
+            result.append({key: data_value})
+        else:
+            result.append(data_value)
+    return result
+
+
+def merge_tensor_data(data_list):
+    data_value = Value()
+    for i, item in enumerate(data_list):
+        data = item.data.named_values['test_logit']
+        if len(data.string) > 0:
+            return data
+        if i == 0:
+            data_value.tensor.data.shape.extend(data.tensor.data.shape)
+            data_value.tensor.data.dtype = data.tensor.data.dtype
+            data_value.tensor.requires_grad = data.tensor.requires_grad
+
+        data_value.tensor.data.value.extend(data.tensor.data.value)
+
+    return data_value
+
+def merge_tensor_data2(data_list):
+    data_value = Value()
+    for i, data in enumerate(data_list):
+        if i == 0:
+            data_value.tensor.data.shape.extend(data.tensor.data.shape)
+            data_value.tensor.data.dtype = data.tensor.data.dtype
+            data_value.tensor.requires_grad = data.tensor.requires_grad
+
+        data_value.tensor.data.value.extend(data.tensor.data.value)
+
+    return data_value
+
+
+@timer()
 def convert_msg_to_tensor(msg):
     dtype = getattr(torch, msg.data.dtype.split(".")[1])
     logits = torch.tensor(msg.data.value, dtype=dtype)
@@ -31,18 +83,19 @@ def convert_msg_to_tensor(msg):
 
 
 @timer()
-def convert_pred_to_batch_msg(pred_list):
-    SPLIT_SIZE = 10
+def convert_pred_to_msg(pred_list):
     total_size = get_total_size(pred_list)
     batch_size = int(total_size / SPLIT_SIZE) + 1
     logger.info(f"split data into {batch_size} parts")
 
     result = []
+    inputs_embeds = pred_list['inputs_embeds'].flatten().tolist()
+    inputs_embeds_len = len(inputs_embeds)
     for i in range(batch_size):
         data_value = Value()
         data_value.hidden_states.inputs_embeds.shape.extend(pred_list['inputs_embeds'].shape)
-        inputs_embeds = pred_list['inputs_embeds'].flatten().tolist()
-        start, end = _compute_range(i, len(inputs_embeds), batch_size)
+
+        start, end = _compute_range(i, inputs_embeds_len, batch_size)
         data_value.hidden_states.inputs_embeds.value.extend(inputs_embeds[start:end])
         data_value.hidden_states.inputs_embeds.dtype = str(pred_list['inputs_embeds'].dtype)
 
@@ -71,6 +124,9 @@ def convert_pred_to_batch_msg(pred_list):
 
 
 def merge_data(data_list):
+    if len(data_list[0].tensor.data.value) > 0:
+        return merge_tensor_data2(data_list)
+
     data_value = Value()
     for i, data in enumerate(data_list):
         if i == 0:
@@ -93,7 +149,7 @@ def merge_data(data_list):
 
 
 def _compute_range(i, total, batch):
-    split_size = int(total / batch)
+    split_size = math.ceil(total / batch)
     end = (i + 1) * split_size
     if end > total:
         end = total
@@ -101,31 +157,6 @@ def _compute_range(i, total, batch):
     logger.info(f"total: {total}, batch:{batch}, start:{start}, end:{end}")
     return start, end
 
-@timer()
-def convert_pred_to_msg(pred_list):
-    get_total_size(pred_list)
-    data_value = Value()
-    data_value.hidden_states.inputs_embeds.shape.extend(pred_list['inputs_embeds'].shape)
-    data_value.hidden_states.inputs_embeds.value.extend(pred_list['inputs_embeds'].flatten().tolist())
-    data_value.hidden_states.inputs_embeds.dtype = str(pred_list['inputs_embeds'].dtype)
-
-    if 'attention_mask' in pred_list and pred_list['attention_mask'] is not None:
-        data_value.hidden_states.attention_mask.shape.extend(pred_list['attention_mask'].shape)
-        data_value.hidden_states.attention_mask.value.extend(pred_list['attention_mask'].flatten().tolist())
-        data_value.hidden_states.attention_mask.dtype = str(pred_list['attention_mask'].dtype)
-        if pred_list['attention_mask'].requires_grad:
-            data_value.hidden_states.requires_grads.append('attention_mask')
-
-    if 'position_ids' in pred_list:
-        data_value.hidden_states.position_ids.shape.extend(pred_list['position_ids'].shape)
-        data_value.hidden_states.position_ids.value.extend(pred_list['position_ids'].flatten().tolist())
-
-    data_value.hidden_states.output_hidden_states = False
-    data_value.hidden_states.use_cache = False
-    if pred_list['inputs_embeds'].requires_grad:
-        data_value.hidden_states.requires_grads.append('inputs_embeds')
-
-    return data_value
 
 @timer()
 def convert_msg_to_pred(pred):
@@ -177,9 +208,7 @@ class DistributedCommunication(ICommunication):
 
         task.params = {"grad_enabled": torch.is_grad_enabled()}
 
-        # response = self._client.send_batch(task, new_pred)
-        response = self._client.open_and_send(task, new_pred)
-        result = response.named_values['test_logit']
+        result = self._client.send_batch(task, new_pred)
         if len(result.hidden_states.inputs_embeds.value) > 0:
             test_logit = result.hidden_states
         elif len(result.tensor.data.value) > 0:
@@ -205,9 +234,9 @@ class DistributedCommunication(ICommunication):
         task.party = "active"
         task.job_id = self._job_id
 
-        gradients = convert_tensor_to_msg(gradients)
+        gradients = convert_tensor_to_batch_msg(gradients)
 
-        response = self._client.open_and_send(task, gradients)
+        response = self._client.send_batch(task, gradients)
 
     def send_cal_passive_local_gradient_message(self, index):
         task = Task()

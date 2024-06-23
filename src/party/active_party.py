@@ -11,7 +11,7 @@ from party.llm_party import Party as Party_LLM
 from utils.basic_functions import cross_entropy_for_onehot, tf_distance_cov_cor, pairwise_dist
 from utils import timer
 from dataset.party_dataset import ActiveDataset
-from framework.client.DistributedCommunication import convert_pred_to_msg, convert_msg_to_pred, convert_tensor_to_msg, convert_msg_to_tensor
+from framework.client.DistributedCommunication import convert_pred_to_msg, convert_msg_to_pred, convert_tensor_to_batch_msg, convert_msg_to_tensor
 
 from config import vfl_basic_config
 
@@ -70,7 +70,7 @@ class ActiveParty_LLM(Party_LLM):
         if self.args.task_type == 'CausalLM':  # self.passive_pred_list[0] = [intermediate, attention_mask]
             if self.args.model_type == 'qwen2':
                 return convert_pred_to_msg(result)
-            return convert_tensor_to_msg(result.logits)
+            return convert_tensor_to_batch_msg(result.logits, 'test_logit')
         elif self.args.task_type == 'SequenceClassification':  # self.passive_pred_list[0] = [intermediate, ,sequence_lengths, attention_mask]
             return {
                 "requires_grad": result.logits.requires_grad,
