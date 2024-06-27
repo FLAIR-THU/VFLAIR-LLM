@@ -267,8 +267,6 @@ def create_main_task(global_model_type: GenerationMixin):
                     logits=logits,
                 )
             elif self.args.task_type == 'CausalLM':
-                if self.args.model_type == 'qwen2':
-                    return convert_msg_to_pred(result)
                 logits = convert_msg_to_tensor(result)
                 return CausalLMOutputWithPast(
                     logits=logits,

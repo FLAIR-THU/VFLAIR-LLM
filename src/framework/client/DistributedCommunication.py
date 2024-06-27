@@ -11,6 +11,7 @@ import math
 
 SPLIT_SIZE = 100
 
+
 @timer()
 def convert_tensor_to_msg(logits):
     get_total_size({'tensor': logits})
@@ -60,6 +61,7 @@ def merge_tensor_data(data_list):
 
     return data_value
 
+
 def merge_tensor_data2(data_list):
     data_value = Value()
     for i, data in enumerate(data_list):
@@ -91,6 +93,15 @@ def convert_pred_to_msg(pred_list):
     result = []
     inputs_embeds = pred_list['inputs_embeds'].flatten().tolist()
     inputs_embeds_len = len(inputs_embeds)
+
+    attention_mask = None
+    if 'attention_mask' in pred_list and pred_list['attention_mask'] is not None:
+        attention_mask = pred_list['attention_mask'].flatten().tolist()
+
+    position_ids = None
+    if 'position_ids' in pred_list:
+        position_ids = pred_list['position_ids'].flatten().tolist()
+
     for i in range(batch_size):
         data_value = Value()
         data_value.hidden_states.inputs_embeds.shape.extend(pred_list['inputs_embeds'].shape)
@@ -99,9 +110,9 @@ def convert_pred_to_msg(pred_list):
         data_value.hidden_states.inputs_embeds.value.extend(inputs_embeds[start:end])
         data_value.hidden_states.inputs_embeds.dtype = str(pred_list['inputs_embeds'].dtype)
 
-        if 'attention_mask' in pred_list and pred_list['attention_mask'] is not None:
+        if attention_mask is not None:
             data_value.hidden_states.attention_mask.shape.extend(pred_list['attention_mask'].shape)
-            attention_mask = pred_list['attention_mask'].flatten().tolist()
+
             start, end = _compute_range(i, len(attention_mask), batch_size)
             data_value.hidden_states.attention_mask.value.extend(attention_mask[start:end])
             data_value.hidden_states.attention_mask.dtype = str(pred_list['attention_mask'].dtype)
@@ -110,7 +121,6 @@ def convert_pred_to_msg(pred_list):
 
         if 'position_ids' in pred_list:
             data_value.hidden_states.position_ids.shape.extend(pred_list['position_ids'].shape)
-            position_ids = pred_list['position_ids'].flatten().tolist()
             start, end = _compute_range(i, len(position_ids), batch_size)
             data_value.hidden_states.position_ids.value.extend(position_ids[start:end])
 
@@ -153,7 +163,7 @@ def _compute_range(i, total, batch):
     end = (i + 1) * split_size
     if end > total:
         end = total
-    start = i*split_size
+    start = i * split_size
     logger.info(f"total: {total}, batch:{batch}, start:{start}, end:{end}")
     return start, end
 
@@ -245,10 +255,8 @@ class DistributedCommunication(ICommunication):
         task.job_id = self._job_id
         task.params = index
 
-        response = self._client.open_and_send(task)
-        result = response.named_values['test_logit'].string
-        test_logit = json.loads(result)
-        return test_logit
+        response = self._client.send_batch(task, [None])
+        return convert_msg_to_tensor(response.tensor)
 
     def send_global_lr_decay(self, i_epoch):
         task = Task()
