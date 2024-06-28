@@ -267,6 +267,8 @@ def create_main_task(global_model_type: GenerationMixin):
                     logits=logits,
                 )
             elif self.args.task_type == 'CausalLM':
+                if vfl_basic_config.num_of_slice == 3:
+                    return convert_msg_to_pred(result)
                 logits = convert_msg_to_tensor(result)
                 return CausalLMOutputWithPast(
                     logits=logits,

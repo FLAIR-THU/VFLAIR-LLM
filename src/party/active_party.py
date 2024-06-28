@@ -68,7 +68,10 @@ class ActiveParty_LLM(Party_LLM):
         result = self.aggregate([new_dict])
 
         if self.args.task_type == 'CausalLM':  # self.passive_pred_list[0] = [intermediate, attention_mask]
-            return convert_tensor_to_batch_msg(result.logits, 'test_logit')
+            if 'logits' in result:
+                return convert_tensor_to_batch_msg(result.logits, 'test_logit')
+            else:
+                return convert_pred_to_msg(result, 'test_logit')
         elif self.args.task_type == 'SequenceClassification':  # self.passive_pred_list[0] = [intermediate, ,sequence_lengths, attention_mask]
             return {
                 "requires_grad": result.logits.requires_grad,

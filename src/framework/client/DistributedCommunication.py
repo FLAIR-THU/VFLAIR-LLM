@@ -47,19 +47,12 @@ def convert_tensor_to_batch_msg(logits, key=None):
 
 
 def merge_tensor_data(data_list):
-    data_value = Value()
+    data_value = []
     for i, item in enumerate(data_list):
         data = item.data.named_values['test_logit']
-        if len(data.string) > 0:
-            return data
-        if i == 0:
-            data_value.tensor.data.shape.extend(data.tensor.data.shape)
-            data_value.tensor.data.dtype = data.tensor.data.dtype
-            data_value.tensor.requires_grad = data.tensor.requires_grad
+        data_value.append(data)
 
-        data_value.tensor.data.value.extend(data.tensor.data.value)
-
-    return data_value
+    return merge_data(data_value)
 
 
 def merge_tensor_data2(data_list):
@@ -85,7 +78,7 @@ def convert_msg_to_tensor(msg):
 
 
 @timer()
-def convert_pred_to_msg(pred_list):
+def convert_pred_to_msg(pred_list, key=None):
     total_size = get_total_size(pred_list)
     batch_size = int(total_size / SPLIT_SIZE) + 1
     logger.info(f"split data into {batch_size} parts")
@@ -128,7 +121,10 @@ def convert_pred_to_msg(pred_list):
         data_value.hidden_states.use_cache = False
         if pred_list['inputs_embeds'].requires_grad:
             data_value.hidden_states.requires_grads.append('inputs_embeds')
-        result.append(data_value)
+        if key:
+            result.append({key: data_value})
+        else:
+            result.append(data_value)
 
     return result
 
