@@ -119,9 +119,7 @@ class GrpcServer(fps.MessageServiceServicer):
                 data = {**request.data.named_values}
             data_segments.append(request.data.named_values['data'])
         data['data'] = merge_data(data_segments)
-        msg = mu.MessageUtil.create(self._node, data, fpm.START_TASK)
-
-        result = self._message_service.parse_message(msg)
+        result = self._message_service.start_task(data['task'].string, data['config'].string, data['data'])
         if result is None:
             response = mu.MessageUtil.create(self._node, {})
             yield response

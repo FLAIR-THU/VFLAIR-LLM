@@ -269,7 +269,7 @@ class DistributedCommunication(ICommunication):
 
     def send_global_model_train_message(self):
         task = Task()
-        task.run = "train_model"
+        task.run = "train"
         task.party = "active"
         task.job_id = self._job_id
 

@@ -13,6 +13,8 @@ import framework.common.logger_util as logger_util
 from contextlib import asynccontextmanager
 from argparse import Namespace
 import os
+from fastapi.responses import StreamingResponse
+from asyncio import sleep
 
 service = {}
 
@@ -85,6 +87,20 @@ def start_model(model_id: str):
 @app.get("/messages")
 def show_message():
     return []
+
+
+async def message_generator():
+    waypoints = '[{"id":1, "message": "hello"}, {"id":2, "message": "world"}]'
+    waypoints = json.loads(waypoints)
+    for waypoint in waypoints[0: 10]:
+        data = json.dumps(waypoint)
+        yield f"event: chat response\ndata: {data}\n\n"
+        await sleep(1)
+
+
+@app.get("/chat")
+def chat():
+    return StreamingResponse(message_generator(), media_type="text/event-stream")
 
 
 @app.post("/message")
