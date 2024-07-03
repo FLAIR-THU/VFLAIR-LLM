@@ -38,8 +38,10 @@ class PassiveMessageService:
         messages = data_dict['messages'] if 'messages' in data_dict else None
 
         job_id = self._create_job(data)
-        threading.Thread(target=self._task_service.run_job, args=(job_id, data, messages)).start()
-        return job_id
+        if data_dict.get('async'):
+            threading.Thread(target=self._task_service.run_job, args=(job_id, data, messages)).start()
+            return job_id, None
+        return job_id, self._task_service.run_job(job_id, data, messages)
 
     def parse_message(self, message):
         if message.type == fpm.CREATE_JOB:

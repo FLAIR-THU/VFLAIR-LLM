@@ -47,7 +47,7 @@ async def upload_job(file: UploadFile):
         return {"result": "error", "message": "No file exists"}
     contents = await file.read()
     msg = Namespace()
-    msg.data = {"config": contents}
+    msg.data = {"config": contents, 'async': True}
     msg.type = fpm.CREATE_JOB
     result = service['grpc_client'].parse_message(msg)
     job_id = result['job_id']
