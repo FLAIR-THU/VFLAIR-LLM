@@ -33,15 +33,14 @@ class PassiveMessageService:
     def _run_job(self, data_dict):
         logger.info("received config: {}".format(data_dict))
 
-        params = data_dict['config']
-        data = json.loads(params)
+        config = data_dict['config']
         messages = data_dict['messages'] if 'messages' in data_dict else None
 
-        job_id = self._create_job(data)
+        job_id = self._create_job(config)
         if data_dict.get('async'):
-            threading.Thread(target=self._task_service.run_job, args=(job_id, data, messages)).start()
+            threading.Thread(target=self._task_service.run_job, args=(job_id, config, messages)).start()
             return job_id, None
-        return job_id, self._task_service.run_job(job_id, data, messages)
+        return job_id, self._task_service.run_job(job_id, config, messages)
 
     def parse_message(self, message):
         if message.type == fpm.CREATE_JOB:
@@ -61,14 +60,14 @@ class PassiveMessageService:
             # start task
             return self._show_job(message.data)
 
-    def _load_model(self, model_id):
-        self._task_service.load_model(model_id)
+    def _load_model(self, data):
+        self._task_service.load_model(data)
 
     def _create_job(self, data):
         job = Job.Job()
-        job.name = data['fl_type'] + "任务"
-        job.fl_type = data['fl_type']
-        job.params = json.dumps(data)
+        job.name = "VFL任务"
+        job.fl_type = 'VFL'
+        job.params = data
         job.create_time = datetime.now()
         job_id = job_repository.create(job)
         job.id = job_id

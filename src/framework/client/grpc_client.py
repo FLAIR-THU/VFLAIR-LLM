@@ -8,7 +8,6 @@ import framework.common.logger_util as logger_util
 import argparse
 import json
 from framework.common.yaml_loader import load_yaml
-from framework.database.repository.JobRepository import job_repository
 from framework.database.model.Task import Task
 from framework.client.DistributedCommunication import merge_tensor_data
 import framework.credentials.credentials as credentials
@@ -79,17 +78,13 @@ class GrpcClient():
         return response_iterator
 
     def _create_msg(self, task, hidden_states=None):
-        job = job_repository.get_by_id(task.job_id)
-        config_value = fpm.Value()
-        config_value.string = job.params
-
         task_value = fpm.Value()
         task_value.string = json.dumps(task.to_dict())
 
         data_value = fpm.Value()
         if hidden_states:
             data_value = hidden_states
-        msg = mu.MessageUtil.create(self._node, {"config": config_value, "task": task_value, "data": data_value},
+        msg = mu.MessageUtil.create(self._node, {"task": task_value, "data": data_value},
                                     fpm.START_TASK)
         return msg
 

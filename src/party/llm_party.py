@@ -20,7 +20,7 @@ from utils.noisy_label_functions import add_noise
 from utils.noisy_sample_functions import noisy_sample
 from utils.basic_functions import cross_entropy_for_onehot, tf_distance_cov_cor, pairwise_dist
 from utils.communication_protocol_funcs import Cache
-
+from .party_utils import get_model_folder
 import torch
 import re
 import collections
@@ -615,15 +615,9 @@ class Party(object):
         self.optimizers[model_index].step()
         self.optimizers[model_index].zero_grad()
 
-    def get_model_folder(self):
-        model_folder = os.getenv('MODEL_FOLDER')
-        if model_folder is None:
-            raise ValueError('MODEL_FOLDER env must not be empty and should contain /')
-        return model_folder
-
     def save_pretrained(self,model_index,model_id,model_folder=None,**kwargs):
         if model_folder is None:
-            model_folder = self.get_model_folder()
+            model_folder = get_model_folder()
         for i,m in self.models.items():
             if m and i in model_index:
                 logger.debug(f"save model {i}")

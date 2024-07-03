@@ -42,9 +42,9 @@ class PassiveTaskService:
         return parties
 
     @timer()
-    def run_job(self, job_id, data, params=None):
+    def run_job(self, job_id, config, params=None):
         try:
-            self._run_job(job_id, data, params)
+            return self._run_job(job_id, config, params)
         except Exception as e:
             job_repository.change_status(job_id, -1, repr(e))
             gc.collect()
@@ -61,26 +61,24 @@ class PassiveTaskService:
         self._client.open_and_send(msg)
 
     @logger.catch(reraise=True)
-    def _run_job(self, job_id, data, params=None):
+    def _run_job(self, job_id, config, params=None):
         params = params if params else {}
-        args = load_llm_configs(data)
-        need_model = args.model_type.lower() != 'qwen2' or args.pipeline != 'pretrained'
+        args = load_llm_configs(json.loads(config))
+        need_model = ('model_type' in args and args.model_type.lower() != 'qwen2') or args.pipeline != 'pretrained'
         args.parties = self._init_parties(args, job_id, need_model)
         if not need_model:
             args.generation_config = self._model_data['generation_config']
             args.config = self._model_data['config']
-        model_name = args.model_list[str(0)]["type"]  # .replace('/','-')
+        model_name = args.model_list[str(0)]["type"]
         exp_res_dir, exp_res_path = create_exp_dir_and_file(args.dataset, args.Q, model_name, args.pipeline, args.defense_name, args.defense_param)
         args.exp_res_dir = exp_res_dir
         args.exp_res_path = exp_res_path
-
-        # self._main_tasks.append(MainTaskVFL_LLM(args, job_id))
-        # self.run_next(job_id)
 
         ancestor_cls = get_cls_ancestor(args.config.model_type)
         main_task_creator = create_main_task(ancestor_cls)
         main_task = main_task_creator(args, job_id)
         main_task.init_communication(DistributedCommunication(self._client, job_id))
+        self._send_config_message(job_id, config)
         if args.pipeline == 'pretrained':
             if not need_model:
                 for party in args.parties:
@@ -118,9 +116,9 @@ class PassiveTaskService:
         self._client = client
         self._node = fpn.Node(node_id=client.id)
 
-    def load_model(self, model_id):
-        model = pretrained_model_repository.get_by_model_id(model_id)
-        self._send_load_model_message(model.model_type, model_id)
+    def load_model(self, data):
+        model = pretrained_model_repository.get_by_model_id(data['model_id'])
+        self._send_load_model_message(model.model_type, f"{model.base_model_id}/{data['model_id']}", data['config'])
         if model.model_type.lower() == 'qwen2':
             loader = QwenModelLoader()  # TODO: use interface instead
             self._model_data = loader.load(model.path, False)
@@ -152,13 +150,27 @@ class PassiveTaskService:
         response = self._client.open_and_send(msg)
         return response
 
-    def _send_load_model_message(self, model_type, model_id):
+    def _send_load_model_message(self, model_type, model_id, config):
         value = fpm.Value()
         value.string = model_id
 
         type_value = fpm.Value()
         type_value.string = model_type
 
+        config_value = fpm.Value()
+        config_value.string = config
+
         logger.info("sending load model message, model_id: {}".format(model_id))
-        msg = mu.MessageUtil.create(self._node, {"model_id": value, "model_type": type_value}, fpm.LOAD_MODEL)
+        msg = mu.MessageUtil.create(self._node, {"model_id": value, "model_type": type_value, "config": config_value}, fpm.LOAD_MODEL)
         self._client.open_and_send(msg)
+
+    def _send_config_message(self, job_id, config):
+        value = fpm.Value()
+        value.sint64 = job_id
+
+        config_value = fpm.Value()
+        config_value.string = config
+
+        msg = mu.MessageUtil.create(self._node, {"job_id": value, "config": config_value}, fpm.UPDATE_CONFIG)
+        self._client.open_and_send(msg)
+

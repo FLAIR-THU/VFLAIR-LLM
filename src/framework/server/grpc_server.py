@@ -30,6 +30,7 @@ class GrpcServer(fps.MessageServiceServicer):
 
     def __init__(self):
         self._queues[ACTIVE_PARTY] = queue.Queue(0)
+        self._message_service = fsm.MessageService(self._queues)
 
     def register(self, request, context):
         node_id = request.node.node_id
@@ -71,9 +72,6 @@ class GrpcServer(fps.MessageServiceServicer):
         return mu.MessageUtil.create(self._node, {}, fpm.PLAIN)
 
     def send(self, request, context):
-        if self._message_service is None:
-            self._message_service = fsm.MessageService(self._queues)
-
         try:
             result = self._message_service.parse_message(request)
             if result is None:
@@ -119,7 +117,7 @@ class GrpcServer(fps.MessageServiceServicer):
                 data = {**request.data.named_values}
             data_segments.append(request.data.named_values['data'])
         data['data'] = merge_data(data_segments)
-        result = self._message_service.start_task(data['task'].string, data['config'].string, data['data'])
+        result = self._message_service.start_task(data['task'].string, data['data'])
         if result is None:
             response = mu.MessageUtil.create(self._node, {})
             yield response

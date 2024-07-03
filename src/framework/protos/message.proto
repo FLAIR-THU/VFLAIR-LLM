@@ -20,6 +20,7 @@ enum MessageType {
   LOAD_MODEL = 7;
   UPDATE_MODEL_DATA = 8;
   STREAM_END = 9;
+  UPDATE_CONFIG = 10;
 }
 
 message Message{

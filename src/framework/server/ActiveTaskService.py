@@ -1,13 +1,15 @@
 import gc
+import os.path
 import threading
 
 import torch
-
+import json
 import framework.common.logger_util as logger_util
 from load.LoadConfigs import load_llm_configs
 from load.LoadParty import get_class_constructor
 from load.QwenModelLoader import QwenModelLoader
 from utils import recorder
+from party.party_utils import get_model_folder
 
 logger = logger_util.get_logger('active_task_service')
 
@@ -17,6 +19,7 @@ class ActiveTaskService(threading.Thread):
     _model_data = {}
     _active_parties = {}
     _last_result = None
+    _configs = {}
 
     def __init__(self, queues):
         threading.Thread.__init__(self)
@@ -46,7 +49,8 @@ class ActiveTaskService(threading.Thread):
                 self._last_result = result
                 logger.info(f"Finished task: {task.run}")
 
-    def run_specific(self, task, config, data=None):
+    def run_specific(self, task, data=None):
+        config = json.loads(self._configs[task['job_id']])
         party = self._get_active_party(task['job_id'], config)
         if party.global_model is None:
             party.update_model_data(self._model_data)
@@ -78,10 +82,11 @@ class ActiveTaskService(threading.Thread):
             gc.collect()
             logger.info(f"current parties: {self._active_parties}")
 
-    def load_model(self, model_type, model_id):
-        logger.info(f"Loading model: {model_type} {model_id}")
-        model_path = f'/shared/model/Qwen/{model_id}'  # TODO: need to change path
-        # model_path = f'/home/shannon/dev/tools/nlp/models/{model_id}'
+    def load_model(self, model_type, model_id, config):
+        model_folder = get_model_folder()
+        model_path = os.path.join(model_folder, model_id)
+        self._configs['inference'] = config
+        logger.info(f"Loading model: {model_type} {model_id} {model_path}")
         if model_type.lower() == 'qwen2':
             loader = QwenModelLoader()  # TODO: use interface instead
             self._model_data = loader.load(model_path, True)
@@ -91,3 +96,7 @@ class ActiveTaskService(threading.Thread):
     def update_model_data(self, job_id):
         party = self._get_active_party(job_id, None)
         party.update_model_data(self._model_data)
+
+    def update_config(self, job_id, config):
+        self._configs[job_id] = config
+

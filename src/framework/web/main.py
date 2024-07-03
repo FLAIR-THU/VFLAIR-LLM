@@ -6,7 +6,7 @@ from framework.client.grpc_client import GrpcClient
 import framework.common.MessageUtil as mu
 import framework.protos.node_pb2 as fpn
 import framework.protos.message_pb2 as fpm
-from typing_extensions import Annotated
+from typing_extensions import Annotated, Optional
 import json
 from framework.common.yaml_loader import load_yaml
 import framework.common.logger_util as logger_util
@@ -75,32 +75,15 @@ def show_job(id: int):
     return job
 
 
-@app.get("/start")
-def start_model(model_id: str):
+@app.post("/start")
+async def start_model(model_id: str, file: Optional[UploadFile] = None):
     msg = Namespace()
-    msg.data = model_id
     msg.type = fpm.LOAD_MODEL
+    if file:
+        service['contents'] = await file.read()
+    msg.data = {"config":  service['contents'], "model_id": model_id}
     service['grpc_client'].parse_message(msg)
     return {"result": "success"}
-
-
-@app.get("/messages")
-def show_message():
-    return []
-
-
-async def message_generator():
-    waypoints = '[{"id":1, "message": "hello"}, {"id":2, "message": "world"}]'
-    waypoints = json.loads(waypoints)
-    for waypoint in waypoints[0: 10]:
-        data = json.dumps(waypoint)
-        yield f"event: chat response\ndata: {data}\n\n"
-        await sleep(1)
-
-
-@app.get("/chat")
-def chat():
-    return StreamingResponse(message_generator(), media_type="text/event-stream")
 
 
 @app.post("/message")
