@@ -11,6 +11,7 @@ class GPT2ModelLoader(IModelLoader):
     def load(self, args, model_path, is_active_party):
         print(f'GPT2ModelLoader.load() {is_active_party}')
         # self.split_index = kwargs.get('split_index', (2,))
+        # split_index: (2,)
         print(f'VFLPipelineGPT2: {vfl_basic_config.split_index} {is_active_party}')
         p = VFLPipelineGPT2(vfl_basic_config.split_index, is_active_party)
         self._models.update(p.from_pretrained(model_path, **vfl_basic_config.kwargs_model_loading))

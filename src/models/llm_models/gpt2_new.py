@@ -28,7 +28,7 @@ class GPT2ModelSplitter(GPT2Model, VFLModel):
         self.h = new_layers
         # update config
         self.config.n_layer = len(new_layers)
-        self.config.n_head = len(new_layers)
+        # self.config.n_head = len(new_layers) # n_head = num of attention head
         
         return True
 
@@ -409,7 +409,7 @@ class GPT2ModelBody(GPT2ModelSplitter):
                     hidden_states,
                     None,
                     attention_mask,
-                    head_mask[i+self.local_num_encoders],
+                    head_mask[i],#[i+self.local_num_encoders],
                     encoder_hidden_states,
                     encoder_attention_mask,
                 )
@@ -418,7 +418,7 @@ class GPT2ModelBody(GPT2ModelSplitter):
                     hidden_states,
                     layer_past=layer_past,
                     attention_mask=attention_mask,
-                    head_mask=head_mask[i+self.local_num_encoders],
+                    head_mask=head_mask[i],#[i+self.local_num_encoders],
                     encoder_hidden_states=encoder_hidden_states,
                     encoder_attention_mask=encoder_attention_mask,
                     use_cache=use_cache,
@@ -627,7 +627,7 @@ class GPT2ModelTail(GPT2ModelSplitter):
                     hidden_states,
                     None,
                     attention_mask,
-                    head_mask[i+self.local_num_encoders],
+                    head_mask[i],#[i+self.local_num_encoders],
                     encoder_hidden_states,
                     encoder_attention_mask,
                 )
@@ -636,7 +636,7 @@ class GPT2ModelTail(GPT2ModelSplitter):
                     hidden_states,
                     layer_past=layer_past,
                     attention_mask=attention_mask,
-                    head_mask=head_mask[i+self.local_num_encoders],
+                    head_mask=head_mask[i],#[i+self.local_num_encoders],
                     encoder_hidden_states=encoder_hidden_states,
                     encoder_attention_mask=encoder_attention_mask,
                     use_cache=use_cache,
@@ -687,15 +687,15 @@ class GPT2ModelTail(GPT2ModelSplitter):
 class GPT2TailForCausalLM(GPT2LMHeadModel, VFLModel):
     def __init__(self, config: GPT2Config, **kwargs):
         super().__init__(config)
-        self.model = GPT2ModelTail(config)
+        self.transformer = GPT2ModelTail(config)
         # Initialize weights and apply final processing
         self.post_init()
 
     def vfl_split(self, idx_of_layers: Iterable[int]) -> bool:
-        return self.model.vfl_split(idx_of_layers)
+        return self.transformer.vfl_split(idx_of_layers)
 
     def _clear_past_key_values(self):
-        self.model._clear_past_key_values()
+        self.transformer._clear_past_key_values()
 
 
 
@@ -720,11 +720,10 @@ class VFLPipelineGPT2(VFLPipeline):
         return model_tail
 
     def _load_model_body(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
-        pass
-        # model_body = GPT2ModelBody.from_pretrained(model_name_or_path, **kwargs)
-        # if do_split:
-        #     split_index = self.split_index
-        #     model_body.vfl_split(range(split_index[0],
-        #                                split_index[1] if split_index[1] > 0 else
-        #                                split_index[1] + model_body.config.num_hidden_layers))
-        # return model_body
+        model_body = GPT2ModelBody.from_pretrained(model_name_or_path, **kwargs)
+        if do_split:
+            split_index = self.split_index
+            model_body.vfl_split(range(split_index[0],
+                                       split_index[1] if split_index[1] > 0 else
+                                       split_index[1] + model_body.config.num_hidden_layers))
+        return model_body

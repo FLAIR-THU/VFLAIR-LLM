@@ -182,6 +182,34 @@ class Party(object):
             args.model_embedded_dim = args.config.hidden_size
             args.generation_config = result['generation_config']
             self._set_peft()
+        elif args.model_type.lower() == 'gpt2_new':
+            print('==== Load GPT2 NEW ====')
+            model_path = args.model_list[str(index)]['path']
+
+            # Load Tokenizer
+            args.tokenizer = AutoTokenizer.from_pretrained(model_path)
+            args.tokenizer.padding_side = args.padding_side if (args.padding_side in ["left", "right"]) else "left"
+            if args.pad_token == "default":
+                if args.tokenizer.pad_token is None:
+                    args.tokenizer.pad_token = args.tokenizer.eos_token  # ({'pad_token': '[PAD]'}) # args.tokenizer.eos_token #
+                    args.pad_id = args.tokenizer.convert_tokens_to_ids(args.tokenizer.eos_token)  #
+                args.pad_token = "default_" + args.tokenizer.pad_token
+            else:
+                args.tokenizer.pad_token = args.pad_token  # ({'pad_token': '[PAD]'}) # args.tokenizer.eos_token #
+                args.pad_id = args.tokenizer.convert_tokens_to_ids(args.pad_token)  #
+            
+            # Load Model
+            loader = GPT2ModelLoader(local_encoders_num = args.local_encoders_num)
+            result = loader.load(args, model_path, self.is_active_party)
+
+            self.models.update(result['models'])
+            args.config = result['config'] # model config
+            args.config.pad_token_id = args.pad_id
+            
+            args.generation_config = result['generation_config'] 
+            args.model_architectures = result['model_architectures'] 
+            args.model_embedded_dim = result['model_embedded_dim'] 
+
         else:
             (
                 args,

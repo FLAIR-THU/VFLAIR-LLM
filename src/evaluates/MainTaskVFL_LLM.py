@@ -704,7 +704,10 @@ def create_main_task(global_model_type: GenerationMixin):
                     predict_word_list = predict_list # bs, seq_len, vocab_size
                     target_word_list = label_list # bs, seq_len
                     print('predict_word_list:',type(predict_word_list),len(predict_word_list),predict_word_list[0].shape)
+                    print(predict_word_list[:20])
                     print('target_word_list:',type(target_word_list),len(target_word_list),target_word_list[0].shape)
+                    print(target_word_list[:20])
+
 
 
 
@@ -1069,16 +1072,16 @@ def create_main_task(global_model_type: GenerationMixin):
             self.eval()
             predict_word_list, target_word_list, total_sample_cnt = self.predict()
 
-            # print('causal_lm_inference target_word_list:',target_word_list )
-            # print('causal_lm_inference predict_word_list:',predict_word_list )
-            try:
-                result_dict = self.generate_assessment(predict_word_list, target_word_list)
-                self.test_acc = result_dict['acc']
-                exp_result = f'|test_acc={self.test_acc}'
-                # print(exp_result)
-                return exp_result, self.test_acc
-            except:
-                return '',0
+            print('causal_lm_inference target_word_list:',target_word_list)
+            print('causal_lm_inference predict_word_list:',predict_word_list)
+            # try:
+            result_dict = self.generate_assessment(predict_word_list, target_word_list)
+            self.test_acc = result_dict['acc']
+            exp_result = f'|test_acc={self.test_acc}'
+            # print(exp_result)
+            return exp_result, self.test_acc
+            # except:
+            #     return '',0
 
 
         def qa_inference(self):
