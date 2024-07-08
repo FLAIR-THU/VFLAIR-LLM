@@ -6,13 +6,15 @@ from framework.client.grpc_client import GrpcClient
 import framework.common.MessageUtil as mu
 import framework.protos.node_pb2 as fpn
 import framework.protos.message_pb2 as fpm
-from typing_extensions import Annotated
+from typing_extensions import Annotated, Optional
 import json
 from framework.common.yaml_loader import load_yaml
 import framework.common.logger_util as logger_util
 from contextlib import asynccontextmanager
 from argparse import Namespace
 import os
+from fastapi.responses import StreamingResponse
+from asyncio import sleep
 
 service = {}
 
@@ -45,7 +47,7 @@ async def upload_job(file: UploadFile):
         return {"result": "error", "message": "No file exists"}
     contents = await file.read()
     msg = Namespace()
-    msg.data = {"config": contents}
+    msg.data = {"config": contents, 'async': True}
     msg.type = fpm.CREATE_JOB
     result = service['grpc_client'].parse_message(msg)
     job_id = result['job_id']
@@ -73,18 +75,15 @@ def show_job(id: int):
     return job
 
 
-@app.get("/start")
-def start_model(model_id: str):
+@app.post("/start")
+async def start_model(model_id: str, file: Optional[UploadFile] = None):
     msg = Namespace()
-    msg.data = model_id
     msg.type = fpm.LOAD_MODEL
+    if file:
+        service['contents'] = await file.read()
+    msg.data = {"config":  service['contents'], "model_id": model_id}
     service['grpc_client'].parse_message(msg)
     return {"result": "success"}
-
-
-@app.get("/messages")
-def show_message():
-    return []
 
 
 @app.post("/message")

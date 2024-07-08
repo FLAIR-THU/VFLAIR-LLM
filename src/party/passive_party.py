@@ -605,7 +605,7 @@ class PassiveParty_LLM(Party_LLM):
                     if param.requires_grad:
                         local_model_params.append(param)
                 # print('local_model_params:',local_model_params)
-
+                self.local_gradient = self.local_gradient.to(self.local_pred.device)
                 if len(local_model_params) > 0:
                     self.weights_grad_a = torch.autograd.grad(
                         self.local_pred,

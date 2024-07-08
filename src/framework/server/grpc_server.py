@@ -30,6 +30,7 @@ class GrpcServer(fps.MessageServiceServicer):
 
     def __init__(self):
         self._queues[ACTIVE_PARTY] = queue.Queue(0)
+        self._message_service = fsm.MessageService(self._queues)
 
     def register(self, request, context):
         node_id = request.node.node_id
@@ -71,9 +72,6 @@ class GrpcServer(fps.MessageServiceServicer):
         return mu.MessageUtil.create(self._node, {}, fpm.PLAIN)
 
     def send(self, request, context):
-        if self._message_service is None:
-            self._message_service = fsm.MessageService(self._queues)
-
         try:
             result = self._message_service.parse_message(request)
             if result is None:
@@ -119,14 +117,17 @@ class GrpcServer(fps.MessageServiceServicer):
                 data = {**request.data.named_values}
             data_segments.append(request.data.named_values['data'])
         data['data'] = merge_data(data_segments)
-        msg = mu.MessageUtil.create(self._node, data, fpm.START_TASK)
-
-        result = self._message_service.parse_message(msg)
+        result = self._message_service.start_task(data['task'].string, data['data'])
         if result is None:
             response = mu.MessageUtil.create(self._node, {})
-        else:
+            yield response
+        elif isinstance(result, dict):
             response = mu.MessageUtil.create(self._node, result)
-        yield response
+            yield response
+        else:
+            for item in result:
+                response = mu.MessageUtil.create(self._node, item)
+                yield response
 
 
 def main(main_args):
@@ -139,7 +140,7 @@ def main(main_args):
     else:
         raise ValueError("Please specify --config")
 
-    MAX_MESSAGE_LENGTH = 2000 * 1024 * 1000
+    MAX_MESSAGE_LENGTH = 500 * 1024 * 1000
     server_credentials = grpc.ssl_server_credentials(
         (
             (

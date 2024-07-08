@@ -17,6 +17,7 @@ QUERY_JOB: MessageType
 START_TASK: MessageType
 STREAM_END: MessageType
 UNREGISTER: MessageType
+UPDATE_CONFIG: MessageType
 UPDATE_MODEL_DATA: MessageType
 
 class AggregationValue(_message.Message):

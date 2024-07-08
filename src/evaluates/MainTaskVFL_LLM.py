@@ -45,7 +45,7 @@ from transformers.models.auto import (
 # from models.vision import resnet18, MLP2
 from utils.basic_functions import cross_entropy_for_onehot, append_exp_res, multiclass_auc
 from utils.communication_protocol_funcs import get_size_of,get_total_size
-
+from party.party_utils import get_model_folder
 # from evaluates.attacks.attack_api import apply_attack
 from utils import timer
 from utils.constants import *
@@ -267,7 +267,7 @@ def create_main_task(global_model_type: GenerationMixin):
                     logits=logits,
                 )
             elif self.args.task_type == 'CausalLM':
-                if self.args.model_type == 'qwen2':
+                if vfl_basic_config.num_of_slice == 3:
                     return convert_msg_to_pred(result)
                 logits = convert_msg_to_tensor(result)
                 return CausalLMOutputWithPast(
@@ -1327,7 +1327,7 @@ def create_main_task(global_model_type: GenerationMixin):
 
 
         def get_base_model(self):
-            model_folder = self.passive_party.get_model_folder()
+            model_folder = get_model_folder()
             if not self.args.model_path and self.args.model_path:
                 raise ValueError('model_path must not be empty and should contain /')
             base_model = self.args.model_path[len(model_folder)+1:]
@@ -1645,7 +1645,7 @@ def create_main_task(global_model_type: GenerationMixin):
             for p in self.parties:
                 p.save_pretrained(model_index,
                                   model_id=model_id,
-                                  model_folder=self.passive_party.get_model_folder(),
+                                  model_folder=get_model_folder(),
                                   **kwargs)
 
         def evaluate_attack(self):
