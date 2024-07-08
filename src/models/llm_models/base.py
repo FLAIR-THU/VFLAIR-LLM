@@ -24,25 +24,25 @@ class VFLPipeline(ABC):
     for 2-slice scenario : (n_local, 0)
     for 3-slice scenario : (n_local_head, n_local_tail)
     '''
-    # def __init__(self, split_index=Union[int, Tuple[int]], is_server=None):
-    #     self.__split_index = split_index
-    #     self.is_server = is_server
-    
-    def __init__(self, vfl_slice_num = int, 
-        local_encoders_num =Union[int, Tuple[int]], 
-        global_encoders_num =Union[int, Tuple[int]], 
-        is_server=None):
-
-        self.vfl_slice_num = vfl_slice_num
-
-        if self.vfl_slice_num == 2:
-            self.__split_index = (local_encoders_num,)
-        elif self.vfl_slice_num == 3:
-            self.__split_index = (local_encoders_num,)
-        else:
-            raise ValueError(f"Not supported vfl_slice_num:{vfl_slice_num}") 
-
+    def __init__(self, split_index=Union[int, Tuple[int]], is_server=None):
+        self.__split_index = split_index
         self.is_server = is_server
+    
+    # def __init__(self, vfl_slice_num = int, 
+    #     local_encoders_num =Union[int, Tuple[int]], 
+    #     global_encoders_num =Union[int, Tuple[int]], 
+    #     is_server=None):
+
+    #     self.vfl_slice_num = vfl_slice_num
+
+    #     if self.vfl_slice_num == 2:
+    #         self.__split_index = (local_encoders_num,)
+    #     elif self.vfl_slice_num == 3:
+    #         self.__split_index = (local_encoders_num,)
+    #     else:
+    #         raise ValueError(f"Not supported vfl_slice_num:{vfl_slice_num}") 
+
+    #     self.is_server = is_server
 
     @property
     def num_of_slices(self) -> int:
