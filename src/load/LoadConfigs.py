@@ -543,7 +543,7 @@ def do_load_basic_configs_llm(config_dict, args):
     # Model
     if 'model_list' in config_dict:
         config_model_dict = config_dict['model_list']
-        
+
         args.vfl_model_slice_num = config_model_dict['vfl_model_slice_num'] if('vfl_model_slice_num' in config_model_dict) else 2
         args.local_encoders_num = config_model_dict['local_encoders_num'] if('local_encoders_num' in config_model_dict) else 1
         args.local_tail_encoders_num = config_model_dict['local_tail_encoders_num'] if('local_tail_encoders_num' in config_model_dict) else 0
@@ -573,86 +573,52 @@ def do_load_basic_configs_llm(config_dict, args):
             args.n_best_size = None
             args.max_new_tokens = None
         
+        # Model Path
+        if 'path' in config_model_dict :
+            args.model_path = config_model_dict['path']
+            args.pretrained = config_model_dict['pretrained'] if 'pretrained' in config_model_dict else 1
+        else:
+            args.model_path = ""
+            args.pretrained = 1
+        # Overall LLM type/None for non-llm scenario
+        args.model_type = config_model_dict['model_type'] if 'model_type' in config_model_dict else None  
+        
         # Finetune Configs  
         # dict:{model_slice: value}  model_slice = head/body/tail
-        args.embedding_trainable = {}
-        args.head_layer_trainable = {}
+        args.embedding_trainable = False
+        args.head_layer_trainable = False
         args.encoder_trainable = {}
         args.encoder_trainable_ids = {}
+        # Passive Party Models
+        assert '0' in config_model_dict, "Passive Party not specified in model list"
+        passive_model_dict = config_model_dict['0']
+        assert 'head' in passive_model_dict, "Model Head not specified in passive party model configs"
+        args.encoder_trainable['head'] = passive_model_dict['head']['encoder_trainable'] if 'encoder_trainable' in passive_model_dict['head'] else False
+        args.encoder_trainable_ids['head'] = passive_model_dict['head']['encoder_trainable_ids'] if 'encoder_trainable_ids' in passive_model_dict['head'] else []
+        args.embedding_trainable = passive_model_dict['head']['embedding_trainable'] if 'embedding_trainable' in passive_model_dict['head'] else False
+        if args.vfl_model_slice_num==3:
+            assert 'tail' in passive_model_dict, "Model Tail not specified in passive party model configs"
+            args.encoder_trainable['tail'] = passive_model_dict['tail']['encoder_trainable'] if 'encoder_trainable' in passive_model_dict['tail'] else False
+            args.encoder_trainable_ids['tail'] = passive_model_dict['tail']['encoder_trainable_ids'] if 'encoder_trainable_ids' in passive_model_dict['tail'] else []
 
-        model_dict = {}
-        default_dict_element = {'type': 'MLP2', 'path': 'random_14*28_10', 'input_dim': 392, 'output_dim': 10}
+        # Active Party Models
+        assert '1' in config_model_dict, "Active Party not specified in model list"
+        active_model_dict = config_model_dict['1']
+        assert 'body' in active_model_dict, "Model Body not specified in active party model configs"
+        args.encoder_trainable['body'] = active_model_dict['body']['encoder_trainable'] if 'encoder_trainable' in active_model_dict['body'] else False
+        args.encoder_trainable_ids['body'] = active_model_dict['body']['encoder_trainable_ids'] if 'encoder_trainable_ids' in active_model_dict['body'] else []
+        args.head_layer_trainable = active_model_dict['body']['head_layer_trainable'] if 'head_layer_trainable' in active_model_dict['body'] else False
         
-        args.model_type = config_model_dict['model_type'] if 'model_type' in config_model_dict else None  # Overall Model Type LLM type/None for non-llm scenario
-
-
-        for ik in range(args.k):
-            if str(ik) in config_model_dict:
-                if 'type' in config_model_dict[str(ik)]:
-                        
-                    encoder_trainable_ids = config_model_dict[str(ik)]['encoder_trainable_ids'] if 'encoder_trainable_ids' in config_model_dict[str(ik)] else []
-                    args.encoder_trainable_ids_list.append(encoder_trainable_ids)
-
-                    if ik == args.k - 1:
-                        args.embedding_trainable.append(False)  # no embedding layer for active parties
-                    else:
-                        embedding_trainable = int(
-                            config_model_dict[str(ik)]['embedding_trainable']) if 'embedding_trainable' in \
-                                                                                  config_model_dict[
-                                                                                      str(ik)] else 0  # Overall Model Type
-                        if embedding_trainable == 1:
-                            embedding_trainable = True
-                        else:
-                            embedding_trainable = False
-                        args.embedding_trainable.append(embedding_trainable)
-
-                    encoder_trainable = int(config_model_dict[str(ik)]['encoder_trainable']) if 'encoder_trainable' in \
-                                                                                                config_model_dict[
-                                                                                                    str(ik)] else 0  # Overall Model Type
-                    if encoder_trainable == 1:
-                        encoder_trainable = True
-                    else:
-                        encoder_trainable = False
-                    args.encoder_trainable.append(encoder_trainable)
-
-                    if ik != args.k - 1:
-                        args.head_layer_trainable.append(False)  # no head layer for passive parties
-                    else:
-                        head_layer_trainable = int(config_model_dict[str(ik)]['head_layer_trainable']) if 'head_layer_trainable' in config_model_dict[str(ik)] else 0
-                        if head_layer_trainable == 1:
-                            head_layer_trainable = True
-                        else:
-                            head_layer_trainable = False
-                        args.head_layer_trainable.append(head_layer_trainable)
-
-                    if 'path' in config_model_dict[str(ik)] or (('input_dim' in config_model_dict[str(ik)]) and (
-                            'output_dim' in config_model_dict[str(ik)])):
-                        model_dict[str(ik)] = config_model_dict[str(ik)]
-                        args.model_path = config_model_dict[str(ik)]['path']
-                        args.pretrained = config_model_dict[str(ik)]['pretrained'] if 'pretrained' in config_model_dict[str(ik)] else 1
-                    else:
-                        model_type_name = config_model_dict[str(ik)]['type']  # specific model type
-                        temp = {'type': model_type_name, 'path': '../models/' + model_type_name + '/random'}
-                        model_dict[str(ik)] = temp
-                        args.model_path = ""
-                        args.pretrained = 1
-                else:
-                    model_dict[str(ik)] = default_dict_element
-            else:
-                model_dict[str(ik)] = default_dict_element
-
+        
+        print('args.vfl_model_slice_num:', args.vfl_model_slice_num)
+        print('args.local_encoders_num:', args.local_encoders_num)
+        print('args.local_tail_encoders_num:', args.local_tail_encoders_num)
         print('args.encoder_trainable:', args.encoder_trainable)
         print('args.embedding_trainable:', args.embedding_trainable)
         print('args.head_layer_trainable:', args.head_layer_trainable)
 
-        args.model_list = model_dict
-        args.local_encoders_num = config_model_dict[
-            'local_encoders_num'] if 'local_encoders_num' in config_model_dict else 1
-        args.apply_trainable_layer = config_model_dict['apply_trainable_layer'] if (
-                    'apply_trainable_layer' in config_model_dict) else 0
-        args.global_model = config_model_dict['global_model'] if (
-                    'global_model' in config_model_dict) else 'ClassificationModelHostHead'
-        print('args.local_encoders_num:', args.local_encoders_num)
+        args.model_list = config_model_dict
+
 
     else:
         default_model_dict = {}

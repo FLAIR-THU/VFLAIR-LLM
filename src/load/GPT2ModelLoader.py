@@ -9,57 +9,74 @@ class GPT2ModelLoader(IModelLoader):
     _models = {}  # type:dict[int,PreTrainedModel]
 
     def load(self, args, model_path, is_active_party):
-        print(f'GPT2ModelLoader.load() {is_active_party}')
-        # self.split_index = kwargs.get('split_index', (2,))
-        # split_index: (2,)
-        print(f'VFLPipelineGPT2: {vfl_basic_config.split_index} {is_active_party}')
-        p = VFLPipelineGPT2(vfl_basic_config.split_index, is_active_party)
-        self._models.update(p.from_pretrained(model_path, **vfl_basic_config.kwargs_model_loading))
-        print(f'{self._models.keys()}')
-        
+        if args.vfl_model_slice_num == 2:
+            split_index = (args.local_encoders_num, )
+        elif args.vfl_model_slice_num == 3:
+            split_index = (args.local_encoders_num, args.local_tail_encoders_num)
+        else:
+            raise ValueError(f"Not supported vfl_model_slice_num:{args.vfl_model_slice_num}") 
+        # print(f'split_index: {split_index}')
+        p = VFLPipelineGPT2(split_index=split_index, is_server=is_active_party, device = args.device)
+        self._models.update(p.from_pretrained(model_path))
+        # **vfl_basic_config.kwargs_model_loading))
+        # self._tensor_to_device(self._models, args.device)
+
+        # print(f'self._models {is_active_party}:{self._models.keys()}')
+        # for _key in self._models.keys():
+        #     print(f'model {_key} device:',self._models[_key].device)
+            
         config, generation_config = self._prepare_model_update_args()
         model_architectures = config.architectures
         model_embedded_dim = config.n_embd
+        all_encoders_num = config.n_layer
 
-        # print('origin trainable param:')
-        # self._models[0].print_trainable_parameters()
-
-        # for param in self._models[0].parameters():
-        #     param.requires_grad = False
 
         if args.finetune_name == "LoRA":
             for i, m in self._models.items():
                 peft_model = self._set_peft(m)
                 self._models.update({i: peft_model})
-        
-        print('after lora trainable param:')
-        self._models[0].print_trainable_parameters()
-
+            # print('after lora trainable param:')
+            # self._models[0].print_trainable_parameters()
 
         if not is_active_party:
-            encoder_trainable_ids = args.encoder_trainable_ids_list[0]
-            print('encoder_trainable_ids = ', encoder_trainable_ids)
-            for encoder_id in range(len(self._models[0].h)):
-                if encoder_id not in encoder_trainable_ids: # freeze encoders that's not needed
-                    for param in self._models[0].h.parameters():
-                        param.requires_grad = False
-
-            print('embedding_trainable = ', args.embedding_trainable[0])
-            if not args.embedding_trainable[0]: # freeze embeddings that's not needed
+            model_head_embedding_trainable = args.embedding_trainable
+            print('model_head embedding_trainable = ', model_head_embedding_trainable)
+            if not model_head_embedding_trainable: # freeze embeddings that's not needed
                 for param in self._models[0].wte.parameters():
                     param.requires_grad = False
                 for param in self._models[0].wpe.parameters():
                     param.requires_grad = False
-        else:
-            encoder_trainable_ids = args.encoder_trainable_ids_list[1]
-            print('encoder_trainable_ids = ', encoder_trainable_ids)
+            model_head_encoder_trainable_ids = args.encoder_trainable_ids['head']
+            print('model_head encoder_trainable_ids = ', model_head_encoder_trainable_ids)
             for encoder_id in range(len(self._models[0].h)):
-                if encoder_id not in encoder_trainable_ids: # freeze encoders that's not needed
+                if encoder_id not in model_head_encoder_trainable_ids: # freeze encoders that's not needed
                     for param in self._models[0].h.parameters():
                         param.requires_grad = False
+            
+            if args.vfl_model_slice_num == 3:
+                model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
+                print('model_tail encoder_trainable_ids = ', model_tail_encoder_trainable_ids)
+                for encoder_id in range(len(self._models[2].transformer.h)):
+                    if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
+                        for param in self._models[2].transformer.h.parameters():
+                            param.requires_grad = False
 
-        print('after config trainable param:')
-        self._models[0].print_trainable_parameters()
+        else:
+            model_body_encoder_trainable_ids = args.encoder_trainable_ids['body']
+            print('model_body encoder_trainable_ids = ', model_body_encoder_trainable_ids)
+            if args.vfl_model_slice_num == 3:
+                for encoder_id in range(len(self._models[1].h)):
+                    if encoder_id not in model_body_encoder_trainable_ids: # freeze encoders that's not needed
+                        for param in self._models[1].h.parameters():
+                            param.requires_grad = False
+            else:
+                for encoder_id in range(len(self._models[1].transformer.h)):
+                    if encoder_id not in model_body_encoder_trainable_ids: # freeze encoders that's not needed
+                        for param in self._models[1].transformer.h.parameters():
+                            param.requires_grad = False
+
+        # print('after config trainable param:')
+        # self._models[0].print_trainable_parameters()
 
         return {
             # "tokenizer": tokenizer,
@@ -67,7 +84,8 @@ class GPT2ModelLoader(IModelLoader):
             "config": config,
             "generation_config": generation_config,
             "model_architectures": model_architectures,
-            "model_embedded_dim": model_embedded_dim
+            "model_embedded_dim": model_embedded_dim,
+            "all_encoders_num": all_encoders_num
         }
 
     def _set_peft(self, model):
@@ -107,3 +125,8 @@ class GPT2ModelLoader(IModelLoader):
         if model is not None:
             return model.config, model.generation_config
         return None, None
+
+    def _tensor_to_device(self, dict_like:dict, device):
+        for k,v in dict_like.items():
+            if isinstance(v,torch.Tensor):
+                dict_like[k] = v.to(device)

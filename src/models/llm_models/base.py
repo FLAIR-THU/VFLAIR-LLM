@@ -24,9 +24,11 @@ class VFLPipeline(ABC):
     for 2-slice scenario : (n_local, 0)
     for 3-slice scenario : (n_local_head, n_local_tail)
     '''
-    def __init__(self, split_index=Union[int, Tuple[int]], is_server=None):
+    def __init__(self, split_index=Union[int, Tuple[int]], is_server=None, device = 'cuda'):
         self.__split_index = split_index
         self.is_server = is_server
+        self.device = device
+        self.all_layer_num = -1
     
     # def __init__(self, vfl_slice_num = int, 
     #     local_encoders_num =Union[int, Tuple[int]], 
@@ -85,9 +87,8 @@ class VFLPipeline(ABC):
 
     @staticmethod
     def save_pretrained(model_name_or_path: str, models: Dict[int, PreTrainedModel], **kwargs):
-        print(f'VFLPipeline save_pretrained')
         for i, m in models.items():
-            m.save_pretrained(os.path.join(model_name_or_path, f"model_{i}"), **kwargs)
+            m.save_pretrained(os.path.join(model_name_or_path, f"model_{i}"), **kwargs) 
 
     def from_vfl(self, model_name_or_path, **kwargs) -> Dict[int, Union[PreTrainedModel, VFLModel]]:
         """
@@ -140,14 +141,14 @@ class VFLPipeline(ABC):
         tokenizer.save_pretrained(self._vfl_model_folder(model_name_or_path))
         return self.from_vfl(self._vfl_model_folder(model_name_or_path), **kwargs)
 
-    # @abstractmethod
-    # def _load_model_head(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
-    #     pass
+    @abstractmethod
+    def _load_model_head(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
+        pass
 
-    # @abstractmethod
-    # def _load_model_tail(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
-    #     pass
+    @abstractmethod
+    def _load_model_tail(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
+        pass
 
-    # @abstractmethod
-    # def _load_model_body(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
-    #     pass
+    @abstractmethod
+    def _load_model_body(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
+        pass

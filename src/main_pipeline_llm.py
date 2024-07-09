@@ -15,7 +15,7 @@ import torch
 # from tensorboardX import SummaryWriter
 from peft.peft_model import PeftModel
 
-from load.LoadConfigs import *  # load_configs
+from load.LoadConfigs import *  # load_configs load_basic_configs_llm
 from load.LoadParty import load_parties, load_parties_llm
 
 from evaluates.MainTaskVFL_LLM import *
@@ -164,7 +164,7 @@ if __name__ == '__main__':
         set_seed(seed)
         print('================= iter seed ', seed, ' =================')
 
-        args = load_basic_configs(args.configs, args)
+        args = load_basic_configs_llm(args.configs, args)
         args.need_auxiliary = 0  # no auxiliary dataset for attackerB
 
         if args.device == 'cuda':
@@ -186,7 +186,7 @@ if __name__ == '__main__':
         print('inversion:', args.inversion_list, args.inversion_index)
 
         # Save record for different defense method
-        model_name = args.model_list[str(0)]["type"]  # .replace('/','-')
+        model_name = args.model_list["name"]  
         exp_res_dir, exp_res_path = create_exp_dir_and_file(args.dataset, args.Q, model_name, args.pipeline, args.defense_name,args.defense_param)
         args.exp_res_dir = exp_res_dir
         args.exp_res_path = exp_res_path

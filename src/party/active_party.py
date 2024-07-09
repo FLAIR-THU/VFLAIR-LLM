@@ -131,7 +131,7 @@ class ActiveParty_LLM(Party_LLM):
     def cal_passive_local_gradient(self, ik, remote=True):
         if remote:
             ik = int(ik)
-        if self.args.task_type == 'QuestionAnswering':
+        if self.args.vfl_model_slice_num== 2 and self.args.task_type == 'QuestionAnswering':
             passive_local_gradient = \
             torch.autograd.grad(self.global_output.start_logits + self.global_output.end_logits,
                                 self.passive_pred_list[ik]['inputs_embeds'], \
@@ -143,6 +143,7 @@ class ActiveParty_LLM(Party_LLM):
         if remote:
             return convert_tensor_to_batch_msg(passive_local_gradient, 'test_logit')
         return passive_local_gradient
+    
 
     def global_backward(self):
         # print('=== Active Global Backward ===')

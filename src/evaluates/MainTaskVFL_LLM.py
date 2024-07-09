@@ -199,8 +199,8 @@ def create_main_task(global_model_type: GenerationMixin):
             self._communication = communication
 
         def LR_Decay(self, i_epoch):
-            # for ik in range(self.k):
-            #     self.parties[ik].LR_decay(i_epoch)
+            for ik in range(self.k-1):
+                self.parties[ik].LR_decay(i_epoch)
             self._communication.send_global_lr_decay(i_epoch)
 
         def apply_defense_on_transmission(self, pred_detach):
@@ -258,6 +258,20 @@ def create_main_task(global_model_type: GenerationMixin):
             self.all_pred_list = all_pred_list
             return all_pred_list
 
+        
+        @timer()
+        def global_pred_transmit(self, pred_list, use_cache=None, count_time=False):
+            start_time = time.time()
+            global_pred = self._communication.send_pred_message(pred_list, self.parse_pred_message_result,
+                                                                use_cache=use_cache)  #
+            get_total_size(global_pred)
+            end_time = time.time()
+            if count_time == 'train':
+                self.train_party_time[-1] += end_time - start_time
+            elif count_time == 'inference':
+                self.inference_party_time[-1] += end_time - start_time
+            return global_pred
+        
         def parse_pred_message_result(self, result):
             if self.args.task_type == 'SequenceClassification':
                 logits = torch.Tensor(result['logits'])
@@ -267,7 +281,7 @@ def create_main_task(global_model_type: GenerationMixin):
                     logits=logits,
                 )
             elif self.args.task_type == 'CausalLM':
-                if vfl_basic_config.num_of_slice == 3:
+                if self.args.vfl_model_slice_num == 3:
                     return convert_msg_to_pred(result)
                 logits = convert_msg_to_tensor(result)
                 return CausalLMOutputWithPast(
@@ -291,19 +305,6 @@ def create_main_task(global_model_type: GenerationMixin):
             else:
                 assert 1 > 2, 'Task type no supported'
 
-        @timer()
-        def global_pred_transmit(self, pred_list, use_cache=None, count_time=False):
-            start_time = time.time()
-            global_pred = self._communication.send_pred_message(pred_list, self.parse_pred_message_result,
-                                                                use_cache=use_cache)  #
-            get_total_size(global_pred)
-            end_time = time.time()
-            if count_time == 'train':
-                self.train_party_time[-1] += end_time - start_time
-            elif count_time == 'inference':
-                self.inference_party_time[-1] += end_time - start_time
-            return global_pred
-
         def local_gradient_transmit(self, count_time='train'):
             for ik in range(self.k - 1):
                 if self.parties[ik].local_model_optimizer != None:
@@ -321,15 +322,18 @@ def create_main_task(global_model_type: GenerationMixin):
         def global_gradient_transmit(self, final_pred, count_time='train'):
             start_time = time.time()
             global_loss = self.parties[0].cal_loss(final_pred)
-            global_gradients = self.parties[0].cal_global_gradient(global_loss, final_pred)
+            if self.args.vfl_model_slice_num == 2:
+                global_gradients = self.parties[0].cal_global_gradient_2slice(global_loss, final_pred)
+            else:
+                global_gradients = self.parties[0].cal_global_gradient_3slice(global_loss, self.global_pred)
             end_time = time.time()
             if count_time == 'train':
                 self.train_party_time[0] += end_time - start_time
 
             self.communication_cost += get_size_of(global_gradients)
 
-            self._communication.send_global_loss_and_gradients(
-                self.parties[0].global_gradients)  # self.parties[0].global_loss,
+            self._communication.send_global_loss_and_gradients(self.parties[0].global_gradients)  # self.parties[0].global_loss,
+            
             return global_loss
 
 
@@ -372,7 +376,8 @@ def create_main_task(global_model_type: GenerationMixin):
                         
                         target_label_list = list(gt_one_hot_label)
 
-                    else:  # forward -- raw model output nect token logits
+                    else:  # forward -- raw model output next token logits
+                        # print('model_output:',type(model_output),model_output.keys())
                         generated_token_logits = model_output.logits[:,-1,:]
                         predict_label_list = torch.argmax(generated_token_logits, dim=-1) 
                         target_label_list = list(gt_one_hot_label)
@@ -627,7 +632,7 @@ def create_main_task(global_model_type: GenerationMixin):
                                                                      torch.stack(gt_one_hot_label),
                                                                      self.args.config).item()
                             self._clear_past_key_values()
-
+                            # print('generation_output:',type(generation_output),generation_output.keys())
                             batch_target_word, batch_predict_word, sample_cnt = self.generate_result(generation_output, gt_one_hot_label)
                             target_word_list.extend(batch_target_word)
                             predict_word_list.extend(batch_predict_word)
@@ -703,10 +708,10 @@ def create_main_task(global_model_type: GenerationMixin):
                 if self.args.task_type == "CausalLM":
                     predict_word_list = predict_list # bs, seq_len, vocab_size
                     target_word_list = label_list # bs, seq_len
-                    print('predict_word_list:',type(predict_word_list),len(predict_word_list),predict_word_list[0].shape)
-                    print(predict_word_list[:20])
-                    print('target_word_list:',type(target_word_list),len(target_word_list),target_word_list[0].shape)
-                    print(target_word_list[:20])
+                    # print('predict_word_list:',type(predict_word_list),len(predict_word_list),predict_word_list[0].shape)
+                    # print(predict_word_list[:20])
+                    # print('target_word_list:',type(target_word_list),len(target_word_list),target_word_list[0].shape)
+                    # print(target_word_list[:20])
 
 
 
@@ -980,7 +985,6 @@ def create_main_task(global_model_type: GenerationMixin):
 
                     return {'acc':acc, 'mcc':mcc}
 
-
             elif self.args.model_architect == 'CLS':
                 predict_labels = predict_list
                 actual_labels = label_list
@@ -1072,8 +1076,9 @@ def create_main_task(global_model_type: GenerationMixin):
             self.eval()
             predict_word_list, target_word_list, total_sample_cnt = self.predict()
 
-            print('causal_lm_inference target_word_list:',target_word_list)
-            print('causal_lm_inference predict_word_list:',predict_word_list)
+            # print('causal_lm_inference target_word_list:',target_word_list)
+            # print('causal_lm_inference predict_word_list:',predict_word_list)
+
             # try:
             result_dict = self.generate_assessment(predict_word_list, target_word_list)
             self.test_acc = result_dict['acc']
@@ -1082,7 +1087,6 @@ def create_main_task(global_model_type: GenerationMixin):
             return exp_result, self.test_acc
             # except:
             #     return '',0
-
 
         def qa_inference(self):
             # generate all model prediction
@@ -1107,20 +1111,26 @@ def create_main_task(global_model_type: GenerationMixin):
 
             # passive party inform active party to do global pred
             resp = self.global_pred_transmit(pred_list, use_cache=False, count_time=count_time)
-            
-            if vfl_basic_config.num_of_slice > 2:
+
+            if self.args.vfl_model_slice_num > 2:
+                self.global_pred = resp['inputs_embeds']#.to(self.device)
+
                 p = self.parties[0]
                 p._tensor_to_device(resp, p.models[2].device)
                 final_output = p.forward(2, **resp)
+
+                # final_output = self.parties[0].model_tail_forward(**resp)
             else:
                 final_output = resp
 
-            p=self.parties[0]
-            p._tensor_to_device(final_output,self.device)
+            self.parties[0]._tensor_to_device(final_output,self.device)
 
             return final_output
 
         def backward(self, final_pred):
+            '''
+            calculate and transmit relevant gradient
+            '''
             # passive party -> global gradient -> active party
             loss = self.global_gradient_transmit(final_pred, count_time='train')
             # active party -> local gradient -> passive party
@@ -1134,6 +1144,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 for i in range(20):
                     result = self._llm_inference(**kwargs)
                 return result
+
             # set inference time back to 0
             self.inference_party_time = [0 for i in range(self.k)]
 
@@ -1189,30 +1200,23 @@ def create_main_task(global_model_type: GenerationMixin):
             ################ normal vertical federated learning ################
             # torch.autograd.set_detect_anomaly(True)
             # =================== Commu ===================
-
             final_pred = self.forward(**data_inputs)
             self._clear_past_key_values()
-            # generation_output = self.generate(**data_inputs, \
-            #     generation_config = self.generation_config,max_new_tokens=1)
-            # self._clear_past_key_values()
-            # print('generation_output:',type(generation_output),generation_output.shape)
 
             self.backward(final_pred)
-            # loss = self.global_gradient_transmit(final_pred, count_time = 'train')
-            # # active party -> local gradient -> passive party
-            # self.local_gradient_transmit(count_time = 'train')
-
             # ============= Model Update =============
-            if vfl_basic_config.num_of_slice == 3:
-                self.passive_party.optimizer_step(2)
+
+            # if self.args.vfl_model_slice_num == 3: # vfl_basic_config.num_of_slice
+            #     self.passive_party.optimizer_step(2)
+
             start_time = time.time()
-            self._communication.send_global_backward_message()
+            self._communication.send_global_backward_message() # active_party.global_backward()
             end_time = time.time()
             self.train_party_time[self.args.k - 1] += end_time - start_time
 
             for ik in range(self.k - 1):
                 start_time = time.time()
-                self.parties[ik].local_backward()
+                self.parties[ik].local_backward() # passive_party.local_backward
                 end_time = time.time()
                 self.train_party_time[ik] += end_time - start_time
 
@@ -1317,6 +1321,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 #     suc_cnt += torch.sum(predict_label == actual_label).item()
 
                 return loss.item(), batch_train_acc
+        
         def train(self,*args,**kwargs):
             for p in self.parties:
                 p.train(*args,**kwargs)
@@ -1456,9 +1461,8 @@ def create_main_task(global_model_type: GenerationMixin):
 
                 # LR decay
                 self.LR_Decay(i_epoch)
-                if vfl_basic_config.num_of_slice == 3:
-                    self.parties[0].lr_schedulers[2].step()
-                # _lr = self.parties[0].global_LR_decay(i_epoch, is_return=True)
+                # if self.args.vfl_model_slice_num == 3:
+                #     self.parties[0].lr_schedulers[2].step()
 
                 if self.args.apply_adversarial:
                     print(
@@ -1665,7 +1669,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 return gradients_list
 
         def _validate_model_kwargs(self, model_kwargs: Dict[str, Any]):
-            if vfl_basic_config.num_of_slice == 3:
+            if self.args.vfl_model_slice_num == 3:
                 # todo: bug caused from def of self.forward
                 #   better align with transformers
                 return
@@ -1755,7 +1759,7 @@ def create_main_task(global_model_type: GenerationMixin):
             #     raise TypeError(exception_message)
 
         def prepare_inputs_for_generation(self, input_ids, **model_kwargs):
-            if vfl_basic_config.num_of_slice == 3:
+            if self.args.vfl_model_slice_num == 3:
                 return super().prepare_inputs_for_generation(input_ids, **model_kwargs)
             else:
                 # return self.parties[-1].global_model.prepare_inputs_for_generation(input_ids=input_ids, **model_kwargs)
@@ -1763,7 +1767,7 @@ def create_main_task(global_model_type: GenerationMixin):
 
         def _prepare_encoder_decoder_kwargs_for_generation(self, inputs_tensor: torch.Tensor, model_kwargs,
                                                            model_input_name: Optional[str] = None):
-            if vfl_basic_config.num_of_slice == 3:
+            if self.args.vfl_model_slice_num == 3:
                 return super()._prepare_encoder_decoder_kwargs_for_generation(inputs_tensor=inputs_tensor,
                                                                               model_kwargs=model_kwargs,
                                                                               model_input_name=model_input_name)

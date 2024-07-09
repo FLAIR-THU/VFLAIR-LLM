@@ -82,7 +82,7 @@ class PassiveParty_LLM(Party_LLM):
         self.num_labels = args.num_classes
         self.weights_grad_a = None  # no gradient for model in passive party(no model update)
 
-        self.encoder_trainable = args.encoder_trainable[index]
+        # self.encoder_trainable = args.encoder_trainable[index]
 
     def init_apply_defense(self, need_apply_defense, apply_adversarial, defense_configs, main_lr, device):
         # some defense need model, add here
@@ -215,7 +215,6 @@ class PassiveParty_LLM(Party_LLM):
 
                 print(f'self.mid_model_name:{self.mid_model_name}')
 
-
     def prepare_data(self, args, index):
         if not args.dataset:
             return None
@@ -246,9 +245,10 @@ class PassiveParty_LLM(Party_LLM):
     def receive_pred(self, pred, giver_index):
         self.pred_received[giver_index] = pred
 
-    def cal_global_gradient(self, global_loss, global_pred):
-        # print('Passive Party cal global_gradients:')
-        # print('Global Loss=',global_loss)
+    def cal_global_gradient_2slice(self, global_loss, global_pred):
+        '''
+        self.global_gradients = \partial global_loss / \partial global_pred
+        '''
 
         if self.args.task_type == 'QuestionAnswering':
             _gradients_start = torch.autograd.grad(global_loss, global_pred.start_logits, retain_graph=True)
@@ -269,6 +269,19 @@ class PassiveParty_LLM(Party_LLM):
                     global_gradients_clone=torch.autograd.grad(self.output_tensors[2],self.input_tensors[2],grad_outputs=logits_gradients,retain_graph=True)[0]
             self.global_gradients = global_gradients_clone
         return global_gradients_clone
+
+    def cal_global_gradient_3slice(self, global_loss, global_intermediate):
+        '''
+        self.global_gradients = \partial global_loss / \partial global_intermediate
+        self.input_tensors[2] = global_intermediate
+        '''
+        # logits_gradients = torch.autograd.grad(global_loss, global_pred, retain_graph=True)[0]
+        # global_gradients_clone=torch.autograd.grad(self.output_tensors[2],self.input_tensors[2],grad_outputs=logits_gradients,retain_graph=True)[0]
+        
+        global_gradients_clone=torch.autograd.grad(global_loss,global_intermediate,retain_graph=True)[0]
+        self.global_gradients = global_gradients_clone
+        return global_gradients_clone
+
 
     def cal_loss(self, pred, test=False):
         gt_one_hot_label = self.gt_one_hot_label  # label
@@ -430,11 +443,22 @@ class PassiveParty_LLM(Party_LLM):
             for param_group in self.global_model_optimizer.param_groups:
                 param_group['lr'] = eta_t
 
+    def model_tail_forward(self, **kwargs):
+        logger.debug(f"model_tail forward")
+        self.input_tensors[2] = kwargs.get('inputs_embeds')
+        
+        resp = self.local_model_tail(**kwargs)
+
+        self.output_tensors[2] = resp.get('logits')
+        self.final_tail_pred = resp
+        return resp #self._detach_tensor(resp)
+
     def local_backward(self):  # model head 1
         # print(' === passive local backward === ')
 
         self.num_local_updates += 1  # another update
 
+        ###### Update Model Head #########
         # adversarial training : update adversarial model
         if (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"])):
             # update imagined_adversary_model
@@ -494,13 +518,6 @@ class PassiveParty_LLM(Party_LLM):
 
         elif (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])
               and (self.index < self.args.k - 1) and self.mid_position == "out"):
-            # print('before')
-            # mark = 0
-            # for name, param in self.mid_model.named_parameters():
-            #     if mark == 0:
-            #         print(name, param)
-            #         mark = mark + 1
-
             self.local_model_optimizer.zero_grad()  # self.mid_model_optimizer.zero_grad()
 
             # update mid+local_model with mid_loss
@@ -622,6 +639,33 @@ class PassiveParty_LLM(Party_LLM):
                                 w.grad = g.detach()
 
                     self.local_model_optimizer.step()
+        
+        ###### Update Model Tail #########
+        if self.args.vfl_model_slice_num== 3 and self.local_model_tail_optimizer != None:
+            self.local_model_tail_optimizer.zero_grad()
+
+            # local model tail trainable part
+            local_model_tail_params = []
+            for param in self.local_model_tail.parameters():
+                if param.requires_grad:
+                    local_model_tail_params.append(param)
+
+            if len(local_model_tail_params) > 0:
+                self.weights_grad_a = torch.autograd.grad(
+                    self.global_loss, # model tail output, the final pred
+                    local_model_tail_params,  # self.local_model.parameters()
+                    retain_graph=True,
+                    allow_unused=True,
+                )
+                for w, g in zip(local_model_tail_params, self.weights_grad_a):
+                    if w.requires_grad and g != None:
+                        if w.grad != None:
+                            w.grad += g.detach()
+                        else:
+                            w.grad = g.detach()
+
+                self.local_model_tail_optimizer.step()
+
 
     # def calculate_gradient_each_class(self, global_pred, local_pred_list, test=False):
     #     # print(f"global_pred.shape={global_pred.size()}") # (batch_size, num_classes)

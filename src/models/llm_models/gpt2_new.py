@@ -20,7 +20,7 @@ class GPT2ModelSplitter(GPT2Model, VFLModel):
         return self._split_layers(idx_of_layers)
 
     def _split_layers(self, idx_of_layers: Iterable[int]) -> bool:
-        print(f'GPT2ModelSplitter _split_layers {list(idx_of_layers)}')
+        # print(f'GPT2ModelSplitter _split_layers {list(idx_of_layers)}')
         new_layers = ModuleList()
         for i, layer in enumerate(self.h):
             if i in idx_of_layers:
@@ -104,17 +104,22 @@ class GPT2ModelHead(GPT2ModelSplitter):
         if token_type_ids is not None:
             token_type_ids = token_type_ids.view(-1, input_shape[-1])
         
-        
-        if self.past_key_values == None:
-            if past_key_values is None:
-                past_length = 0
-                past_key_values = tuple([None] * len(self.h)) 
-                # past_key_values = tuple([None] * self.num_encoders_all)
-            else:
-                past_length = past_key_values[0][0].size(-2)
+        if past_key_values is None:
+            past_length = 0
+            past_key_values = tuple([None] * len(self.h))
         else:
-            past_key_values = self.past_key_values
             past_length = past_key_values[0][0].size(-2)
+
+        # if self.past_key_values == None:
+        #     if past_key_values is None:
+        #         past_length = 0
+        #         past_key_values = tuple([None] * len(self.h)) 
+        #         # past_key_values = tuple([None] * self.num_encoders_all)
+        #     else:
+        #         past_length = past_key_values[0][0].size(-2)
+        # else:
+        #     past_key_values = self.past_key_values
+        #     past_length = past_key_values[0][0].size(-2)
 
         if position_ids is None:
             position_ids = torch.arange(past_length, input_shape[-1] + past_length, dtype=torch.long, device=device)
@@ -257,6 +262,11 @@ class GPT2ModelHead(GPT2ModelSplitter):
                 }
     
 class GPT2ModelBody(GPT2ModelSplitter):
+    def __init__(self, config: GPT2Config):
+        super().__init__(config)
+        self.past_key_values = None
+        # todo: del norm will cause error when load from original model weight
+        # del self.norm
 
     def forward(
         self,
@@ -302,16 +312,22 @@ class GPT2ModelBody(GPT2ModelSplitter):
         if token_type_ids is not None:
             token_type_ids = token_type_ids.view(-1, input_shape[-1])
 
-        if self.past_key_values == None:
-            if past_key_values is None:
-                past_length = 0
-                past_key_values = tuple([None] * len(self.h)) 
-                # past_key_values = tuple([None] * self.num_encoders_all)
-            else:
-                past_length = past_key_values[0][0].size(-2)
+        if past_key_values is None:
+            past_length = 0
+            past_key_values = tuple([None] * len(self.h))
         else:
-            past_key_values = self.past_key_values
             past_length = past_key_values[0][0].size(-2)
+
+        # if self.past_key_values == None:
+        #     if past_key_values is None:
+        #         past_length = 0
+        #         past_key_values = tuple([None] * len(self.h)) 
+        #         # past_key_values = tuple([None] * self.num_encoders_all)
+        #     else:
+        #         past_length = past_key_values[0][0].size(-2)
+        # else:
+        #     past_key_values = self.past_key_values
+        #     past_length = past_key_values[0][0].size(-2)
     
         if position_ids is None:
             position_ids = torch.arange(past_length, input_shape[-1] + past_length, dtype=torch.long, device=device)
@@ -440,6 +456,9 @@ class GPT2ModelBody(GPT2ModelSplitter):
                     if i+self.num_encoders == v[-1] and "cuda:" + str(k) != self.last_device:
                         hidden_states = hidden_states.to("cuda:" + str(k + 1))
         
+        # self.past_key_values = presents
+        self.past_key_values = presents
+
         return {'inputs_embeds':hidden_states,
                 'attention_mask':attention_mask,
                 }
@@ -520,16 +539,22 @@ class GPT2ModelTail(GPT2ModelSplitter):
         if token_type_ids is not None:
             token_type_ids = token_type_ids.view(-1, input_shape[-1])
 
-        if self.past_key_values == None:
-            if past_key_values is None:
-                past_length = 0
-                past_key_values = tuple([None] * len(self.h)) 
-                # past_key_values = tuple([None] * self.num_encoders_all)
-            else:
-                past_length = past_key_values[0][0].size(-2)
+        if past_key_values is None:
+            past_length = 0
+            past_key_values = tuple([None] * len(self.h))
         else:
-            past_key_values = self.past_key_values
             past_length = past_key_values[0][0].size(-2)
+
+        # if self.past_key_values == None:
+        #     if past_key_values is None:
+        #         past_length = 0
+        #         past_key_values = tuple([None] * len(self.h)) 
+        #         # past_key_values = tuple([None] * self.num_encoders_all)
+        #     else:
+        #         past_length = past_key_values[0][0].size(-2)
+        # else:
+        #     past_key_values = self.past_key_values
+        #     past_length = past_key_values[0][0].size(-2)
     
         if position_ids is None:
             position_ids = torch.arange(past_length, input_shape[-1] + past_length, dtype=torch.long, device=device)
@@ -684,6 +709,7 @@ class GPT2ModelTail(GPT2ModelSplitter):
         )
 
 
+# Global Model Wrapper
 class GPT2TailForCausalLM(GPT2LMHeadModel, VFLModel):
     def __init__(self, config: GPT2Config, **kwargs):
         super().__init__(config)
@@ -696,6 +722,84 @@ class GPT2TailForCausalLM(GPT2LMHeadModel, VFLModel):
 
     def _clear_past_key_values(self):
         self.transformer._clear_past_key_values()
+    
+    def forward(
+        self,
+        input_ids: Optional[torch.LongTensor] = None,
+        attention_mask: Optional[torch.FloatTensor] = None,
+        past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None,
+        token_type_ids: Optional[torch.LongTensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        head_mask: Optional[torch.FloatTensor] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        encoder_hidden_states: Optional[torch.Tensor] = None,
+        encoder_attention_mask: Optional[torch.FloatTensor] = None,
+        labels: Optional[torch.LongTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+        **kwargs
+    ) -> Union[Tuple, CausalLMOutputWithCrossAttentions]:
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        transformer_outputs = self.transformer(
+            inputs_embeds = inputs_embeds,
+            attention_mask = attention_mask,
+
+            past_key_values=past_key_values,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            input_ids=input_ids,
+            encoder_hidden_states=encoder_hidden_states,
+            encoder_attention_mask=encoder_attention_mask,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        hidden_states = transformer_outputs[0]
+
+        # Set device for model parallelism
+        if self.model_parallel:
+            torch.cuda.set_device(self.transformer.first_device)
+            hidden_states = hidden_states.to(self.lm_head.weight.device)
+
+        lm_logits = self.lm_head(hidden_states)
+        # return lm_logits
+
+        loss = None
+        if labels is not None:
+            # move labels to correct device to enable model parallelism
+            labels = labels.to(lm_logits.device)
+            # Shift so that tokens < n predict n
+            shift_logits = lm_logits[..., :-1, :].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
+            # Flatten the tokens
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+
+        if not return_dict:
+            output = (lm_logits,) + transformer_outputs[1:]
+            return ((loss,) + output) if loss is not None else output
+        
+        
+        return CausalLMOutputWithCrossAttentions(
+            loss=loss,
+            logits=lm_logits,
+            past_key_values=transformer_outputs.past_key_values,
+            hidden_states=transformer_outputs.hidden_states,
+            attentions=transformer_outputs.attentions,
+            cross_attentions=transformer_outputs.cross_attentions,
+        )
+
 
 
 
@@ -704,26 +808,36 @@ class VFLPipelineGPT2(VFLPipeline):
     def _load_model_head(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         model_head = GPT2ModelHead.from_pretrained(model_name_or_path, **kwargs)
         if do_split:
-            model_head.vfl_split(range(0, self.split_index[0]))
-        # print(f'Model Head:{len(model_head.h)}')
-        return model_head
+            self.all_layer_num = model_head.config.n_layer
+            split_range = range(0, self.split_index[0])
+            model_head.vfl_split(split_range)
+            # print(list(split_range))
+            # print(f'Model Head:{len(model_head.h)} {do_split}')
+
+        return model_head.to(self.device)
 
     def _load_model_tail(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         model_tail = GPT2TailForCausalLM.from_pretrained(model_name_or_path, **kwargs)
         if do_split:
-            split_index = self.split_index[-1]
-            model_tail.vfl_split(
-                range(split_index if split_index > 0 else split_index + model_tail.config.num_hidden_layers,
-                      model_tail.config.num_hidden_layers))
-        # print(f'Model Tail:{len(model_tail.model.h)}')
-        
-        return model_tail
+            if self.num_of_slices == 2:
+                split_range = range(self.split_index[0],model_tail.config.n_layer)
+            else:
+                split_range = range(model_tail.config.n_layer-self.split_index[1],model_tail.config.n_layer)
+            model_tail.vfl_split(split_range)
+            # print(list(split_range))
+            # print(f'Model Tail:{len(model_tail.transformer.h)} {do_split}')
+
+
+        return model_tail.to(self.device)
 
     def _load_model_body(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         model_body = GPT2ModelBody.from_pretrained(model_name_or_path, **kwargs)
         if do_split:
-            split_index = self.split_index
-            model_body.vfl_split(range(split_index[0],
-                                       split_index[1] if split_index[1] > 0 else
-                                       split_index[1] + model_body.config.num_hidden_layers))
-        return model_body
+            split_range = range(self.split_index[0], model_body.config.n_layer-self.split_index[1])
+            model_body.vfl_split(split_range)
+            
+            # print(list(split_range))
+            # print(f'Model Body:{len(model_body.h)} {do_split}')
+           
+        
+        return model_body.to(self.device)

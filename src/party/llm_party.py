@@ -84,6 +84,8 @@ class Party(object):
         self.global_model_optimizer = None
         if need_model:
             self.prepare_model(args, index)
+        # tokenizer
+        self.tokenizer = None
 
         # attack and defense
         # self.attacker = None
@@ -169,6 +171,21 @@ class Party(object):
         if need_auxiliary == 1 and self.aux_dst != None:
             self.aux_loader = DataLoader(self.aux_dst, batch_size=batch_size, collate_fn=lambda x: x)
 
+    def prepare_tokenizer(self, args, model_path):
+        # Load Tokenizer
+        args.tokenizer = AutoTokenizer.from_pretrained(model_path)
+        args.tokenizer.padding_side = args.padding_side if (args.padding_side in ["left", "right"]) else "left"
+        if args.pad_token == "default":
+            if args.tokenizer.pad_token is None:
+                args.tokenizer.pad_token = args.tokenizer.eos_token  # ({'pad_token': '[PAD]'}) # args.tokenizer.eos_token #
+                args.pad_id = args.tokenizer.convert_tokens_to_ids(args.tokenizer.eos_token)  #
+            args.pad_token = "default_" + args.tokenizer.pad_token
+        else:
+            args.tokenizer.pad_token = args.pad_token  # ({'pad_token': '[PAD]'}) # args.tokenizer.eos_token #
+            args.pad_id = args.tokenizer.convert_tokens_to_ids(args.pad_token)  #
+        
+        self.tokenizer = args.tokenizer
+
     def prepare_model(self, args, index):
         if args.model_type.lower() == 'qwen2':
             model_path = args.model_list[str(index)]['path']
@@ -182,33 +199,42 @@ class Party(object):
             args.model_embedded_dim = args.config.hidden_size
             args.generation_config = result['generation_config']
             self._set_peft()
+
         elif args.model_type.lower() == 'gpt2_new':
             print('==== Load GPT2 NEW ====')
-            model_path = args.model_list[str(index)]['path']
-
-            # Load Tokenizer
-            args.tokenizer = AutoTokenizer.from_pretrained(model_path)
-            args.tokenizer.padding_side = args.padding_side if (args.padding_side in ["left", "right"]) else "left"
-            if args.pad_token == "default":
-                if args.tokenizer.pad_token is None:
-                    args.tokenizer.pad_token = args.tokenizer.eos_token  # ({'pad_token': '[PAD]'}) # args.tokenizer.eos_token #
-                    args.pad_id = args.tokenizer.convert_tokens_to_ids(args.tokenizer.eos_token)  #
-                args.pad_token = "default_" + args.tokenizer.pad_token
-            else:
-                args.tokenizer.pad_token = args.pad_token  # ({'pad_token': '[PAD]'}) # args.tokenizer.eos_token #
-                args.pad_id = args.tokenizer.convert_tokens_to_ids(args.pad_token)  #
+            model_path = args.model_list['path']
+            self.prepare_tokenizer(args, model_path)
             
             # Load Model
-            loader = GPT2ModelLoader(local_encoders_num = args.local_encoders_num)
+            loader = GPT2ModelLoader()
             result = loader.load(args, model_path, self.is_active_party)
-
-            self.models.update(result['models'])
+            self.models=result['models'] #.update(result['models'])
+            
             args.config = result['config'] # model config
             args.config.pad_token_id = args.pad_id
-            
             args.generation_config = result['generation_config'] 
             args.model_architectures = result['model_architectures'] 
             args.model_embedded_dim = result['model_embedded_dim'] 
+            args.all_encoders_num = result['all_encoders_num'] 
+            args.global_encoders_num = args.all_encoders_num - args.local_encoders_num - args.local_tail_encoders_num
+            print(f'Model Partition: head-{args.local_encoders_num}/body-{args.global_encoders_num}/tail-{args.local_tail_encoders_num}')
+           
+            print(f'Party {self.index} Model:',self.models.keys())
+            
+            # Optimizer
+            self.optimizers = {}
+            for i in self.models.keys():
+                trainable_params = list(filter(lambda x: x.requires_grad, self.models[i].parameters()))
+                if len(trainable_params) > 0:
+                    optimizer = torch.optim.Adam(trainable_params, lr=args.main_lr)
+                else:
+                    optimizer = None
+                self.optimizers.update({i: optimizer})
+            print(f'Party {self.index} Optimizer:',self.optimizers.keys())
+
+                # scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, end_factor=0.01, total_iters=10)
+                # self.lr_schedulers.update({i: scheduler})
+
 
         else:
             (
@@ -233,8 +259,6 @@ class Party(object):
         if _train_conf := vfl_basic_config.vfl_training_config:
             if _train_conf.peft_config:
                 self._peft_model_setting()
-
-
 
     def _peft_model_setting(self):
         _train_conf = vfl_basic_config.vfl_training_config
@@ -276,196 +300,7 @@ class Party(object):
         self.local_gradient = gradient
         return
 
-    def give_pred_old(self, use_cache=False):
-        intermediate = self.local_model(input_ids=self.local_batch_data, \
-                                        attention_mask=self.local_batch_attention_mask, \
-                                        token_type_ids=self.local_batch_token_type_ids, \
-                                        past_key_values=self.past_key_values, \
-                                        use_cache=use_cache)
-        self.local_pred = intermediate['inputs_embeds']
-        self.local_attention_mask = intermediate['attention_mask'] if ('attention_mask' in intermediate) else None
-
-        self.local_pred_clone = self.local_pred.detach().clone()
-        if self.local_attention_mask != None:
-            self.local_attention_mask = self.local_attention_mask.detach().clone()
-
-        # if self.args.model_type in ['Bert','Roberta']:
-        #     # SequenceClassification & QuestionAnswering
-        #     intermediate = self.local_model(input_ids = self.local_batch_data, \
-        #                                     attention_mask = self.local_batch_attention_mask, \
-        #                                     token_type_ids=self.local_batch_token_type_ids)
-        #     self.local_pred = intermediate['local_pred']
-        #     self.local_attention_mask = intermediate['local_attention_mask']
-
-        #     self.local_pred_clone = self.local_pred.detach().clone()
-        #     self.local_attention_mask = self.local_attention_mask.detach().clone()
-
-        # elif self.args.model_type == 'GPT2':
-        #     if self.args.task_type == 'SequenceClassification':
-        #         # self.local_pred,  self.local_sequence_lengths, self.local_attention_mask, _
-        #         intermediate = self.local_model(input_ids = self.local_batch_data,\
-        #                                         attention_mask = self.local_batch_attention_mask,\
-        #                                         token_type_ids = self.local_batch_token_type_ids)
-        #         self.local_pred = intermediate['local_pred']
-        #         self.local_sequence_lengths = intermediate['local_sequence_lengths']
-        #         self.local_attention_mask = intermediate['local_attention_mask']
-
-        #         self.local_pred_clone = self.local_pred.detach().clone()
-        #         self.local_attention_mask = self.local_attention_mask.detach().clone()
-        #     elif self.args.task_type == 'CausalLM':
-        #         intermediate = self.local_model(input_ids = self.local_batch_data,\
-        #                                         attention_mask = self.local_batch_attention_mask,\
-        #                                         token_type_ids = self.local_batch_token_type_ids,\
-        #                                         use_cache = use_cache)
-        #         self.local_pred = intermediate['local_pred']
-        #         self.local_sequence_lengths = intermediate['local_sequence_lengths']
-        #         self.local_attention_mask = intermediate['local_attention_mask']
-
-        #         self.local_pred_clone = self.local_pred.detach().clone()
-        #         self.local_attention_mask = self.local_attention_mask.detach().clone()
-        #     elif self.args.task_type == 'Generation':
-        #         # # renew and transmit past_key_values
-        #         # self.local_pred,  self.local_sequence_lengths, self.local_attention_mask ,self.past_key_values = \
-        #         #     self.local_model(self.local_batch_data, attention_mask = self.local_batch_attention_mask, \
-        #         #     token_type_ids = self.local_batch_token_type_ids, \
-        #         #     past_key_values = self.past_key_values ,use_cache = use_cache)
-
-        #         intermediate = self.local_model(input_ids = self.local_batch_data,\
-        #                                         attention_mask = self.local_batch_attention_mask,\
-        #                                         token_type_ids = self.local_batch_token_type_ids,\
-        #                                         use_cache = use_cache)
-        #         self.local_pred = intermediate['local_pred']
-        #         self.local_sequence_lengths = intermediate['local_sequence_lengths']
-        #         self.local_attention_mask = intermediate['local_attention_mask']
-        #         self.past_key_values = intermediate['local_past_key_values']
-
-        #         self.local_pred_clone = self.local_pred.detach().clone()
-        #         self.local_attention_mask = self.local_attention_mask.detach().clone()
-
-        #     elif self.args.task_type == 'QuestionAnswering':
-        #         intermediate = self.local_model(input_ids = self.local_batch_data,\
-        #                                         attention_mask = self.local_batch_attention_mask,\
-        #                                         token_type_ids = self.local_batch_token_type_ids,\
-        #                                         use_cache = use_cache)
-        #         self.local_pred = intermediate['local_pred']
-        #         self.local_sequence_lengths = intermediate['local_sequence_lengths']
-        #         self.local_attention_mask = intermediate['local_attention_mask']
-
-        #         self.local_pred_clone = self.local_pred.detach().clone()
-        #         self.local_attention_mask = self.local_attention_mask.detach().clone()
-
-        # elif self.args.model_type == 'Llama':
-        #     intermediate = self.local_model(input_ids = self.local_batch_data,\
-        #                                     attention_mask = self.local_batch_attention_mask)
-        #     self.local_pred = intermediate['local_pred']
-        #     self.local_sequence_lengths = intermediate['local_sequence_lengths']
-        #     self.local_attention_mask = intermediate['local_attention_mask']
-        #     self.past_key_values = intermediate['local_past_key_values']
-
-        #     self.local_pred_clone = self.local_pred.detach().clone()
-        #     if self.local_attention_mask != None:
-        #         self.local_attention_mask = self.local_attention_mask.detach().clone()
-
-        #     # if self.args.task_type == 'SequenceClassification':
-        #     #     self.local_pred,  self.local_sequence_lengths, self.local_attention_mask, self.past_key_values = self.local_model(\
-        #     #         self.local_batch_data, attention_mask = self.local_batch_attention_mask)
-        #     #     self.local_pred_clone = self.local_pred.detach().clone()
-        #     #     self.local_attention_mask = self.local_attention_mask.detach().clone()
-        #     # elif self.args.task_type == 'CausalLM':
-        #     #     self.local_pred,  self.local_sequence_lengths, self.local_attention_mask, self.past_key_values  = self.local_model(\
-        #     #         self.local_batch_data, attention_mask = self.local_batch_attention_mask)
-        #     #     self.local_pred_clone = self.local_pred.detach().clone()
-        #     #     if (self.local_attention_mask!=None):
-        #     #         self.local_attention_mask = self.local_attention_mask.detach().clone()
-        #     # elif self.args.task_type == 'Generation':
-        #     #     self.local_pred,  self.local_sequence_lengths, self.local_attention_mask , self.past_key_values = \
-        #     #         self.local_model(self.local_batch_data, attention_mask = self.local_batch_attention_mask, \
-        #     #         past_key_values = self.past_key_values ,use_cache = use_cache)
-        #     #     self.local_pred_clone = self.local_pred.detach().clone()
-        #     #     self.local_attention_mask = self.local_attention_mask.detach().clone()
-        #     # elif self.args.task_type == 'QuestionAnswering':
-        #     #     self.local_pred,  self.local_sequence_lengths, self.local_attention_mask, self.past_key_values  = self.local_model(self.local_batch_data, attention_mask = self.local_batch_attention_mask)
-        #     #     self.local_pred_clone = self.local_pred.detach().clone()
-        #     #     self.local_attention_mask = self.local_attention_mask.detach().clone()
-
-        # elif self.args.model_type == 'T5':
-        #     if self.args.task_type == 'CausalLM':
-        #         self.local_pred,  self.local_attention_mask = \
-        #             self.local_model(self.local_batch_data, attention_mask = self.local_batch_attention_mask, \
-        #             use_cache = use_cache)
-        #         self.local_pred_clone = self.local_pred.detach().clone()
-        #         self.local_attention_mask = self.local_attention_mask.detach().clone()
-
-        ######### Defense Applied on Local Model Prediction Process ###########
-        if self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "out"):
-            self.local_pred, self.mid_loss = self.mid_model(self.local_pred)  # , self.local_attention_mask
-            self.local_pred_clone = self.local_pred.detach().clone()
-
-        elif self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (
-                self.mid_position == "inner"):
-            # print('inner mid: self.mid_position=',self.mid_position)
-            self.mid_loss = self.local_model.mid_loss
-            # print(' self.local_model.mid_loss:', self.local_model.mid_loss)
-
-        elif (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"])):
-            self.origin_pred = self.local_pred.clone()
-            # print('self.origin_pred:',self.origin_pred.shape)
-            self.local_pred = self.adversarial_model(self.origin_pred)
-            self.local_pred_clone = self.local_pred.detach().clone()
-        ######### Defense Applied on Local Model Prediction Process ###########
-
-        self.transferred_past_key_values = None  # no need to transmit past_key_values
-        if use_cache:  # need to transmit past_key_values
-            self.transferred_past_key_values = self.past_key_values
-
-        intermediate['inputs_embeds'] = self.local_pred_clone
-        intermediate['attention_mask'] = self.local_attention_mask
-        # intermediate['past_key_values'] = self.transferred_past_key_values
-
-        return intermediate
-
-        # if self.args.model_type in ['Bert','Roberta']:
-        #     intermediate['local_pred'] = self.local_pred_clone
-        #     intermediate['local_attention_mask'] = self.local_attention_mask
-        #     intermediate['local_past_key_values'] = self.transferred_past_key_values
-        #     return intermediate
-        #     # self.local_pred, self.local_pred_clone , self.local_attention_mask, self.transferred_past_key_values
-        # elif self.args.model_type == 'GPT2':
-        #     if self.args.task_type == 'SequenceClassification':
-        #         intermediate['local_pred'] = self.local_pred_clone
-        #         intermediate['local_attention_mask'] = self.local_attention_mask
-        #         intermediate['local_past_key_values'] = self.transferred_past_key_values
-        #         intermediate['local_sequence_lengths'] = self.local_sequence_lengths
-        #         return intermediate
-        #         # self.local_pred, self.local_pred_clone, self.local_attention_mask ,self.transferred_past_key_values, \
-        #         #         self.local_sequence_lengths
-        #     elif self.args.task_type == 'CausalLM':
-        #         intermediate['local_pred'] = self.local_pred_clone
-        #         intermediate['local_attention_mask'] = self.local_attention_mask
-        #         intermediate['local_past_key_values'] = self.transferred_past_key_values
-        #         return intermediate
-        #     elif self.args.task_type == 'Generation':
-        #         intermediate['local_pred'] = self.local_pred_clone
-        #         intermediate['local_attention_mask'] = self.local_attention_mask
-        #         intermediate['local_past_key_values'] = self.transferred_past_key_values
-        #         return intermediate
-        #     elif self.args.task_type == 'QuestionAnswering':
-        #         intermediate['local_pred'] = self.local_pred_clone
-        #         intermediate['local_attention_mask'] = self.local_attention_mask
-        #         intermediate['local_past_key_values'] = self.transferred_past_key_values
-        #         return intermediate
-        # elif self.args.model_type == 'Llama':
-        #     intermediate['local_pred'] = self.local_pred_clone
-        #     intermediate['local_attention_mask'] = self.local_attention_mask
-        #     intermediate['local_past_key_values'] = self.transferred_past_key_values
-        #     intermediate['local_sequence_lengths'] = self.local_sequence_lengths
-        #     return intermediate
-
-        # elif self.args.model_type == 'T5':
-        #     if self.args.task_type == 'CausalLM':
-        #         return self.local_pred, self.local_pred_clone,self.local_attention_mask, self.transferred_past_key_values
-
-    def _tensor_to_device(self,dict_like:dict,device):
+    def _tensor_to_device(self, dict_like:dict, device):
         for k,v in dict_like.items():
             if isinstance(v,torch.Tensor):
                 dict_like[k] = v.to(device)
@@ -474,13 +309,13 @@ class Party(object):
     def give_pred(self, use_cache=False):
         # print('give_pred_dev:',self.local_data_input.keys())
         self.local_data_input['use_cache'] = use_cache
-        self._tensor_to_device(self.local_data_input,self.models[0].device)
+        self._tensor_to_device(self.local_data_input , self.models[0].device)
+
         intermediate = self.forward(model_index=0,**self.local_data_input)
         if not isinstance(intermediate, dict):
             intermediate = intermediate.prepare_for_forward()
         self.local_pred = intermediate['inputs_embeds']
         self.local_attention_mask = intermediate['attention_mask'] if ('attention_mask' in intermediate) else None
-
         self.local_pred_clone = self.local_pred.detach().clone()
         if self.local_attention_mask != None:
             self.local_attention_mask = self.local_attention_mask.detach().clone()
@@ -519,6 +354,20 @@ class Party(object):
 
         return intermediate
 
+    @timer()
+    def forward(self, model_index, **kwargs):
+        logger.debug(f"model_{model_index} forward")
+        self.input_tensors[model_index] = kwargs.get('inputs_embeds')
+        
+        resp = self.models[model_index](**kwargs)
+
+        if model_index == self.args.vfl_model_slice_num - 1:
+            self.output_tensors[model_index] = resp.get('logits')
+        else:
+            self.output_tensors[model_index] = resp.get('inputs_embeds')
+
+        return self._detach_tensor(resp)
+
     def give_current_lr(self):
         return (self.local_model_optimizer.state_dict()['param_groups'][0]['lr'])
 
@@ -527,18 +376,8 @@ class Party(object):
         eta_t = eta_0 / (np.sqrt(i_epoch + 1))
         for param_group in self.local_model_optimizer.param_groups:
             param_group['lr'] = eta_t
-
-    def obtain_local_data_old(self, input_ids=None,
-                              inputs_embeds=None,
-                              local_batch_attention_mask=None,
-                              local_batch_token_type_ids=None,
-                              past_key_values=None,
-                              **kwargs):
-        self.local_batch_data = input_ids  # input_ids
-        self.local_batch_attention_mask = local_batch_attention_mask
-        self.local_batch_token_type_ids = local_batch_token_type_ids
-
-        self.past_key_values = past_key_values
+        for param_group in self.local_model_tail_optimizer.param_groups:
+            param_group['lr'] = eta_t
 
     def obtain_local_data(self, data_input_dict, **kwargs):
         # self.local_batch_data = kwargs['input_ids'] # input_ids
@@ -567,6 +406,21 @@ class Party(object):
             self.models.update({0: model})
 
     @property
+    def local_model_tail(self):
+        if 2 in self.models:
+            return self.models[2]
+        else:
+            return None
+
+    @local_model_tail.setter
+    def local_model_tail(self, model):
+        if model is None:
+            pass
+        else:
+            self.models.update({2: model})
+
+
+    @property
     def local_model_optimizer(self):
         if 0 in self.optimizers:
             return self.optimizers[0]
@@ -579,6 +433,21 @@ class Party(object):
             pass
         else:
             self.optimizers.update({0: optimizer})
+
+    @property
+    def local_model_tail_optimizer(self):
+        if 2 in self.optimizers:
+            return self.optimizers[2]
+        else:
+            return None
+
+    @local_model_tail_optimizer.setter
+    def local_model_tail_optimizer(self, optimizer):
+        if optimizer is None:
+            pass
+        else:
+            self.optimizers.update({2: optimizer})
+
 
     @property
     def local_pred(self):
@@ -615,16 +484,6 @@ class Party(object):
         # args.local_model()
         pass
 
-    @timer()
-    def forward(self, model_index, **kwargs):
-        logger.debug(f"model_{model_index} forward")
-        self.input_tensors[model_index] = kwargs.get('inputs_embeds')
-        resp = self.models[model_index](**kwargs)
-        if model_index == vfl_basic_config.num_of_slice - 1:
-            self.output_tensors[model_index] = resp.get('logits')
-        else:
-            self.output_tensors[model_index] = resp.get('inputs_embeds')
-        return self._detach_tensor(resp)
 
     def _detach_tensor(self, dict_like: dict):
         return dict_like  # todo: need to check whether used in local mode
