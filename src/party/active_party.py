@@ -91,10 +91,10 @@ class ActiveParty_LLM(Party_LLM):
     def aggregate_remote(self, pred_list):
         return self._do_aggregate_remote(pred_list)
 
-    def save_pretrained_remote(self, data):
-        model_index = data['model_index']
-        model_id = data['model_id']
-        self.save_pretrained(model_index, model_id)
+    # def save_pretrained_remote(self, data):
+    #     model_index = data['model_index']
+    #     model_id = data['model_id']
+    #     self.save_pretrained(model_index, model_id)
 
     @timer()
     def aggregate(self, pred_list, use_cache=False, test=False):

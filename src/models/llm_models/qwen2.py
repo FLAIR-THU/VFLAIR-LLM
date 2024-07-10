@@ -13,7 +13,7 @@ import torch
 import copy
 import os
 from peft.peft_model import PeftModel
-from .base import VFLPipeline, VFLModel
+from .base import ModelPartitionPipeline, VFLModel
 
 
 class Qwen2DecoderLayerParam(object):
@@ -792,7 +792,7 @@ class E2EModel(Qwen2ForCausalLM):
                                   **kwargs, )
 
 
-class VFLPipelineQwen(VFLPipeline):
+class ModelPartitionPipelineQwen(ModelPartitionPipeline):
 
     def _load_model_head(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         model_head = Qwen2ModelHead.from_pretrained(model_name_or_path, **kwargs)

@@ -1,11 +1,10 @@
-from .IModelLoader import IModelLoader
-from transformers import PreTrainedModel, AutoTokenizer
-from config import vfl_basic_config
-from models.llm_models.gpt2_new import VFLPipelineGPT2
+from .LLMModelLoader import LLMModelLoader
+from transformers import PreTrainedModel, AutoTokenizer, AutoConfig
+from models.llm_models.gpt2 import ModelPartitionPipelineGPT2
 from peft import LoraConfig, TaskType, get_peft_model, PeftModel, PeftModelForCausalLM
 
 
-class GPT2ModelLoader(IModelLoader):
+class GPT2ModelLoader(LLMModelLoader):
     _models = {}  # type:dict[int,PreTrainedModel]
 
     def load(self, args, model_path, is_active_party):
@@ -15,89 +14,103 @@ class GPT2ModelLoader(IModelLoader):
             split_index = (args.local_encoders_num, args.local_tail_encoders_num)
         else:
             raise ValueError(f"Not supported vfl_model_slice_num:{args.vfl_model_slice_num}") 
-        # print(f'split_index: {split_index}')
-        p = VFLPipelineGPT2(split_index=split_index, is_server=is_active_party, device = args.device)
-        self._models.update(p.from_pretrained(model_path))
-        # **vfl_basic_config.kwargs_model_loading))
-        # self._tensor_to_device(self._models, args.device)
+        
+        model_config = AutoConfig.from_pretrained(model_path) # full model config
+        if hasattr(model_config, 'generation_config'):
+            generation_config = model_config.generation_config
+        else:
+            generation_config = None
+        model_architectures = model_config.architectures
+        model_embedded_dim = model_config.hidden_size # change with model type
+        all_encoders_num = model_config.num_hidden_layers # change with model type
 
-        # print(f'self._models {is_active_party}:{self._models.keys()}')
-        # for _key in self._models.keys():
-        #     print(f'model {_key} device:',self._models[_key].device)
-            
-        config, generation_config = self._prepare_model_update_args()
-        model_architectures = config.architectures
-        model_embedded_dim = config.n_embd
-        all_encoders_num = config.n_layer
+        p = ModelPartitionPipelineGPT2(args=args, all_layer_num = all_encoders_num, 
+                            split_index=split_index, is_server=is_active_party)
+        self._models=p.from_pretrained(model_path)# **vfl_basic_config.kwargs_model_loading))
+        print(f'===== is_active_party={is_active_party}---{self._models.keys()} ======')
 
 
         if args.finetune_name == "LoRA":
             for i, m in self._models.items():
-                peft_model = self._set_peft(m)
+                peft_model = self._set_peft(m, args.finetune_detail_configs)
                 self._models.update({i: peft_model})
-            # print('after lora trainable param:')
-            # self._models[0].print_trainable_parameters()
+            print('after lora trainable param:')
+            for _key in self._models.keys():
+                print(_key)
+                self._models[_key].print_trainable_parameters()
 
         if not is_active_party:
             model_head_embedding_trainable = args.embedding_trainable
-            print('model_head embedding_trainable = ', model_head_embedding_trainable)
             if not model_head_embedding_trainable: # freeze embeddings that's not needed
                 for param in self._models[0].wte.parameters():
                     param.requires_grad = False
                 for param in self._models[0].wpe.parameters():
                     param.requires_grad = False
             model_head_encoder_trainable_ids = args.encoder_trainable_ids['head']
-            print('model_head encoder_trainable_ids = ', model_head_encoder_trainable_ids)
             for encoder_id in range(len(self._models[0].h)):
                 if encoder_id not in model_head_encoder_trainable_ids: # freeze encoders that's not needed
                     for param in self._models[0].h.parameters():
                         param.requires_grad = False
-            
+            print(f'passive_model_head: encoder_trainable_ids={model_head_encoder_trainable_ids}; embedding_trainable={model_head_embedding_trainable}')
+
             if args.vfl_model_slice_num == 3:
                 model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
-                print('model_tail encoder_trainable_ids = ', model_tail_encoder_trainable_ids)
                 for encoder_id in range(len(self._models[2].transformer.h)):
                     if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
                         for param in self._models[2].transformer.h.parameters():
                             param.requires_grad = False
-
+                model_tail_head_layer_trainable = args.head_layer_trainable
+                if not model_tail_head_layer_trainable: # freeze embeddings that's not needed
+                    for param in self._models[2].head_layer.parameters():
+                        param.requires_grad = False
+                print(f'passive_model_tail: encoder_trainable_ids={model_tail_encoder_trainable_ids}; head_layer_trainable={model_tail_head_layer_trainable}', )
         else:
-            model_body_encoder_trainable_ids = args.encoder_trainable_ids['body']
-            print('model_body encoder_trainable_ids = ', model_body_encoder_trainable_ids)
             if args.vfl_model_slice_num == 3:
+                model_body_encoder_trainable_ids = args.encoder_trainable_ids['body']
                 for encoder_id in range(len(self._models[1].h)):
                     if encoder_id not in model_body_encoder_trainable_ids: # freeze encoders that's not needed
                         for param in self._models[1].h.parameters():
                             param.requires_grad = False
+                print(f'active_model_body: encoder_trainable_ids={model_body_encoder_trainable_ids}')
+                
             else:
+                model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
                 for encoder_id in range(len(self._models[1].transformer.h)):
-                    if encoder_id not in model_body_encoder_trainable_ids: # freeze encoders that's not needed
+                    if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
                         for param in self._models[1].transformer.h.parameters():
                             param.requires_grad = False
+                model_tail_head_layer_trainable = args.head_layer_trainable
+                if not model_tail_head_layer_trainable: # freeze embeddings that's not needed
+                    for param in self._models[1].head_layer.parameters():
+                        param.requires_grad = False
+                print(f'active_model_tail: encoder_trainable_ids={model_tail_encoder_trainable_ids}; head_layer_trainable={model_tail_head_layer_trainable}')
 
-        # print('after config trainable param:')
-        # self._models[0].print_trainable_parameters()
+
+        print('final trainable param:')
+        for _key in self._models.keys():
+            print(_key)
+            self._models[_key].print_trainable_parameters()
 
         return {
-            # "tokenizer": tokenizer,
             "models": self._models,
-            "config": config,
+            "config": model_config,
             "generation_config": generation_config,
             "model_architectures": model_architectures,
             "model_embedded_dim": model_embedded_dim,
             "all_encoders_num": all_encoders_num
         }
 
-    def _set_peft(self, model):
+    def _set_peft(self, model, finetune_detail_configs):
         """
         peft training or load trained peft weights
         :return:
         """
         # print('args.finetune_detail_configs:',args.finetune_detail_configs)
-        if args.finetune_detail_configs != None:
+        if finetune_detail_configs != None and finetune_detail_configs!={}:
             lora_config = LoraConfig(
-                **args.finetune_detail_configs
+                **finetune_detail_configs
             )
+            # print('finetune_detail_configs:',finetune_detail_configs)
         else:
             lora_config = LoraConfig(
                 inference_mode=False,  
@@ -105,6 +118,7 @@ class GPT2ModelLoader(IModelLoader):
                 lora_alpha=32, 
                 lora_dropout=0.1
             )
+            # print('default lora configs')
 
         def get_lora_model(model):
             model.enable_input_require_grads()
@@ -112,8 +126,6 @@ class GPT2ModelLoader(IModelLoader):
             return peft_model
 
         model = get_lora_model(model)
-        print('after lora')
-        model.print_trainable_parameters()
         return model
 
     def _prepare_model_update_args(self):
@@ -126,7 +138,3 @@ class GPT2ModelLoader(IModelLoader):
             return model.config, model.generation_config
         return None, None
 
-    def _tensor_to_device(self, dict_like:dict, device):
-        for k,v in dict_like.items():
-            if isinstance(v,torch.Tensor):
-                dict_like[k] = v.to(device)

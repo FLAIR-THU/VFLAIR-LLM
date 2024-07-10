@@ -9,6 +9,19 @@ from transformers import AutoTokenizer
 
 
 class VFLModel(ABC):
+    
+    def print_trainable_parameters(self):
+        """
+        Prints the number of trainable parameters in the model.
+        """
+        trainable_params = 0
+        all_param = 0
+        for _, param in self.named_parameters():
+            all_param += param.numel()
+            if param.requires_grad:
+                trainable_params += param.numel()
+        print(f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}")
+
     @abstractmethod
     def vfl_split(self, idx_of_layers: Iterable[int]) -> bool:
         raise NotImplementedError('Not implemented')
@@ -18,17 +31,18 @@ class VFLModel(ABC):
         pass
 
 
-class VFLPipeline(ABC):
+class ModelPartitionPipeline(ABC):
     '''
     split_index: (number of encoders in model head , number of encoders in nudel tail)
     for 2-slice scenario : (n_local, 0)
     for 3-slice scenario : (n_local_head, n_local_tail)
     '''
-    def __init__(self, split_index=Union[int, Tuple[int]], is_server=None, device = 'cuda'):
+    def __init__(self, args, all_layer_num, split_index=Union[int, Tuple[int]], is_server=None):
+        self.args = args
         self.__split_index = split_index
         self.is_server = is_server
-        self.device = device
-        self.all_layer_num = -1
+        self.device = args.device
+        self.all_layer_num = all_layer_num
     
     # def __init__(self, vfl_slice_num = int, 
     #     local_encoders_num =Union[int, Tuple[int]], 

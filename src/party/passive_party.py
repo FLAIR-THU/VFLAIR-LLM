@@ -55,7 +55,8 @@ class PassiveParty_LLM(Party_LLM):
         super().__init__(args, index, need_data=need_data, need_model=need_model)
         logger.debug(f'running on cuda{os.getenv("CUDA_VISIBLE_DEVICES").split(",")[torch.cuda.current_device()]}')
 
-        self.init_apply_defense(args.apply_defense, args.apply_adversarial, args.defense_configs, args.main_lr,
+        self.init_apply_defense(args.apply_defense, args.apply_adversarial, 
+                                args.defense_configs, args.main_lr,
                                 args.device)
 
         self.criterion = cross_entropy_for_onehot
@@ -88,6 +89,7 @@ class PassiveParty_LLM(Party_LLM):
         # some defense need model, add here
         if need_apply_defense:
             if apply_adversarial and (self.index in defense_configs["party"]):
+                print(f'Passive Party {self.index}: init Adversarial Trainining Defense')
                 # add adversarial model for local model
                 if not 'party' in defense_configs:
                     defense_configs['party'] = [0]
@@ -137,6 +139,7 @@ class PassiveParty_LLM(Party_LLM):
                 self.adversary_lambda = defense_configs['lambda']
 
             elif self.args.apply_mid and (self.index in self.args.defense_configs["party"]):
+                print(f'Passive Party {self.index}: init MID Defense')
                 self.mid_lambda = self.args.defense_configs['lambda']
                 self.mid_model_name = self.args.defense_configs['mid_model_name']
                 self.mid_lr = self.args.defense_configs['lr']
@@ -215,6 +218,10 @@ class PassiveParty_LLM(Party_LLM):
 
                 print(f'self.mid_model_name:{self.mid_model_name}')
 
+            elif self.args.apply_dp and (self.index in defense_configs["party"]):
+                print(f'Passive Party {self.index}: init DP Defense')
+
+
     def prepare_data(self, args, index):
         if not args.dataset:
             return None
@@ -282,21 +289,21 @@ class PassiveParty_LLM(Party_LLM):
         self.global_gradients = global_gradients_clone
         return global_gradients_clone
 
-
     def cal_loss(self, pred, test=False):
         gt_one_hot_label = self.gt_one_hot_label  # label
 
         # ########### Normal Loss ###############
         if self.args.model_architect == 'CLS':  # self.args.task_type == 'SequenceClassification':
-            # loss = self.criterion(pred, gt_one_hot_label)
-            pooled_logits = pred.logits
-            labels = gt_one_hot_label
-
-            # GPT2
+            pooled_logits = pred.logits # [bs, num_labels]
+            labels = torch.argmax(gt_one_hot_label,-1) # [bs, num_labels] -> [bs]
+            
+            # copied from transformer.model.gpt2.modeling_gpt
             if self.num_labels == 1:
                 self.problem_type = "regression"
+            elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                    self.problem_type = "single_label_classification"
             else:
-                self.problem_type = "single_label_classification"
+                self.problem_type = "multi_label_classification"
 
             if self.problem_type == "regression":
                 loss_fct = MSELoss()
@@ -306,10 +313,15 @@ class PassiveParty_LLM(Party_LLM):
                     loss = loss_fct(pooled_logits, labels)
             elif self.problem_type == "single_label_classification":
                 loss_fct = CrossEntropyLoss()
-                loss = loss_fct(pooled_logits.view(-1, self.num_labels), labels)  # labels.view(-1)
-            # elif self.problem_type == "multi_label_classification":
-            #     loss_fct = BCEWithLogitsLoss()
-            #     loss = loss_fct(pooled_logits, labels)
+                # print('labels:',labels.shape)
+                # print('self.num_labels:',self.num_labels)
+                # print('pooled_logits:',pooled_logits.shape)
+                # print('pooled_logits.view(-1, self.num_labels):',pooled_logits.view(-1, self.num_labels).shape)
+                loss = loss_fct(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+            elif self.problem_type == "multi_label_classification":
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(pooled_logits, labels)
+
 
         elif self.args.model_architect == 'CLM':  # self.args.task_type == 'CausalLM':
             lm_logits = pred.logits  # [bs, seq_len, vocab_size]
@@ -665,25 +677,6 @@ class PassiveParty_LLM(Party_LLM):
                             w.grad = g.detach()
 
                 self.local_model_tail_optimizer.step()
-
-
-    # def calculate_gradient_each_class(self, global_pred, local_pred_list, test=False):
-    #     # print(f"global_pred.shape={global_pred.size()}") # (batch_size, num_classes)
-    #     self.gradient_each_class = [[] for _ in range(global_pred.size(1))]
-    #     one_hot_label = torch.zeros(global_pred.size()).to(global_pred.device)
-    #     for ic in range(global_pred.size(1)):
-    #         one_hot_label *= 0.0
-    #         one_hot_label[:,ic] += 1.0
-    #         if self.train_index != None: # for graph data
-    #             if test == False:
-    #                 loss = self.criterion(global_pred[self.train_index], one_hot_label[self.train_index])
-    #             else:
-    #                 loss = self.criterion(global_pred[self.test_index], one_hot_label[self.test_index])
-    #         else:
-    #             loss = self.criterion(global_pred, one_hot_label)
-    #         for ik in range(self.args.k):
-    #             self.gradient_each_class[ic].append(torch.autograd.grad(loss, local_pred_list[ik], retain_graph=True, create_graph=True))
-    #     # end of calculate_gradient_each_class, return nothing
 
     def launch_defense(self, gradients_list, _type):
 

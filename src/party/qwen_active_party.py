@@ -4,7 +4,7 @@ from party.llm_party import Party as Party_LLM
 from transformers import AutoTokenizer
 from peft import get_peft_model
 from config import vfl_basic_config
-from models.llm_models.qwen2 import VFLPipelineQwen
+from models.llm_models.qwen2 import ModelPartitionPipelineQwen
 
 
 class QW_Active_Party(Party_LLM):
@@ -35,7 +35,7 @@ class QW_Active_Party(Party_LLM):
     def prepare_model(self, args, index):
         model_path = args.model_list[str(index)]['path']
         args.tokenizer = AutoTokenizer.from_pretrained(model_path)
-        p = VFLPipelineQwen(vfl_basic_config.split_index, self.is_active_party)
+        p = ModelPartitionPipelineQwen(vfl_basic_config.split_index, self.is_active_party)
         self.models.update(p.from_pretrained(model_path, **vfl_basic_config.kwargs_model_loading))
         # whether to train
         if _train_conf := vfl_basic_config.vfl_training_config:

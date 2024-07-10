@@ -748,54 +748,6 @@ def create_main_task(global_model_type: GenerationMixin):
                             score += _score
                         score = score/len(target_word_list)
                         acc = score
-
-                        # if self.args.dataset=='GMS8K':
-                        #     predict_word_list = [
-                        #         self.args.tokenizer.decode(_ids)
-                        #         for _ids in list(predict_word_list)]
-
-                        #     target_word_list = [
-                        #         self.args.tokenizer.decode(_ids)
-                        #         for _ids in list(target_word_list)]
-
-                        #     ANS_RE = re.compile(r"#### (\-?[0-9\.\,]+)")
-                        #     INVALID_ANS = "[invalid]"
-
-                        #     def extract_answer(completion):
-                        #         match = ANS_RE.search(completion)
-                        #         # print('match:',match)
-                        #         if match:
-                        #             match_str = match.group(1).strip()
-                        #             match_str = match_str.replace(",", "")
-                        #             return match_str
-                        #         else:
-                        #             return INVALID_ANS
-
-                        #     def is_correct(model_completion, gt_answer):
-                        #         gt_answer = extract_answer(gt_answer)
-                        #         print('gt_answer:',gt_answer)
-                        #         print(self.args.tokenizer.encode(gt_answer))
-
-                        #         # assert gt_answer != INVALID_ANS
-                        #         if gt_answer == INVALID_ANS:
-                        #             return 0
-                        #         pred_ans = extract_answer(model_completion)
-                        #         print('pred_ans:',pred_ans)
-                        #         print(self.args.tokenizer.encode(pred_ans))
-                        #         return  pred_ans == gt_answer
-
-                        #     score = 0
-                        #     for i in range(len(target_word_list)):
-                        #         print('-'*100)
-                                
-                        #         print('GOLD:',target_word_list[i])
-                        #         print('PRED:',predict_word_list[i])
-                        #         _score = is_correct(predict_word_list[i],target_word_list[i])
-                        #         score += _score
-                        #         print('SCORE:',_score)
-
-                        #     score = score/len(target_word_list)
-                        #     acc = score
                         
                         if self.args.dataset == 'GMS8K':
                             def extract_answer_number(completion):
@@ -1183,6 +1135,7 @@ def create_main_task(global_model_type: GenerationMixin):
             ############### allocate data ###############
             gt_one_hot_label = batch_label
             self.gt_one_hot_label = gt_one_hot_label
+            
             for ik in range(self.k - 1):
                 # # allocate data (data/label/attention_mask/token_type_ids)
                 data_inputs = {}
@@ -1530,7 +1483,7 @@ def create_main_task(global_model_type: GenerationMixin):
             # self.final_state.update(self.save_party_data())
 
             result_path = f'exp_result/{self.args.dataset}/Q{str(self.args.Q)}/'
-            model_name = self.args.model_list[str(0)]["type"].replace('/', '-')
+            model_name = self.args.model_list["name"].replace('/', '-')
             if self.args.pipeline == 'pretrained':
                 filename = f'{self.args.defense_name}_{self.args.defense_param},pretrained_model={model_name}'
             else:

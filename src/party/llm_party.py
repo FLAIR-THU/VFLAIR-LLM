@@ -27,10 +27,10 @@ import collections
 from transformers import PreTrainedModel, AutoTokenizer
 from peft import get_peft_model,PeftModel
 from config import vfl_basic_config
-from models.llm_models.qwen2 import VFLPipelineQwen
-from models.llm_models.base import VFLPipeline
-from load.QwenModelLoader import QwenModelLoader
-from load.GPT2ModelLoader import GPT2ModelLoader
+# from models.llm_models.qwen2 import ModelPartitionPipelineQwen
+# from models.llm_models.base import ModelPartitionPipeline
+# from load.QwenModelLoader import QwenModelLoader
+# from load.GPT2ModelLoader import GPT2ModelLoader
 np_str_obj_array_pattern = re.compile(r'[SaUO]')
 
 
@@ -76,14 +76,19 @@ class Party(object):
         self.models = {}  # type:dict[int,PreTrainedModel]
         self.optimizers = {}  # type:dict[int,torch.optim.Optimizer]
         self.lr_schedulers = {}  # type:dict[int,torch.optim.lr_scheduler.LinearLR]
+
         # local model
         self.local_model = None
         self.local_model_optimizer = None
+        # local model tail (3-slice scenario)
+        self.local_model_tail = None
+        self.local_model_tail_optimizer = None
         # global_model
         self.global_model = None
         self.global_model_optimizer = None
         if need_model:
             self.prepare_model(args, index)
+        
         # tokenizer
         self.tokenizer = None
 
@@ -91,6 +96,7 @@ class Party(object):
         # self.attacker = None
         self.defender = None
 
+        # Data
         if need_data:
             self.prepare_data(args, index)
         # self.prepare_attacker(args, index)
@@ -134,15 +140,15 @@ class Party(object):
             if m:
                 m.train(*args,**kwargs)
 
-    def update_model_data(self, model_data):
-        self.args.tokenizer = model_data['tokenizer']
-        self.models = model_data['models']
-        self.args.config = model_data['config']
-        self.args.model_architectures = self.args.config.architectures
-        self.args.model_embedded_dim = self.args.config.hidden_size
-        if model_data['generation_config']:
-            self.args.generation_config = model_data['generation_config']
-        self._set_peft()
+    # def update_model_data(self, model_data):
+    #     self.args.tokenizer = model_data['tokenizer']
+    #     self.models = model_data['models']
+    #     self.args.config = model_data['config']
+    #     self.args.model_architectures = self.args.config.architectures
+    #     self.args.model_embedded_dim = self.args.config.hidden_size
+    #     if model_data['generation_config']:
+    #         self.args.generation_config = model_data['generation_config']
+    #     self._set_peft()
 
     def prepare_data(self, args, index):
         (
@@ -173,92 +179,96 @@ class Party(object):
 
     def prepare_tokenizer(self, args, model_path):
         # Load Tokenizer
-        args.tokenizer = AutoTokenizer.from_pretrained(model_path)
-        args.tokenizer.padding_side = args.padding_side if (args.padding_side in ["left", "right"]) else "left"
-        if args.pad_token == "default":
-            if args.tokenizer.pad_token is None:
-                args.tokenizer.pad_token = args.tokenizer.eos_token  # ({'pad_token': '[PAD]'}) # args.tokenizer.eos_token #
-                args.pad_id = args.tokenizer.convert_tokens_to_ids(args.tokenizer.eos_token)  #
-            args.pad_token = "default_" + args.tokenizer.pad_token
+        self.args.tokenizer = AutoTokenizer.from_pretrained(model_path)
+        self.args.tokenizer.padding_side = args.padding_side if (args.padding_side in ["left", "right"]) else "left"
+        if self.args.pad_token == "default":
+            if self.args.tokenizer.pad_token is None:
+                self.args.tokenizer.pad_token = args.tokenizer.eos_token  # ({'pad_token': '[PAD]'}) # args.tokenizer.eos_token #
+                self.args.pad_id = args.tokenizer.convert_tokens_to_ids(args.tokenizer.eos_token)  #
+            self.args.pad_token = "default_" + args.tokenizer.pad_token
         else:
-            args.tokenizer.pad_token = args.pad_token  # ({'pad_token': '[PAD]'}) # args.tokenizer.eos_token #
-            args.pad_id = args.tokenizer.convert_tokens_to_ids(args.pad_token)  #
+            self.args.tokenizer.pad_token = args.pad_token  # ({'pad_token': '[PAD]'}) # args.tokenizer.eos_token #
+            self.args.pad_id = args.tokenizer.convert_tokens_to_ids(args.pad_token)  #
         
         self.tokenizer = args.tokenizer
 
+    def prepare_optimizer(self,args):
+        # Optimizer
+        self.optimizers = {}
+        for i in self.models.keys():
+            trainable_params = list(filter(lambda x: x.requires_grad, self.models[i].parameters()))
+            if len(trainable_params) > 0:
+                optimizer = torch.optim.Adam(trainable_params, lr=args.main_lr)
+            else:
+                optimizer = None
+            self.optimizers.update({i: optimizer})
+        print(f'Party {self.index} Optimizer:',self.optimizers.keys())
+        # scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, end_factor=0.01, total_iters=10)
+        # self.lr_schedulers.update({i: scheduler})
+
     def prepare_model(self, args, index):
-        if args.model_type.lower() == 'qwen2':
-            model_path = args.model_list[str(index)]['path']
-            loader = QwenModelLoader()
-            result = loader.load(model_path, self.is_active_party)
+        # if args.model_type.lower() == 'qwen2':
+        #     model_path = args.model_list[str(index)]['path']
+        #     loader = QwenModelLoader()
+        #     result = loader.load(model_path, self.is_active_party)
 
-            args.tokenizer = result['tokenizer']
-            self.models.update(result['models'])
-            args.config = result['config']
-            args.model_architectures = args.config.architectures
-            args.model_embedded_dim = args.config.hidden_size
-            args.generation_config = result['generation_config']
-            self._set_peft()
+        #     args.tokenizer = result['tokenizer']
+        #     self.models.update(result['models'])
+        #     args.config = result['config']
+        #     args.model_architectures = args.config.architectures
+        #     args.model_embedded_dim = args.config.hidden_size
+        #     args.generation_config = result['generation_config']
+        #     self._set_peft()
 
-        elif args.model_type.lower() == 'gpt2_new':
-            print('==== Load GPT2 NEW ====')
-            model_path = args.model_list['path']
-            self.prepare_tokenizer(args, model_path)
-            
-            # Load Model
-            loader = GPT2ModelLoader()
-            result = loader.load(args, model_path, self.is_active_party)
-            self.models=result['models'] #.update(result['models'])
-            
-            args.config = result['config'] # model config
-            args.config.pad_token_id = args.pad_id
-            args.generation_config = result['generation_config'] 
-            args.model_architectures = result['model_architectures'] 
-            args.model_embedded_dim = result['model_embedded_dim'] 
-            args.all_encoders_num = result['all_encoders_num'] 
-            args.global_encoders_num = args.all_encoders_num - args.local_encoders_num - args.local_tail_encoders_num
-            print(f'Model Partition: head-{args.local_encoders_num}/body-{args.global_encoders_num}/tail-{args.local_tail_encoders_num}')
-           
-            print(f'Party {self.index} Model:',self.models.keys())
-            
-            # Optimizer
-            self.optimizers = {}
-            for i in self.models.keys():
-                trainable_params = list(filter(lambda x: x.requires_grad, self.models[i].parameters()))
-                if len(trainable_params) > 0:
-                    optimizer = torch.optim.Adam(trainable_params, lr=args.main_lr)
-                else:
-                    optimizer = None
-                self.optimizers.update({i: optimizer})
-            print(f'Party {self.index} Optimizer:',self.optimizers.keys())
-
-                # scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, end_factor=0.01, total_iters=10)
-                # self.lr_schedulers.update({i: scheduler})
-
-
+        # Load Tokenizer
+        model_path = args.model_list['path']
+        self.prepare_tokenizer(args, model_path)
+        
+        # Load Model
+        result = load_models_per_party_llm(args, index)
+        self.models=result['models'] #.update(result['models'])
+        for _key in self.models.keys(): # update pad token configs
+            self.models[_key].config.pad_token_id = args.pad_id
+    
+        self.args.config = result['config'] # model config
+        self.args.config.pad_token_id = args.pad_id
+        self.args.generation_config = result['generation_config'] 
+        self.args.model_architectures = result['model_architectures'] 
+        self.args.model_embedded_dim = result['model_embedded_dim'] 
+        self.args.all_encoders_num = result['all_encoders_num'] 
+        self.args.global_encoders_num = self.args.all_encoders_num - args.local_encoders_num - args.local_tail_encoders_num
+        print(f'Party {self.index} Model:',self.models.keys())
+        if args.vfl_model_slice_num==3:
+            print(f'Model Partition: 0head-{args.local_encoders_num}/1body-{args.global_encoders_num}/2tail-{args.local_tail_encoders_num}')
         else:
-            (
-                args,
-                self.local_model,
-                self.local_model_optimizer,
-                self.global_model,
-                self.global_model_optimizer
-            ) = load_models_per_party_llm(args, index)
+            print(f'Model Partition: 0head-{args.local_encoders_num}/1tail-{args.global_encoders_num}')
 
-    def _set_peft(self):
-        """
-        peft training or load trained peft weights
-        :return:
-        """
-        if peft_model_path:=self.args.model_list[str(self.index)].get('peft_model_path'):
-            for i,m in self.models.items():
-                _model_path=os.path.join(peft_model_path,f"model_{i}")
-                if m and os.path.exists(_model_path):
-                    self.models[i]=PeftModel.from_pretrained(m, _model_path).train()
+        # Load Optimizer
+        self.prepare_optimizer(args)
+        
+        # else:
+        #     (
+        #         args,
+        #         self.local_model,
+        #         self.local_model_optimizer,
+        #         self.global_model,
+        #         self.global_model_optimizer
+        #     ) = load_models_per_party_llm(args, index)
 
-        if _train_conf := vfl_basic_config.vfl_training_config:
-            if _train_conf.peft_config:
-                self._peft_model_setting()
+    # def _set_peft(self):
+    #     """
+    #     peft training or load trained peft weights
+    #     :return:
+    #     """
+    #     if peft_model_path:=self.args.model_list[str(self.index)].get('peft_model_path'):
+    #         for i,m in self.models.items():
+    #             _model_path=os.path.join(peft_model_path,f"model_{i}")
+    #             if m and os.path.exists(_model_path):
+    #                 self.models[i]=PeftModel.from_pretrained(m, _model_path).train()
+
+    #     if _train_conf := vfl_basic_config.vfl_training_config:
+    #         if _train_conf.peft_config:
+    #             self._peft_model_setting()
 
     def _peft_model_setting(self):
         _train_conf = vfl_basic_config.vfl_training_config
@@ -314,6 +324,7 @@ class Party(object):
         intermediate = self.forward(model_index=0,**self.local_data_input)
         if not isinstance(intermediate, dict):
             intermediate = intermediate.prepare_for_forward()
+
         self.local_pred = intermediate['inputs_embeds']
         self.local_attention_mask = intermediate['attention_mask'] if ('attention_mask' in intermediate) else None
         self.local_pred_clone = self.local_pred.detach().clone()
@@ -358,7 +369,6 @@ class Party(object):
     def forward(self, model_index, **kwargs):
         logger.debug(f"model_{model_index} forward")
         self.input_tensors[model_index] = kwargs.get('inputs_embeds')
-        
         resp = self.models[model_index](**kwargs)
 
         if model_index == self.args.vfl_model_slice_num - 1:
@@ -374,10 +384,12 @@ class Party(object):
     def LR_decay(self, i_epoch):
         eta_0 = self.args.main_lr
         eta_t = eta_0 / (np.sqrt(i_epoch + 1))
-        for param_group in self.local_model_optimizer.param_groups:
-            param_group['lr'] = eta_t
-        for param_group in self.local_model_tail_optimizer.param_groups:
-            param_group['lr'] = eta_t
+        if self.local_model_optimizer != None:
+            for param_group in self.local_model_optimizer.param_groups:
+                param_group['lr'] = eta_t
+        if self.local_model_tail_optimizer != None:
+            for param_group in self.local_model_tail_optimizer.param_groups:
+                param_group['lr'] = eta_t
 
     def obtain_local_data(self, data_input_dict, **kwargs):
         # self.local_batch_data = kwargs['input_ids'] # input_ids
@@ -502,12 +514,12 @@ class Party(object):
         self.optimizers[model_index].step()
         self.optimizers[model_index].zero_grad()
 
-    def save_pretrained(self,model_index,model_id,model_folder=None,**kwargs):
-        if model_folder is None:
-            model_folder = get_model_folder()
-        for i,m in self.models.items():
-            if m and i in model_index:
-                logger.debug(f"save model {i}")
-                VFLPipeline.save_pretrained(model_name_or_path=os.path.join(*filter(lambda x:x is not None,[model_folder,model_id])),
-                                            models={i:m},
-                                            **kwargs)
+    # def save_pretrained(self,model_index,model_id,model_folder=None,**kwargs):
+    #     if model_folder is None:
+    #         model_folder = get_model_folder()
+    #     for i,m in self.models.items():
+    #         if m and i in model_index:
+    #             logger.debug(f"save model {i}")
+    #             ModelPartitionPipeline.save_pretrained(model_name_or_path=os.path.join(*filter(lambda x:x is not None,[model_folder,model_id])),
+    #                                         models={i:m},
+    #                                         **kwargs)

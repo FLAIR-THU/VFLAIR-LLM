@@ -1569,26 +1569,18 @@ def load_dataset_per_party_llm(args, index):
         if train_set_file is None or test_set_file is None:
             train_set_file = DATA_PATH + 'SST-2/train.tsv'
             test_set_file = DATA_PATH + 'SST-2/dev.tsv'
-        df = pd.read_csv(train_set_file, delimiter='\t', names=['label', 'sentence'])  # names=[  'sentence','label']
-        sentences = df.sentence.values[1:]
-        labels = df.label.values[1:]
+        df = pd.read_csv(train_set_file, delimiter='\t')  # names=[  'sentence','label'] , names=['label', 'sentence']
+        sentences = df.sentence.values[:]
+        labels = df.label.values[:]
 
-        # if args.model_architect == 'CLM':
-        #     instructions = task_prompt[args.dataset]
-        #     for i in range(len(sentences)):
-        #         sentences[i] = instructions.format(sentences[i])
 
         X_train = np.array(sentences)
         y_train = np.array([int(_label) for _label in labels])
 
-        df = pd.read_csv(test_set_file, delimiter='\t', names=['label', 'sentence'])  # names=[  'sentence','label']
-        sentences = df.sentence.values[1:]
-        labels = df.label.values[1:]
+        df = pd.read_csv(test_set_file, delimiter='\t')  # names=[  'sentence','label']
+        sentences = df.sentence.values[:]
+        labels = df.label.values[:]
 
-        # if args.model_architect == 'CLM':
-        #     instructions = task_prompt[args.dataset]
-        #     for i in range(len(sentences)):
-        #         sentences[i] = instructions.format(sentences[i])
 
         X_test = np.array(sentences)
         y_test = np.array([int(_label) for _label in labels])
@@ -1933,7 +1925,7 @@ def load_dataset_per_party_llm(args, index):
         texts = []
         target_word = []
 
-        for _all_text in train_all_texts[:1]:
+        for _all_text in train_all_texts[:]:
             all_doc_tokens = args.tokenizer.tokenize(_all_text)#.strip().split()
             # all_doc_tokens = [c for c in all_doc_tokens if c not in string.punctuation]
 
@@ -1972,7 +1964,7 @@ def load_dataset_per_party_llm(args, index):
         test_domain = dataset['test'][:]['domain']
         texts = []
         target_word = []
-        for _all_text in test_all_texts[:50]:
+        for _all_text in test_all_texts[:]:
             all_doc_tokens = args.tokenizer.tokenize(_all_text)  # .strip().split()
 
             text_tokens = all_doc_tokens[:-1]

@@ -592,22 +592,32 @@ def do_load_basic_configs_llm(config_dict, args):
         # Passive Party Models
         assert '0' in config_model_dict, "Passive Party not specified in model list"
         passive_model_dict = config_model_dict['0']
+        
         assert 'head' in passive_model_dict, "Model Head not specified in passive party model configs"
         args.encoder_trainable['head'] = passive_model_dict['head']['encoder_trainable'] if 'encoder_trainable' in passive_model_dict['head'] else False
         args.encoder_trainable_ids['head'] = passive_model_dict['head']['encoder_trainable_ids'] if 'encoder_trainable_ids' in passive_model_dict['head'] else []
         args.embedding_trainable = passive_model_dict['head']['embedding_trainable'] if 'embedding_trainable' in passive_model_dict['head'] else False
+        
         if args.vfl_model_slice_num==3:
             assert 'tail' in passive_model_dict, "Model Tail not specified in passive party model configs"
             args.encoder_trainable['tail'] = passive_model_dict['tail']['encoder_trainable'] if 'encoder_trainable' in passive_model_dict['tail'] else False
             args.encoder_trainable_ids['tail'] = passive_model_dict['tail']['encoder_trainable_ids'] if 'encoder_trainable_ids' in passive_model_dict['tail'] else []
-
+            args.head_layer_trainable = passive_model_dict['tail']['head_layer_trainable'] if 'head_layer_trainable' in passive_model_dict['tail'] else False
+        
         # Active Party Models
         assert '1' in config_model_dict, "Active Party not specified in model list"
         active_model_dict = config_model_dict['1']
-        assert 'body' in active_model_dict, "Model Body not specified in active party model configs"
-        args.encoder_trainable['body'] = active_model_dict['body']['encoder_trainable'] if 'encoder_trainable' in active_model_dict['body'] else False
-        args.encoder_trainable_ids['body'] = active_model_dict['body']['encoder_trainable_ids'] if 'encoder_trainable_ids' in active_model_dict['body'] else []
-        args.head_layer_trainable = active_model_dict['body']['head_layer_trainable'] if 'head_layer_trainable' in active_model_dict['body'] else False
+        
+        if args.vfl_model_slice_num==3:
+            assert 'body' in active_model_dict, "Model Body not specified in active party model configs"
+            args.encoder_trainable['body'] = active_model_dict['body']['encoder_trainable'] if 'encoder_trainable' in active_model_dict['body'] else False
+            args.encoder_trainable_ids['body'] = active_model_dict['body']['encoder_trainable_ids'] if 'encoder_trainable_ids' in active_model_dict['body'] else []
+        
+        else:
+            assert 'tail' in active_model_dict, "Model Tail not specified in active party model configs"
+            args.encoder_trainable['tail'] = active_model_dict['tail']['encoder_trainable'] if 'encoder_trainable' in active_model_dict['tail'] else False
+            args.encoder_trainable_ids['tail'] = active_model_dict['tail']['encoder_trainable_ids'] if 'encoder_trainable_ids' in active_model_dict['tail'] else []
+            args.head_layer_trainable = active_model_dict['tail']['head_layer_trainable'] if 'head_layer_trainable' in active_model_dict['tail'] else False
         
         
         print('args.vfl_model_slice_num:', args.vfl_model_slice_num)
