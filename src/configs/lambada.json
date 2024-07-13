@@ -30,27 +30,27 @@
         "add_special_tokens": 1
     },
     "model_list":{
-        "name": "tiiuaefalcon-rw-1b",
+        "name": "THUDMchatglm3-6b",
         "pretrained": 1,
-        "model_type": "Falcon",
+        "model_type": "ChatGLM",
         "max_sequence": 512,
-        "path": "/home/DAIR/guzx/Git_FedProject/Models/tiiuaefalcon-rw-1b",
+        "path": "/home/DAIR/guzx/Git_FedProject/Models/THUDMchatglm3-6b",
         "0": {
             "head":{
-                "embedding_trainable": 1,
+                "embedding_trainable": 0,
                 "encoder_trainable": 1,
-                "encoder_trainable_ids":[0,1]
+                "encoder_trainable_ids":[0]
             },
             "tail":{
                 "head_layer_trainable": 1,
-                "encoder_trainable": 1,
-                "encoder_trainable_ids":[11]
+                "encoder_trainable": 0,
+                "encoder_trainable_ids":[]
             }
         },
         "1": {
             "body":{
                 "encoder_trainable": 1,
-                "encoder_trainable_ids":[5,6]
+                "encoder_trainable_ids":[2]
             }
         },
         "task":{

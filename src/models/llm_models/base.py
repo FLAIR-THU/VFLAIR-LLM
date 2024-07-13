@@ -151,7 +151,7 @@ class ModelPartitionPipeline(ABC):
             del _model
             gc.collect()
             torch.cuda.empty_cache()
-        tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+        tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, trust_remote_code=True)
         tokenizer.save_pretrained(self._vfl_model_folder(model_name_or_path))
         return self.from_vfl(self._vfl_model_folder(model_name_or_path), **kwargs)
 

@@ -179,7 +179,7 @@ class Party(object):
 
     def prepare_tokenizer(self, args, model_path):
         # Load Tokenizer
-        self.args.tokenizer = AutoTokenizer.from_pretrained(model_path)
+        self.args.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
         self.args.tokenizer.padding_side = args.padding_side if (args.padding_side in ["left", "right"]) else "left"
         if self.args.pad_token == "default":
             if self.args.tokenizer.pad_token is None:

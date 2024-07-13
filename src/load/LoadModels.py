@@ -29,21 +29,23 @@ from peft import LoraConfig, TaskType, get_peft_model, PeftModel, PeftModelForCa
 from models.llm_models.bert import *
 from models.llm_models.gpt2 import *
 from models.llm_models.llama import *
-from models.llm_models.baichuan import *
-from models.llm_models.chatglm import *
 from models.llm_models.falcon import *
-from models.llm_models.mamba import *
 from models.llm_models.gemma import *
 from models.llm_models.mistral import *
-from models.llm_models.xlnet import *
+from models.llm_models.baichuan import *
 from models.llm_models.chatglm import *
+
+from models.llm_models.mamba import *
+from models.llm_models.xlnet import *
 
 from .llm_model_loaders.BertModelLoader import *
 from .llm_model_loaders.GPT2ModelLoader import *
 from .llm_model_loaders.LlamaModelLoader import *
 from .llm_model_loaders.GemmaModelLoader import *
 from .llm_model_loaders.FalconModelLoader import *
-
+from .llm_model_loaders.MistralModelLoader import *
+from .llm_model_loaders.BaichuanModelLoader import *
+from .llm_model_loaders.ChatGLMModelLoader import *
 
 
 from models.bottom_models import *
@@ -51,6 +53,20 @@ from models.global_models import *
 from models.autoencoder import *
 from utils.optimizers import MaliciousSGD, MaliciousAdam
 from config import vfl_basic_config
+
+Loader_Map = {
+    'Bert': BertModelLoader,
+    'GPT2': GPT2ModelLoader,
+    'Llama': LlamaModelLoader,
+    'Gemma': GemmaModelLoader,
+    'Falcon': FalconModelLoader,
+    'Mistral': MistralModelLoader,
+    'Baichuan': BaichuanModelLoader,
+    'ChatGLM': ChatGLMModelLoader,
+
+
+}
+
 
 YOUR_MODEL_PATH = "/home/DAIR/guzx/Git_FedProject/Models/"
 MODEL_PATH = {
@@ -344,13 +360,6 @@ def load_basic_models_llm_gpt2(args, index):
     return result
 
 
-Loader_Map = {
-    'Bert': BertModelLoader,
-    'GPT2': GPT2ModelLoader,
-    'Llama': LlamaModelLoader,
-    'Gemma': GemmaModelLoader,
-    'Falcon': FalconModelLoader,
-}
 
 def load_basic_models_llm(args, index):
     assert args.model_type in Loader_Map.keys(), f'{args.model_type} not supported'
