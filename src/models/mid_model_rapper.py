@@ -300,7 +300,7 @@ class MIDModel_SqueezeLinear(nn.Module):
 
 
 class MIDModel_Linear(nn.Module):
-    def __init__(self, seq_length, embed_dim, mid_lambda, bottleneck_scale=1, std_shift=0.5):
+    def __init__(self, seq_length, embed_dim, mid_lambda, bottleneck_scale=1, std_shift=0.5, model_dtype=torch.float32):
         super(MIDModel_Linear, self).__init__()
         self.bottleneck_scale = bottleneck_scale
         self.input_dim = embed_dim
@@ -308,6 +308,7 @@ class MIDModel_Linear(nn.Module):
 
         self.mid_lambda = mid_lambda
         self.std_shift = std_shift
+        self.model_dtype = model_dtype
 
         # self.drop_out_p = 0.2
 
@@ -320,10 +321,14 @@ class MIDModel_Linear(nn.Module):
             nn.ReLU(inplace=True)
         )
 
+        self.to(model_dtype) 
+
     def forward(self, x):
         # print('== MID Model Forward ==')
-        # print('x:',x.shape) # bs, 30 ,768
-        x = torch.tensor(x, dtype=torch.float32)
+        # print('x:',x.dtype) # bs, 30 ,768
+        # print('mid_model:',self.enlarge_layer[0].weight.dtype)
+        # print('mid_model:',self.decoder_layer[0].weight.dtype)
+        
         input_shape = x.shape
 
         # epsilon = torch.empty((x.size()[0],x.size()[1]*self.bottleneck_scale))
@@ -340,14 +345,14 @@ class MIDModel_Linear(nn.Module):
 
         mu, std = x_double[:, :, :self.input_dim * self.bottleneck_scale], x_double[:, :,
                                                                            self.input_dim * self.bottleneck_scale:]
-        # print(f"mu, std={mu.shape},{std.shape}") # bs, 30, 768*bottleneck_scale   bs, 30, 768*bottleneck_scale
+        # print(f"mu, std={mu.dtype},{std.dtype}") # bs, 30, 768*bottleneck_scale   bs, 30, 768*bottleneck_scale
 
         std = F.softplus(std - self.std_shift)  # ? F.softplus(std-0.5) F.softplus(std-5)
-        # print("std:",std.shape)  # bs, 30, 768*bottleneck_scale
+        # print("std:",std.dtype)  # bs, 30, 768*bottleneck_scale
 
         z = mu + std * epsilon
-        z = z.to(x.device)
-
+        z = z.to(x.device).to(self.model_dtype)
+        # print(f'z={z.dtype}')
         # print('z:',z.shape) # bs, 30, 768*bottleneck_scale
 
         z = self.decoder_layer(z)
@@ -355,11 +360,14 @@ class MIDModel_Linear(nn.Module):
 
         z = z.reshape(input_shape)
 
+        # z = torch.tensor(z, dtype=origin_dtype)
+
         # print('reshape z:',z.shape) # bs, 23040
 
         mid_loss = self.mid_lambda * torch.mean(
             torch.sum((-0.5) * (1 + 2 * torch.log(std) - mu ** 2 - std ** 2), 1)) / (input_shape[1] * input_shape[2])
         # print('mid_loss:',mid_loss)
+
 
         # print('== In mid model ==')
         # mark = 0

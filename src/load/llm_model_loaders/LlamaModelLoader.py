@@ -93,13 +93,16 @@ class LlamaModelLoader(LLMModelLoader):
             print(_key)
             self._models[_key].print_trainable_parameters()
 
+        model_dtype = self._get_model_dtype(model_config)
+
         return {
             "models": self._models,
             "config": model_config,
             "generation_config": generation_config,
             "model_architectures": model_architectures,
             "model_embedded_dim": model_embedded_dim,
-            "all_encoders_num": all_encoders_num
+            "all_encoders_num": all_encoders_num,
+            "model_dtype": model_dtype
         }
 
     def _set_peft(self, model, finetune_detail_configs):

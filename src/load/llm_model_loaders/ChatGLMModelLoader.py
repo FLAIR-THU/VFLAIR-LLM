@@ -2,7 +2,7 @@ from .LLMModelLoader import LLMModelLoader
 from transformers import PreTrainedModel, AutoTokenizer, AutoConfig
 from models.llm_models.chatglm import ModelPartitionPipelineChatGLM
 from peft import LoraConfig, TaskType, get_peft_model, PeftModel, PeftModelForCausalLM
-
+import torch
 
 class ChatGLMModelLoader(LLMModelLoader):
     _models = {}  # type:dict[int,PreTrainedModel]
@@ -16,6 +16,7 @@ class ChatGLMModelLoader(LLMModelLoader):
             raise ValueError(f"Not supported vfl_model_slice_num:{args.vfl_model_slice_num}") 
         
         model_config = AutoConfig.from_pretrained(model_path, trust_remote_code=True) # full model config
+        
         if hasattr(model_config, 'generation_config'):
             generation_config = model_config.generation_config
         else:
@@ -24,12 +25,13 @@ class ChatGLMModelLoader(LLMModelLoader):
         model_embedded_dim = model_config.hidden_size # change with model type
         all_encoders_num = model_config.num_layers # change with model type 
 
+        ####### Load Models #######
         p = ModelPartitionPipelineChatGLM(args=args, all_layer_num = all_encoders_num, 
                             split_index=split_index, is_server=is_active_party)
-        self._models=p.from_pretrained(model_path, trust_remote_code=True)# **vfl_basic_config.kwargs_model_loading))
+        self._models=p.from_pretrained(model_path, trust_remote_code=True, torch_dtype=torch.float32)# **vfl_basic_config.kwargs_model_loading))
         print(f'===== is_active_party={is_active_party}---{self._models.keys()} ======')
 
-
+        ######## Finetune Configs #########
         if args.finetune_name == "LoRA":
             for i, m in self._models.items():
                 peft_model = self._set_peft(m, args.finetune_detail_configs)
@@ -83,21 +85,26 @@ class ChatGLMModelLoader(LLMModelLoader):
                         param.requires_grad = False
                 print(f'active_model_tail: encoder_trainable_ids={model_tail_encoder_trainable_ids}; head_layer_trainable={model_tail_head_layer_trainable}')
 
-
         print('final trainable param:')
         for _key in self._models.keys():
             print(_key)
             self._models[_key].print_trainable_parameters()
 
+        
+        model_dtype = self._get_model_dtype(model_config)
+        
         return {
             "models": self._models,
             "config": model_config,
             "generation_config": generation_config,
             "model_architectures": model_architectures,
             "model_embedded_dim": model_embedded_dim,
-            "all_encoders_num": all_encoders_num
+            "all_encoders_num": all_encoders_num,
+            "model_dtype": model_dtype
         }
-
+    
+    
+        
     def _set_peft(self, model, finetune_detail_configs):
         """
         peft training or load trained peft weights

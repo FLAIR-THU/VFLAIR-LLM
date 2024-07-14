@@ -153,12 +153,18 @@ class WhiteBoxInversion(Attacker):
                     # print('sample_origin_data:',sample_origin_data.shape)
                     received_intermediate = real_results['inputs_embeds'][_id].unsqueeze(0) # [1,256,768]
                     # print('received_intermediate:',received_intermediate.shape)
-                    received_attention_mask = real_results['attention_mask'][_id].unsqueeze(0) # [1,256]
-                    # print('received_attention_mask:',received_attention_mask.shape)
+                    if hasattr(real_results,'attention_mask'):
+                        received_attention_mask = real_results['attention_mask'][_id].unsqueeze(0) # [1,256]
+                    else:
+                        received_attention_mask = None
                     
                     ##### Dummy Data #####
                     # dummy_data = torch.zeros_like(sample_origin_data).long().to(self.device)
-                    dummy_attention_mask = received_attention_mask.to(self.device)
+                    if received_attention_mask != None:
+                        dummy_attention_mask = received_attention_mask.to(self.device)
+                    else:
+                        dummy_attention_mask = None
+                        
                     if 'token_type_ids' in batch_input_dicts[0].keys():
                         dummy_local_batch_token_type_ids = batch_input_dicts[_id]['token_type_ids'].unsqueeze(0).to(self.device)
                     else:

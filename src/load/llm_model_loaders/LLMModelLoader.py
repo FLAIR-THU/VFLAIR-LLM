@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-
+import torch
 
 class LLMModelLoader(object):
     __metaclass__ = ABCMeta
@@ -35,6 +35,21 @@ class LLMModelLoader(object):
         model = get_lora_model(model)
         return model
 
+    def _get_model_dtype(self, model_config):
+        if hasattr(model_config,'torch_dtype'):
+            # dtype_mapping = {
+            #     "float16": torch.float16,
+            #     "float32": torch.float32,
+            #     "float64": torch.float64,
+            #     "bfloat16": torch.bfloat16,
+            #     # add
+            # }
+            model_dtype = model_config.torch_dtype #dtype_mapping[model_config.torch_dtype.lower()]
+        else:
+            model_dtype = torch.float32
+        
+        return model_dtype
+        
     def _prepare_model_update_args(self):
         model = None
         for m in self._models.values():

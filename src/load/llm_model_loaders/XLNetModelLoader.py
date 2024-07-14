@@ -1,10 +1,10 @@
 from .LLMModelLoader import LLMModelLoader
 from transformers import PreTrainedModel, AutoTokenizer, AutoConfig
-from models.llm_models.falcon import ModelPartitionPipelineFalcon
+from models.llm_models.xlnet import ModelPartitionPipelineXLNet
 from peft import LoraConfig, TaskType, get_peft_model, PeftModel, PeftModelForCausalLM
 
 
-class FalconModelLoader(LLMModelLoader):
+class XLNetModelLoader(LLMModelLoader):
     _models = {}  # type:dict[int,PreTrainedModel]
 
     def load(self, args, model_path, is_active_party):
@@ -21,20 +21,20 @@ class FalconModelLoader(LLMModelLoader):
         else:
             generation_config = None
         model_architectures = model_config.architectures
-        model_embedded_dim = model_config.hidden_size # change with model type
-        all_encoders_num = model_config.num_hidden_layers # change with model type
+        model_embedded_dim = model_config.d_model # change with model type
+        all_encoders_num = model_config.n_layer # change with model type 
 
-        p = ModelPartitionPipelineFalcon(args=args, all_layer_num = all_encoders_num, 
+        p = ModelPartitionPipelineXLNet(args=args, all_layer_num = all_encoders_num, 
                             split_index=split_index, is_server=is_active_party)
         self._models=p.from_pretrained(model_path)# **vfl_basic_config.kwargs_model_loading))
         print(f'===== is_active_party={is_active_party}---{self._models.keys()} ======')
 
 
         if args.finetune_name == "LoRA":
-            print('==== LoRA ====')
             for i, m in self._models.items():
                 peft_model = self._set_peft(m, args.finetune_detail_configs)
                 self._models.update({i: peft_model})
+            print('after lora trainable param:')
             for _key in self._models.keys():
                 print(_key)
                 self._models[_key].print_trainable_parameters()
@@ -42,22 +42,20 @@ class FalconModelLoader(LLMModelLoader):
         if not is_active_party:
             model_head_embedding_trainable = args.embedding_trainable
             if not model_head_embedding_trainable: # freeze embeddings that's not needed
-                for param in self._models[0].word_embeddings.parameters():
+                for param in self._models[0].word_embedding.parameters():
                     param.requires_grad = False
             model_head_encoder_trainable_ids = args.encoder_trainable_ids['head']
-            for encoder_id in range(len(self._models[0].h)):
+            for encoder_id in range(len(self._models[0].layer)):
                 if encoder_id not in model_head_encoder_trainable_ids: # freeze encoders that's not needed
-                    for param in self._models[0].h.parameters():
+                    for param in self._models[0].layer.parameters():
                         param.requires_grad = False
             print(f'passive_model_head: encoder_trainable_ids={model_head_encoder_trainable_ids}; embedding_trainable={model_head_embedding_trainable}')
 
             if args.vfl_model_slice_num == 3:
                 model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
-                print('1 ',type(self._models[2]))
-                print('2 ',type(self._models[2].transformer))
-                for encoder_id in range(len(self._models[2].transformer.h)):
+                for encoder_id in range(len(self._models[2].transformer.layer)):
                     if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
-                        for param in self._models[2].transformer.h.parameters():
+                        for param in self._models[2].transformer.layer.parameters():
                             param.requires_grad = False
                 model_tail_head_layer_trainable = args.head_layer_trainable
                 if not model_tail_head_layer_trainable: # freeze embeddings that's not needed
@@ -67,17 +65,17 @@ class FalconModelLoader(LLMModelLoader):
         else:
             if args.vfl_model_slice_num == 3:
                 model_body_encoder_trainable_ids = args.encoder_trainable_ids['body']
-                for encoder_id in range(len(self._models[1].h)):
+                for encoder_id in range(len(self._models[1].layer)):
                     if encoder_id not in model_body_encoder_trainable_ids: # freeze encoders that's not needed
-                        for param in self._models[1].h.parameters():
+                        for param in self._models[1].layer.parameters():
                             param.requires_grad = False
                 print(f'active_model_body: encoder_trainable_ids={model_body_encoder_trainable_ids}')
                 
             else:
                 model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
-                for encoder_id in range(len(self._models[1].transformer.h)):
+                for encoder_id in range(len(self._models[1].transformer.layer)):
                     if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
-                        for param in self._models[1].transformer.h.parameters():
+                        for param in self._models[1].transformer.layer.parameters():
                             param.requires_grad = False
                 model_tail_head_layer_trainable = args.head_layer_trainable
                 if not model_tail_head_layer_trainable: # freeze embeddings that's not needed
@@ -91,10 +89,7 @@ class FalconModelLoader(LLMModelLoader):
             print(_key)
             self._models[_key].print_trainable_parameters()
 
-
-        
         model_dtype = self._get_model_dtype(model_config)
-
 
         return {
             "models": self._models,

@@ -30,11 +30,11 @@
         "add_special_tokens": 1
     },
     "model_list":{
-        "name": "THUDMchatglm3-6b",
+        "name": "xlnetxlnet-base-cased",
         "pretrained": 1,
-        "model_type": "ChatGLM",
+        "model_type": "XLNet",
         "max_sequence": 512,
-        "path": "/home/DAIR/guzx/Git_FedProject/Models/THUDMchatglm3-6b",
+        "path": "/home/DAIR/guzx/Git_FedProject/Models/xlnetxlnet-base-cased",
         "0": {
             "head":{
                 "embedding_trainable": 0,

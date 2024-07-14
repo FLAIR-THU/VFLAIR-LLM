@@ -184,11 +184,6 @@ class VanillaModelInversion_WhiteBox(Attacker):
                 real_results = all_pred_list[0]
                 self.top_vfl._clear_past_key_values()
 
-                # batch_received_intermediate = real_results['inputs_embeds'].type(torch.float32).to(self.device)
-                # if real_results['attention_mask']!= None:
-                #     batch_received_attention_mask = real_results['attention_mask'].to(self.device)
-                # else:
-                #     batch_received_attention_mask = None
 
                 # each sample in a batch
                 for _id in range(len(origin_input)):
@@ -197,12 +192,18 @@ class VanillaModelInversion_WhiteBox(Attacker):
                     # print('sample_origin_data:',sample_origin_data.shape)
                     received_intermediate = real_results['inputs_embeds'][_id].unsqueeze(0) # [1,256,768]
                     # print('received_intermediate:',received_intermediate.shape)
-                    received_attention_mask = real_results['attention_mask'][_id].unsqueeze(0) # [1,256]
-                    # print('received_attention_mask:',received_attention_mask.shape)
+                    if hasattr(real_results,'attention_mask'):
+                        received_attention_mask = real_results['attention_mask'][_id].unsqueeze(0) # [1,256]
+                    else:
+                        received_attention_mask = None
 
                     # initial guess
                     # dummy_data = torch.zeros_like(sample_origin_data).long().to(self.device)
-                    dummy_attention_mask = received_attention_mask.to(self.device)
+                    if received_attention_mask != None:
+                        dummy_attention_mask = received_attention_mask.to(self.device)
+                    else:
+                        dummy_attention_mask = None
+                        
                     if 'token_type_ids' in batch_input_dicts[0].keys():
                         dummy_local_batch_token_type_ids = batch_input_dicts[_id]['token_type_ids'].unsqueeze(0).to(self.device)
                     else:

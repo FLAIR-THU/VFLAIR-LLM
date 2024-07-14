@@ -26,17 +26,6 @@ import copy
 from loguru import logger
 from peft import LoraConfig, TaskType, get_peft_model, PeftModel, PeftModelForCausalLM
 
-from models.llm_models.bert import *
-from models.llm_models.gpt2 import *
-from models.llm_models.llama import *
-from models.llm_models.falcon import *
-from models.llm_models.gemma import *
-from models.llm_models.mistral import *
-from models.llm_models.baichuan import *
-from models.llm_models.chatglm import *
-
-from models.llm_models.mamba import *
-from models.llm_models.xlnet import *
 
 from .llm_model_loaders.BertModelLoader import *
 from .llm_model_loaders.GPT2ModelLoader import *
@@ -46,6 +35,8 @@ from .llm_model_loaders.FalconModelLoader import *
 from .llm_model_loaders.MistralModelLoader import *
 from .llm_model_loaders.BaichuanModelLoader import *
 from .llm_model_loaders.ChatGLMModelLoader import *
+from .llm_model_loaders.MambaModelLoader import *
+from .llm_model_loaders.XLNetModelLoader import *
 
 
 from models.bottom_models import *
@@ -63,7 +54,8 @@ Loader_Map = {
     'Mistral': MistralModelLoader,
     'Baichuan': BaichuanModelLoader,
     'ChatGLM': ChatGLMModelLoader,
-
+    'Mamba': MambaModelLoader,
+    'XLNet': XLNetModelLoader,
 
 }
 
@@ -347,18 +339,6 @@ def load_models_per_party(args, index):
     args, local_model, local_model_optimizer, global_model, global_model_optimizer = load_defense_models(args,index,local_model,local_model_optimizer,global_model,global_model_optimizer)
     # important
     return args, local_model, local_model_optimizer, global_model, global_model_optimizer
-
-
-
-
-def load_basic_models_llm_gpt2(args, index):
-    is_active_party = (index == args.k - 1)
-    current_model_name = args.model_list['name']
-    model_path = args.model_list['path']
-    loader = GPT2ModelLoader()
-    result = loader.load(args, model_path, is_active_party)
-    return result
-
 
 
 def load_basic_models_llm(args, index):

@@ -24,6 +24,7 @@ class GPT2ModelLoader(LLMModelLoader):
         model_embedded_dim = model_config.hidden_size # change with model type
         all_encoders_num = model_config.num_hidden_layers # change with model type
 
+
         p = ModelPartitionPipelineGPT2(args=args, all_layer_num = all_encoders_num, 
                             split_index=split_index, is_server=is_active_party)
         self._models=p.from_pretrained(model_path)# **vfl_basic_config.kwargs_model_loading))
@@ -91,13 +92,17 @@ class GPT2ModelLoader(LLMModelLoader):
             print(_key)
             self._models[_key].print_trainable_parameters()
 
+
+        model_dtype = self._get_model_dtype(model_config)
+
         return {
             "models": self._models,
             "config": model_config,
             "generation_config": generation_config,
             "model_architectures": model_architectures,
             "model_embedded_dim": model_embedded_dim,
-            "all_encoders_num": all_encoders_num
+            "all_encoders_num": all_encoders_num,
+            "model_dtype": model_dtype
         }
 
     def _set_peft(self, model, finetune_detail_configs):

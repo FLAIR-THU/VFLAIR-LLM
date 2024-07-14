@@ -157,6 +157,7 @@ class PassiveParty_LLM(Party_LLM):
                 else:
                     std_shift_hyperparameter = 5
 
+                model_dtype = self.args.model_dtype
                 seq_length = self.args.defense_configs['seq_length']
                 embed_dim = self.args.model_embedded_dim  # defense_configs['embed_dim']
                 mid_model_path = self.args.defense_configs[
@@ -169,13 +170,15 @@ class PassiveParty_LLM(Party_LLM):
                                                                                           mid_lambda=self.mid_lambda,
                                                                                           squeeze_dim=self.squeeze_dim,
                                                                                           bottleneck_scale=current_bottleneck_scale,
-                                                                                          std_shift=std_shift_hyperparameter).to(
+                                                                                          std_shift=std_shift_hyperparameter,
+                                                                                          model_dtype=model_dtype).to(
                             self.args.device)
                     else:
                         self.local_model.inner_mid_model = globals()[self.mid_model_name](seq_length, embed_dim, \
                                                                                           mid_lambda=self.mid_lambda,
                                                                                           bottleneck_scale=current_bottleneck_scale,
-                                                                                          std_shift=std_shift_hyperparameter).to(
+                                                                                          std_shift=std_shift_hyperparameter,
+                                                                                          model_dtype=model_dtype).to(
                             self.args.device)
 
                     if self.local_model_optimizer == None:
@@ -201,13 +204,15 @@ class PassiveParty_LLM(Party_LLM):
                                                                             mid_lambda=self.mid_lambda,
                                                                             squeeze_dim=self.squeeze_dim,
                                                                             bottleneck_scale=current_bottleneck_scale,
-                                                                            std_shift=std_shift_hyperparameter).to(
+                                                                            std_shift=std_shift_hyperparameter,
+                                                                            model_dtype=model_dtype).to(
                                 self.args.device)
                         else:
                             self.mid_model = globals()[self.mid_model_name](seq_length, embed_dim, \
                                                                             mid_lambda=self.mid_lambda,
                                                                             bottleneck_scale=current_bottleneck_scale,
-                                                                            std_shift=std_shift_hyperparameter).to(
+                                                                            std_shift=std_shift_hyperparameter,
+                                                                            model_dtype=model_dtype).to(
                                 self.args.device)
 
                     if self.local_model_optimizer == None:

@@ -229,7 +229,8 @@ class Party(object):
         self.models=result['models'] #.update(result['models'])
         for _key in self.models.keys(): # update pad token configs
             self.models[_key].config.pad_token_id = args.pad_id
-    
+
+        self.args.model_dtype = result['model_dtype']
         self.args.config = result['config'] # model config
         self.args.config.pad_token_id = args.pad_id
         self.args.generation_config = result['generation_config'] 
@@ -246,30 +247,7 @@ class Party(object):
         # Load Optimizer
         self.prepare_optimizer(args)
         
-        # else:
-        #     (
-        #         args,
-        #         self.local_model,
-        #         self.local_model_optimizer,
-        #         self.global_model,
-        #         self.global_model_optimizer
-        #     ) = load_models_per_party_llm(args, index)
-
-    # def _set_peft(self):
-    #     """
-    #     peft training or load trained peft weights
-    #     :return:
-    #     """
-    #     if peft_model_path:=self.args.model_list[str(self.index)].get('peft_model_path'):
-    #         for i,m in self.models.items():
-    #             _model_path=os.path.join(peft_model_path,f"model_{i}")
-    #             if m and os.path.exists(_model_path):
-    #                 self.models[i]=PeftModel.from_pretrained(m, _model_path).train()
-
-    #     if _train_conf := vfl_basic_config.vfl_training_config:
-    #         if _train_conf.peft_config:
-    #             self._peft_model_setting()
-
+       
     def _peft_model_setting(self):
         _train_conf = vfl_basic_config.vfl_training_config
         logger.info(f"enable peft model setting: \n{str(_train_conf.peft_config)}")
