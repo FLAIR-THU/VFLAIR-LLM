@@ -189,9 +189,12 @@ class VanillaModelInversion_WhiteBox(Attacker):
                 for _id in range(len(origin_input)):
                     sample_origin_data = batch_input_dicts[_id]['input_ids'].unsqueeze(0) # [1,sequence length]
                     bs, seq_length = sample_origin_data.shape
-                    # print('sample_origin_data:',sample_origin_data.shape)
-                    received_intermediate = real_results['inputs_embeds'][_id].unsqueeze(0) # [1,256,768]
-                    # print('received_intermediate:',received_intermediate.shape)
+
+                    if real_results['inputs_embeds'].shape[1] != seq_length:
+                        received_intermediate = real_results['inputs_embeds'].transpose(0,1)[_id].unsqueeze(0) # [1,256,768]
+                    else:
+                        received_intermediate = real_results['inputs_embeds'][_id].unsqueeze(0) # [1,256,768]
+
                     if hasattr(real_results,'attention_mask'):
                         received_attention_mask = real_results['attention_mask'][_id].unsqueeze(0) # [1,256]
                     else:
@@ -210,14 +213,6 @@ class VanillaModelInversion_WhiteBox(Attacker):
                         dummy_local_batch_token_type_ids = None
 
                     dummy_embedding = torch.zeros([bs,seq_length,self.args.model_embedded_dim]).type(torch.float32).to(self.device)
-                    # if self.args.model_type in ['Bert','Roberta']:
-                    #     dummy_embedding = torch.zeros([bs,seq_length,768]).type(torch.float32).to(self.device)
-                    # elif self.args.model_type == "GPT2":
-                    #     dummy_embedding = torch.zeros([bs,seq_length,768]).type(torch.float32).to(self.device)
-                    # elif self.args.model_type == "Llama":
-                    #     dummy_embedding = torch.zeros([bs,seq_length,4096]).type(torch.float32).to(self.device)
-                    # else:
-                    #     assert 1>2, f"{self.args.model_type} not supported"
                     dummy_embedding.requires_grad_(True) 
                     
                     optimizer = torch.optim.Adam([dummy_embedding], lr=self.lr)
@@ -228,10 +223,14 @@ class VanillaModelInversion_WhiteBox(Attacker):
                             'input_ids':None, 'attention_mask':dummy_attention_mask,\
                             'inputs_embeds':dummy_embedding, 'token_type_ids':dummy_local_batch_token_type_ids
                         }
-                        dummy_intermediate  = local_model(**dummy_input)
+                        dummy_intermediate_dict = local_model(**dummy_input)
                         local_model._clear_past_key_values()
 
-                        dummy_intermediate = dummy_intermediate.get('inputs_embeds')
+                        dummy_intermediate = dummy_intermediate_dict.get('inputs_embeds')
+                        if dummy_intermediate.shape[1] != seq_length:
+                            dummy_intermediate = dummy_intermediate.transpose(0,1)
+                        # print('dummy_intermediate:',dummy_intermediate.shape) # 1, seq_len, embed_dim
+                        # print('received_intermediate:',received_intermediate.shape)
                     
                         crit = nn.CrossEntropyLoss()
                         _cost = crit(dummy_intermediate, received_intermediate)

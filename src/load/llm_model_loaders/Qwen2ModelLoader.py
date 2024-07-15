@@ -1,10 +1,10 @@
 from .LLMModelLoader import LLMModelLoader
 from transformers import PreTrainedModel, AutoTokenizer, AutoConfig
-from models.llm_models.llama import ModelPartitionPipelineLlama
+from models.llm_models.qwen2 import ModelPartitionPipelineQwen2
 from peft import LoraConfig, TaskType, get_peft_model, PeftModel, PeftModelForCausalLM
 
 
-class LlamaModelLoader(LLMModelLoader):
+class Qwen2ModelLoader(LLMModelLoader):
     _models = {}  # type:dict[int,PreTrainedModel]
 
     def load(self, args, model_path, is_active_party):
@@ -22,9 +22,9 @@ class LlamaModelLoader(LLMModelLoader):
             generation_config = None
         model_architectures = model_config.architectures
         model_embedded_dim = model_config.hidden_size # change with model type
-        all_encoders_num = model_config.num_hidden_layers # change with model type
+        all_encoders_num = model_config.num_hidden_layers # change with model type 
 
-        p = ModelPartitionPipelineLlama(args=args, all_layer_num = all_encoders_num, 
+        p = ModelPartitionPipelineQwen2(args=args, all_layer_num = all_encoders_num, 
                             split_index=split_index, is_server=is_active_party)
         self._models=p.from_pretrained(model_path)# **vfl_basic_config.kwargs_model_loading))
         print(f'===== is_active_party={is_active_party}---{self._models.keys()} ======')
@@ -44,7 +44,6 @@ class LlamaModelLoader(LLMModelLoader):
             if not model_head_embedding_trainable: # freeze embeddings that's not needed
                 for param in self._models[0].embed_tokens.parameters():
                     param.requires_grad = False
-                
             model_head_encoder_trainable_ids = args.encoder_trainable_ids['head']
             for encoder_id in range(len(self._models[0].layers)):
                 if encoder_id not in model_head_encoder_trainable_ids: # freeze encoders that's not needed
@@ -54,8 +53,6 @@ class LlamaModelLoader(LLMModelLoader):
 
             if args.vfl_model_slice_num == 3:
                 model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
-                print('1 ',type(self._models[2]))
-                print('2 ',type(self._models[2].model))
                 for encoder_id in range(len(self._models[2].model.layers)):
                     if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
                         for param in self._models[2].model.layers.parameters():
@@ -93,7 +90,7 @@ class LlamaModelLoader(LLMModelLoader):
             self._models[_key].print_trainable_parameters()
 
         model_dtype = self._get_model_dtype(model_config)
-        print('_get_model_dtype:',model_dtype)
+
         return {
             "models": self._models,
             "config": model_config,

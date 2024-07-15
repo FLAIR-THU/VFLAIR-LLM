@@ -4,7 +4,7 @@ from party.llm_party import Party as Party_LLM
 from transformers import AutoTokenizer
 from peft import get_peft_model
 from config import vfl_basic_config
-from models.llm_models.qwen2 import ModelPartitionPipelineQwen
+from models.llm_models.qwen2 import ModelPartitionPipelineQwen2
 
 
 class QW_Active_Party(Party_LLM):

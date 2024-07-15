@@ -84,10 +84,6 @@ class WhiteBoxInversion(Attacker):
                 embedding_matrix = local_model.embeddings.word_embeddings.weight # 30522, 768       
             else:
                 embedding_matrix = local_model.get_input_embeddings().weight        
-            # elif self.args.model_type == 'GPT2':
-            #     embedding_matrix = local_model.wte.weight # 30522, 768  
-            # elif self.args.model_type == 'Llama':
-            #     embedding_matrix = local_model.embed_tokens.weight # 30522, 768  
             
             # print('embedding_matrix:',embedding_matrix.shape)
 
@@ -150,8 +146,12 @@ class WhiteBoxInversion(Attacker):
                     ###### Real data #####
                     sample_origin_data = batch_input_dicts[_id]['input_ids'].unsqueeze(0) # [1,sequence length]
                     bs, seq_length = sample_origin_data.shape
-                    # print('sample_origin_data:',sample_origin_data.shape)
-                    received_intermediate = real_results['inputs_embeds'][_id].unsqueeze(0) # [1,256,768]
+
+                    if real_results['inputs_embeds'].shape[1] != seq_length:
+                        received_intermediate = real_results['inputs_embeds'].transpose(0,1)[_id].unsqueeze(0) # [1,256,768]
+                    else:
+                        received_intermediate = real_results['inputs_embeds'][_id].unsqueeze(0) # [1,256,768]
+
                     # print('received_intermediate:',received_intermediate.shape)
                     if hasattr(real_results,'attention_mask'):
                         received_attention_mask = real_results['attention_mask'][_id].unsqueeze(0) # [1,256]
@@ -195,11 +195,13 @@ class WhiteBoxInversion(Attacker):
                             'inputs_embeds':dummy_embedding, \
                             'token_type_ids':dummy_local_batch_token_type_ids
                         }
-                        dummy_intermediate  = local_model(**dummy_input)   
+                        dummy_intermediate_dict = local_model(**dummy_input)
                         local_model._clear_past_key_values()
 
-                        dummy_intermediate = dummy_intermediate['inputs_embeds']
-                        
+                        dummy_intermediate = dummy_intermediate_dict.get('inputs_embeds')
+                        if dummy_intermediate.shape[1] != seq_length:
+                            dummy_intermediate = dummy_intermediate.transpose(0,1)
+
                         crit = nn.CrossEntropyLoss()
                         _cost = crit(dummy_intermediate, received_intermediate)
                         return _cost

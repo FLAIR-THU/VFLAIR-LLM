@@ -30,11 +30,11 @@
         "add_special_tokens": 1
     },
     "model_list":{
-        "name": "QwenQwen2-7B-Instruct",
+        "name": "llama-2-7b",
         "pretrained": 1,
-        "model_type": "Qwen2",
+        "model_type": "Llama",
         "max_sequence": 512,
-        "path": "/home/DAIR/guzx/Git_FedProject/Models/QwenQwen2-7B-Instruct",
+        "path": "/home/DAIR/guzx/Git_FedProject/Models/llama-2-7b",
         "0": {
             "head":{
                 "embedding_trainable": 0,

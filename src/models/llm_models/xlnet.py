@@ -96,10 +96,17 @@ class XLNetModelHead(XLNetModelSplitter):
             input_ids = input_ids.transpose(0, 1).contiguous()
             qlen, bsz = input_ids.shape[0], input_ids.shape[1]
         elif inputs_embeds is not None:
+            print('model head inputs_embeds:',inputs_embeds.shape)
             inputs_embeds = inputs_embeds.transpose(0, 1).contiguous()
             qlen, bsz = inputs_embeds.shape[0], inputs_embeds.shape[1]
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
+
+        origin_input_mask = input_mask
+        origin_token_type_ids = token_type_ids
+        origin_attention_mask = attention_mask
+        origin_perm_mask = perm_mask
+        origin_target_mapping = target_mapping
 
         token_type_ids = token_type_ids.transpose(0, 1).contiguous() if token_type_ids is not None else None
         input_mask = input_mask.transpose(0, 1).contiguous() if input_mask is not None else None
@@ -165,6 +172,7 @@ class XLNetModelHead(XLNetModelSplitter):
             word_emb_k = self.word_embedding(input_ids)
         self.embedding_output = word_emb_k
         output_h = self.dropout(word_emb_k)
+        print(f'output_h={output_h.shape} word_emb_k={word_emb_k.shape}')
 
         if target_mapping is not None:
             word_emb_q = self.mask_emb.expand(target_mapping.shape[0], bsz, -1)
@@ -240,14 +248,22 @@ class XLNetModelHead(XLNetModelSplitter):
             output_h, output_g = outputs[:2]
             if output_attentions:
                 attentions.append(outputs[2])
+        
+        # origin_input_mask = input_mask
+        # origin_token_type_ids = token_type_ids
+        # origin_attention_mask = attention_mask
+        # origin_perm_mask = perm_mask
+        # origin_target_mapping = target_mapping
+        print(f'inputs_embeds={output_h.shape}')
 
         return {'inputs_embeds': output_h, 
                 'output_g': output_g,
-                'attention_mask': attention_mask,
-                'input_mask': input_mask, 
-                'perm_mask': perm_mask,
-                'target_mapping': target_mapping,
-                'token_type_ids': token_type_ids} 
+
+                'attention_mask': origin_attention_mask,
+                'input_mask': origin_input_mask, 
+                'perm_mask': origin_perm_mask,
+                'target_mapping': origin_target_mapping,
+                'token_type_ids': origin_token_type_ids} 
 
 class XLNetModelBody(XLNetModelSplitter):
     def __init__(self, config: XLNetConfig):
@@ -301,17 +317,23 @@ class XLNetModelBody(XLNetModelSplitter):
             input_ids = input_ids.transpose(0, 1).contiguous()
             qlen, bsz = input_ids.shape[0], input_ids.shape[1]
         elif inputs_embeds is not None:
-            inputs_embeds = inputs_embeds.transpose(0, 1).contiguous()
+            # no need to transpose again
+            # inputs_embeds = inputs_embeds.transpose(0, 1).contiguous()
             qlen, bsz = inputs_embeds.shape[0], inputs_embeds.shape[1]
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
-        # no need to transpose again
-        # token_type_ids = token_type_ids.transpose(0, 1).contiguous() if token_type_ids is not None else None
-        # input_mask = input_mask.transpose(0, 1).contiguous() if input_mask is not None else None
-        # attention_mask = attention_mask.transpose(0, 1).contiguous() if attention_mask is not None else None
-        # perm_mask = perm_mask.permute(1, 2, 0).contiguous() if perm_mask is not None else None
-        # target_mapping = target_mapping.permute(1, 2, 0).contiguous() if target_mapping is not None else None
+        origin_input_mask = input_mask
+        origin_token_type_ids = token_type_ids
+        origin_attention_mask = attention_mask
+        origin_perm_mask = perm_mask
+        origin_target_mapping = target_mapping
+
+        token_type_ids = token_type_ids.transpose(0, 1).contiguous() if token_type_ids is not None else None
+        input_mask = input_mask.transpose(0, 1).contiguous() if input_mask is not None else None
+        attention_mask = attention_mask.transpose(0, 1).contiguous() if attention_mask is not None else None
+        perm_mask = perm_mask.permute(1, 2, 0).contiguous() if perm_mask is not None else None
+        target_mapping = target_mapping.permute(1, 2, 0).contiguous() if target_mapping is not None else None
 
         mlen = mems[0].shape[0] if mems is not None and mems[0] is not None else 0
         klen = mlen + qlen
@@ -329,6 +351,7 @@ class XLNetModelBody(XLNetModelSplitter):
             attn_mask = None
         else:
             raise ValueError(f"Unsupported attention type: {self.attn_type}")
+        
 
         ### [attention_mask -> input_mask]
         # data mask: input mask & perm mask 
@@ -460,11 +483,12 @@ class XLNetModelBody(XLNetModelSplitter):
 
         return {'inputs_embeds': output_h, 
                 'output_g': output_g,
-                'attention_mask': attention_mask,
-                'input_mask': input_mask, 
-                'perm_mask': perm_mask,
-                'target_mapping': target_mapping,
-                'token_type_ids': token_type_ids}
+
+                'attention_mask': origin_attention_mask,
+                'input_mask': origin_input_mask, 
+                'perm_mask': origin_perm_mask,
+                'target_mapping': origin_target_mapping,
+                'token_type_ids': origin_token_type_ids} 
         
 
 
@@ -521,17 +545,17 @@ class XLNetModelTail(XLNetModelSplitter):
             input_ids = input_ids.transpose(0, 1).contiguous()
             qlen, bsz = input_ids.shape[0], input_ids.shape[1]
         elif inputs_embeds is not None:
-            inputs_embeds = inputs_embeds.transpose(0, 1).contiguous()
+            # no need to transpose again
+            # inputs_embeds = inputs_embeds.transpose(0, 1).contiguous()
             qlen, bsz = inputs_embeds.shape[0], inputs_embeds.shape[1]
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
-        # no need to transpose again
-        # token_type_ids = token_type_ids.transpose(0, 1).contiguous() if token_type_ids is not None else None
-        # input_mask = input_mask.transpose(0, 1).contiguous() if input_mask is not None else None
-        # attention_mask = attention_mask.transpose(0, 1).contiguous() if attention_mask is not None else None
-        # perm_mask = perm_mask.permute(1, 2, 0).contiguous() if perm_mask is not None else None
-        # target_mapping = target_mapping.permute(1, 2, 0).contiguous() if target_mapping is not None else None
+        token_type_ids = token_type_ids.transpose(0, 1).contiguous() if token_type_ids is not None else None
+        input_mask = input_mask.transpose(0, 1).contiguous() if input_mask is not None else None
+        attention_mask = attention_mask.transpose(0, 1).contiguous() if attention_mask is not None else None
+        perm_mask = perm_mask.permute(1, 2, 0).contiguous() if perm_mask is not None else None
+        target_mapping = target_mapping.permute(1, 2, 0).contiguous() if target_mapping is not None else None
 
         mlen = mems[0].shape[0] if mems is not None and mems[0] is not None else 0
         klen = mlen + qlen

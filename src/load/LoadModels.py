@@ -37,6 +37,7 @@ from .llm_model_loaders.BaichuanModelLoader import *
 from .llm_model_loaders.ChatGLMModelLoader import *
 from .llm_model_loaders.MambaModelLoader import *
 from .llm_model_loaders.XLNetModelLoader import *
+from .llm_model_loaders.Qwen2ModelLoader import *
 
 
 from models.bottom_models import *
@@ -56,6 +57,8 @@ Loader_Map = {
     'ChatGLM': ChatGLMModelLoader,
     'Mamba': MambaModelLoader,
     'XLNet': XLNetModelLoader,
+    'Qwen2': Qwen2ModelLoader,
+
 
 }
 

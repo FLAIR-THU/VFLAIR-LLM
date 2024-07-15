@@ -179,17 +179,27 @@ class Party(object):
 
     def prepare_tokenizer(self, args, model_path):
         # Load Tokenizer
+        print('==== Tokenizer =====')
+
         self.args.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
         self.args.tokenizer.padding_side = args.padding_side if (args.padding_side in ["left", "right"]) else "left"
+        
         if self.args.pad_token == "default":
             if self.args.tokenizer.pad_token is None:
                 self.args.tokenizer.pad_token = args.tokenizer.eos_token  # ({'pad_token': '[PAD]'}) # args.tokenizer.eos_token #
                 self.args.pad_id = args.tokenizer.convert_tokens_to_ids(args.tokenizer.eos_token)  #
             self.args.pad_token = "default_" + args.tokenizer.pad_token
         else:
-            self.args.tokenizer.pad_token = args.pad_token  # ({'pad_token': '[PAD]'}) # args.tokenizer.eos_token #
-            self.args.pad_id = args.tokenizer.convert_tokens_to_ids(args.pad_token)  #
-        
+            self.args.pad_id = args.tokenizer.convert_tokens_to_ids(self.args.pad_token)  #
+            if self.args.pad_id != None: 
+                self.args.tokenizer.pad_token = self.args.pad_token  # ({'pad_token': '[PAD]'}) # args.tokenizer.eos_token #
+            else: # invalid pad token set
+                print('invalid pad token set, use default pad token from the tokenizer')
+                self.args.pad_token = self.args.tokenizer.pad_token
+                self.args.pad_id = args.tokenizer.convert_tokens_to_ids(self.args.pad_token) 
+
+        print('pad_token:',self.args.pad_token,'  pad_id:',self.args.pad_id)
+
         self.tokenizer = args.tokenizer
 
     def prepare_optimizer(self,args):
@@ -231,6 +241,7 @@ class Party(object):
             self.models[_key].config.pad_token_id = args.pad_id
 
         self.args.model_dtype = result['model_dtype']
+        print('self.args.model_dtype:',self.args.model_dtype)
         self.args.config = result['config'] # model config
         self.args.config.pad_token_id = args.pad_id
         self.args.generation_config = result['generation_config'] 

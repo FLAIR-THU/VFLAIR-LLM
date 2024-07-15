@@ -158,6 +158,7 @@ class PassiveParty_LLM(Party_LLM):
                     std_shift_hyperparameter = 5
 
                 model_dtype = self.args.model_dtype
+                print('self.args.model_dtype:',self.args.model_dtype)
                 seq_length = self.args.defense_configs['seq_length']
                 embed_dim = self.args.model_embedded_dim  # defense_configs['embed_dim']
                 mid_model_path = self.args.defense_configs[

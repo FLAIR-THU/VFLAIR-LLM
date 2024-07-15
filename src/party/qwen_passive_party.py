@@ -5,7 +5,7 @@ from loguru import logger
 from .LocalCommunication import LocalCommunication
 from transformers import AutoTokenizer
 from config import vfl_basic_config
-from models.llm_models.qwen2 import ModelPartitionPipelineQwen
+from models.llm_models.qwen2 import ModelPartitionPipelineQwen2
 from dataset.party_dataset import PassiveDataset, PassiveDataset_LLM
 
 
