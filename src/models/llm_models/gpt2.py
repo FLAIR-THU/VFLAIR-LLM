@@ -241,10 +241,10 @@ class GPT2ModelHead(GPT2ModelSplitter):
                 for k, v in self.device_map.items():
                     if i == v[-1] and "cuda:" + str(k) != self.last_device:
                         hidden_states = hidden_states.to("cuda:" + str(k + 1))
-
+           
         # self.past_key_values = presents
         self.past_key_values = presents
-
+        
         return {'inputs_embeds':hidden_states,
                 'attention_mask':attention_mask,
                 }
@@ -422,7 +422,7 @@ class GPT2ModelBody(GPT2ModelSplitter):
                     hidden_states,
                     layer_past=layer_past,
                     attention_mask=attention_mask,
-                    head_mask=head_mask[i],#[i+self.local_num_encoders],
+                    head_mask=head_mask[i],
                     encoder_hidden_states=encoder_hidden_states,
                     encoder_attention_mask=encoder_attention_mask,
                     use_cache=use_cache,
@@ -430,6 +430,8 @@ class GPT2ModelBody(GPT2ModelSplitter):
                 )
 
             hidden_states = outputs[0]
+ 
+
             if use_cache is True:
                 presents = presents + (outputs[1],)
 
@@ -443,37 +445,13 @@ class GPT2ModelBody(GPT2ModelSplitter):
                 for k, v in self.device_map.items():
                     if i+self.num_encoders == v[-1] and "cuda:" + str(k) != self.last_device:
                         hidden_states = hidden_states.to("cuda:" + str(k + 1))
-        
+
         # self.past_key_values = presents
         self.past_key_values = presents
 
         return {'inputs_embeds':hidden_states,
-                'attention_mask':attention_mask,
-                }
-        # hidden_states = self.ln_f(hidden_states)
-
-        # hidden_states = hidden_states.view(output_shape)
-        # # Add last hidden state
-        # if output_hidden_states:
-        #     all_hidden_states = all_hidden_states + (hidden_states,)
-
-        # self.past_key_values = presents
-
-        # if not return_dict:
-        #     return tuple(
-        #         v
-        #         for v in [hidden_states, presents, all_hidden_states, all_self_attentions, all_cross_attentions]
-        #         if v is not None
-        #     )
-
-
-        # return BaseModelOutputWithPastAndCrossAttentions(
-        #     last_hidden_state=hidden_states,
-        #     past_key_values=presents,
-        #     hidden_states=all_hidden_states,
-        #     attentions=all_self_attentions,
-        #     cross_attentions=all_cross_attentions,
-        # )
+                'attention_mask':attention_mask}
+        
 
 class GPT2ModelTail(GPT2ModelSplitter):
     def __init__(self, config: GPT2Config):
@@ -687,6 +665,26 @@ class GPT2ModelTail(GPT2ModelSplitter):
                 if v is not None
             )
 
+        # print('== final ==')
+        # dummy_global_gradients = torch.ones([4, 256, 768]).to(hidden_states.device)
+        # params = []
+        # param_name = []
+        # for name, param in self.named_parameters():
+        #     param.requires_grad=True
+        #     params.append(param)
+        #     param_name.append(name)
+
+        #     weights_grad_a = None
+        #     weights_grad_a = torch.autograd.grad(hidden_states,
+        #                                             param, 
+        #                                             grad_outputs=dummy_global_gradients, 
+        #                                             allow_unused=True,
+        #                                             retain_graph=True
+        #                                             )
+        #     if weights_grad_a[0] != None:
+        #         print(f'{name}:{param.requires_grad}  {param.shape}  {len(weights_grad_a)} {weights_grad_a[0].shape}')
+        #     else:
+        #         print(f'{name}:{param.requires_grad}  {param.shape}  None')
 
         return BaseModelOutputWithPastAndCrossAttentions(
             last_hidden_state=hidden_states,
@@ -774,7 +772,7 @@ class ModelPartitionPipelineGPT2(ModelPartitionPipeline):
             # print(list(split_range))
             # print(f'Model Head:{len(model_head.h)} {do_split}')
 
-        return model_head.to(self.device)
+        return model_head
 
     def _load_model_tail(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         if self.args.model_architect == 'CLM':
@@ -796,7 +794,7 @@ class ModelPartitionPipelineGPT2(ModelPartitionPipeline):
             # print(f'Model Tail:{len(model_tail.transformer.h)} {do_split}')
 
 
-        return model_tail.to(self.device)
+        return model_tail
 
     def _load_model_body(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         model_body = GPT2ModelBody.from_pretrained(model_name_or_path, **kwargs)
@@ -808,4 +806,4 @@ class ModelPartitionPipelineGPT2(ModelPartitionPipeline):
             # print(f'Model Body:{len(model_body.h)} {do_split}')
            
         
-        return model_body.to(self.device)
+        return model_body

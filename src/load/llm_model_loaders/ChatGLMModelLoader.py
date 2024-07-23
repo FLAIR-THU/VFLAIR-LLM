@@ -49,7 +49,7 @@ class ChatGLMModelLoader(LLMModelLoader):
             model_head_encoder_trainable_ids = args.encoder_trainable_ids['head']
             for encoder_id in range(len(self._models[0].encoder.layers)):
                 if encoder_id not in model_head_encoder_trainable_ids: # freeze encoders that's not needed
-                    for param in self._models[0].encoder.layers.parameters():
+                    for param in self._models[0].encoder.layers[encoder_id].parameters():
                         param.requires_grad = False
             print(f'passive_model_head: encoder_trainable_ids={model_head_encoder_trainable_ids}; embedding_trainable={model_head_embedding_trainable}')
 
@@ -57,7 +57,7 @@ class ChatGLMModelLoader(LLMModelLoader):
                 model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
                 for encoder_id in range(len(self._models[2].transformer.encoder.layers)):
                     if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
-                        for param in self._models[2].transformer.encoder.layers.parameters():
+                        for param in self._models[2].transformer.encoder.layers[encoder_id].parameters():
                             param.requires_grad = False
                 model_tail_head_layer_trainable = args.head_layer_trainable
                 if not model_tail_head_layer_trainable: # freeze embeddings that's not needed
@@ -69,7 +69,7 @@ class ChatGLMModelLoader(LLMModelLoader):
                 model_body_encoder_trainable_ids = args.encoder_trainable_ids['body']
                 for encoder_id in range(len(self._models[1].encoder.layers)):
                     if encoder_id not in model_body_encoder_trainable_ids: # freeze encoders that's not needed
-                        for param in self._models[1].encoder.layers.parameters():
+                        for param in self._models[1].encoder.layers[encoder_id].parameters():
                             param.requires_grad = False
                 print(f'active_model_body: encoder_trainable_ids={model_body_encoder_trainable_ids}')
                 
@@ -77,7 +77,7 @@ class ChatGLMModelLoader(LLMModelLoader):
                 model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
                 for encoder_id in range(len(self._models[1].transformer.encoder.layers)):
                     if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
-                        for param in self._models[1].transformer.encoder.layers.parameters():
+                        for param in self._models[1].transformer.encoder.layers[encoder_id].parameters():
                             param.requires_grad = False
                 model_tail_head_layer_trainable = args.head_layer_trainable
                 if not model_tail_head_layer_trainable: # freeze embeddings that's not needed

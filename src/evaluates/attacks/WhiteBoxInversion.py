@@ -75,7 +75,7 @@ class WhiteBoxInversion(Attacker):
             index = attacker_ik
 
             # collect necessary information
-            local_model = self.vfl_info['model'][0].to(self.device) # Passive
+            local_model = self.vfl_info['local_model_head'][0].to(self.device) # Passive
             local_model.eval()
             batch_size = self.attack_batch_size
 

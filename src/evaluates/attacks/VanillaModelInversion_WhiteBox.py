@@ -69,23 +69,7 @@ class VanillaModelInversion_WhiteBox(Attacker):
         self.args = args
         self.top_vfl = top_vfl
         self.vfl_info = top_vfl.final_state
-        '''
-        "data": copy.deepcopy(self.parties_data), 
-        "label": copy.deepcopy(self.gt_one_hot_label),
-        "predict": [copy.deepcopy(self.parties[ik].local_pred_clone) for ik in range(self.k)],
-        "gradient": [copy.deepcopy(self.parties[ik].local_gradient) for ik in range(self.k)],
-        "local_model_gradient": [copy.deepcopy(self.parties[ik].weights_grad_a) for ik in range(self.k)],
-        "train_acc": copy.deepcopy(self.train_acc),
-        "loss": copy.deepcopy(self.loss),
-        
-        "global_pred":self.parties[self.k-1].global_pred,
-        "final_model": [copy.deepcopy(self.parties[ik].local_model) for ik in range(self.args.k)],
-        "final_global_model":copy.deepcopy(self.parties[self.args.k-1].global_model),
 
-        "aux_loader": [copy.deepcopy(self.parties[ik].aux_loader) for ik in range(self.k)],
-        "train_loader": [copy.deepcopy(self.parties[ik].train_loader) for ik in range(self.k)],
-        "test_loader": [copy.deepcopy(self.parties[ik].test_loader) for ik in range(self.k)],        
-        '''
         # self.vfl_first_epoch = top_vfl.first_epoch_state
         
         # prepare parameters
@@ -129,7 +113,7 @@ class VanillaModelInversion_WhiteBox(Attacker):
             index = attacker_ik
 
             # collect necessary information
-            local_model = self.vfl_info['model'][0].to(self.device) # Passive
+            local_model = self.vfl_info['local_model_head'][0].to(self.device) # Passive
             local_model.eval()
 
             batch_size = self.attack_batch_size

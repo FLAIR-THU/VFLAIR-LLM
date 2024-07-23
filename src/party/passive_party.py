@@ -17,6 +17,7 @@ from party.llm_party import Party as Party_LLM
 from dataset.party_dataset import *
 from dataset.party_dataset import ActiveDataset
 from load.LoadModels import load_models_per_party, QuestionAnsweringModelOutput
+from utils import timer
 from utils.squad_utils import normalize_answer, _get_best_indexes, compute_exact, compute_f1
 from utils.communication_protocol_funcs import get_size_of
 from evaluates.defenses.defense_api import apply_defense
@@ -82,7 +83,7 @@ class PassiveParty_LLM(Party_LLM):
 
         self.num_labels = args.num_classes
         self.weights_grad_a = None  # no gradient for model in passive party(no model update)
-
+        self.weights_grad_a_tail = None
         # self.encoder_trainable = args.encoder_trainable[index]
 
     def init_apply_defense(self, need_apply_defense, apply_adversarial, defense_configs, main_lr, device):
@@ -227,7 +228,6 @@ class PassiveParty_LLM(Party_LLM):
             elif self.args.apply_dp and (self.index in defense_configs["party"]):
                 print(f'Passive Party {self.index}: init DP Defense')
 
-
     def prepare_data(self, args, index):
         if not args.dataset:
             return None
@@ -293,6 +293,7 @@ class PassiveParty_LLM(Party_LLM):
         
         global_gradients_clone=torch.autograd.grad(global_loss,global_intermediate,retain_graph=True)[0]
         self.global_gradients = global_gradients_clone
+        
         return global_gradients_clone
 
     def cal_loss(self, pred, test=False):
@@ -328,12 +329,11 @@ class PassiveParty_LLM(Party_LLM):
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(pooled_logits, labels)
 
-
         elif self.args.model_architect == 'CLM':  # self.args.task_type == 'CausalLM':
             lm_logits = pred.logits  # [bs, seq_len, vocab_size]
-            # move labels to correct device to enable model parallelism
             labels = torch.tensor(gt_one_hot_label).to(lm_logits.device)
-            # print('cal loss labels.shape:',labels.shape)
+            # print(f'lm_logits={lm_logits.shape} labels={labels.shape}')
+            
             if len(labels.shape) > 1:
                 # Shift so that tokens < n predict n
                 shift_logits = lm_logits[..., :-1, :].contiguous()
@@ -405,7 +405,7 @@ class PassiveParty_LLM(Party_LLM):
         if self.args.apply_adversarial and (self.index in self.args.defense_configs["party"]):
 
             # [bs, seq, embed_dim] or [seq, bs, embed_dim](ChatGLM/XLNet)
-            intermediate = self.local_pred  
+            intermediate = self.output_tensors[0]  
             adversary_recovered_embedding = self.imagined_adversary(intermediate)
             # bs, seq_len, embed_dim
             real_embedding = self.local_model.embedding_output 
@@ -422,7 +422,7 @@ class PassiveParty_LLM(Party_LLM):
                                          intermediate.shape[0]
 
             # avrage mapping distance on bs*seq_len   self.origin_pred: bs, seq_len, embed_dim
-            self.mapping_distance = torch.norm(self.origin_pred - self.local_pred, p=2) / (
+            self.mapping_distance = torch.norm(self.origin_pred - self.output_tensors[0], p=2) / (
                     self.origin_pred.shape[0] * self.origin_pred.shape[1])
 
             # print(f'main_loss={self.global_loss},mapping_distance={self.mapping_distance},adversary_attack_loss={self.adversary_attack_loss}')
@@ -461,17 +461,49 @@ class PassiveParty_LLM(Party_LLM):
             for param_group in self.global_model_optimizer.param_groups:
                 param_group['lr'] = eta_t
 
-    def model_tail_forward(self, **kwargs):
-        logger.debug(f"model_tail forward")
-        self.input_tensors[2] = kwargs.get('inputs_embeds')
+    @timer()
+    def give_pred(self, use_cache=False):
+        self.local_data_input['use_cache'] = use_cache
+        self._tensor_to_device(self.local_data_input , self.models[0].device)
+
+        intermediate = self.forward(model_index=0,**self.local_data_input)
+        # if not isinstance(intermediate, dict):
+        #     intermediate = intermediate.prepare_for_forward()
         
-        resp = self.local_model_tail(**kwargs)
+        # self.local_pred = intermediate['inputs_embeds']
+       
+        self.local_attention_mask = intermediate['attention_mask'] if ('attention_mask' in intermediate) else None
+        self.local_pred_clone = self.output_tensors[0].detach().clone()
+        if self.local_attention_mask != None:
+            self.local_attention_mask = self.local_attention_mask.detach().clone()
 
-        self.output_tensors[2] = resp.get('logits')
-        self.final_tail_pred = resp
-        return resp #self._detach_tensor(resp)
+        ######### Defense Applied on Local Model Prediction Process ###########
+        if self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "out"):
+            self.output_tensors[0], self.mid_loss = self.mid_model(self.output_tensors[0])  # , self.local_attention_mask
+            self.local_pred_clone = self.output_tensors[0].detach().clone()
 
-    def local_backward(self):  # model head 1
+        elif self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (
+                self.mid_position == "inner"):
+            # print('inner mid: self.mid_position=',self.mid_position)
+            self.mid_loss = self.local_model.mid_loss
+            # print(' self.local_model.mid_loss:', self.local_model.mid_loss)
+
+        elif (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"])):
+            self.origin_pred = self.output_tensors[0].clone()
+            self.output_tensors[0] = self.adversarial_model(self.origin_pred)
+            self.local_pred_clone = self.output_tensors[0].detach().clone()
+        ######### Defense Applied on Local Model Prediction Process ###########
+
+        self.output_attention_mask[0] = self.local_attention_mask
+
+        intermediate['inputs_embeds'] = self.local_pred_clone
+        if self.local_attention_mask != None:
+            intermediate['attention_mask'] = self.local_attention_mask
+
+        return intermediate
+
+
+    def local_backward(self):  # model head backward
         # print(' === passive local backward === ')
 
         self.num_local_updates += 1  # another update
@@ -495,18 +527,12 @@ class PassiveParty_LLM(Party_LLM):
                     local_model_params.append(param)
 
 
-            self.local_gradient=self.local_gradient.to(self.local_pred.device)
+            self.local_gradient=self.local_gradient.to(self.output_tensors[0].device)
             
-            # print('self.local_pred:',self.local_pred.requires_grad)
-            # print('self.local_gradient:',self.local_gradient.requires_grad)
-            # self.local_pred.requires_grad_(True)
-            # self.local_gradient.requires_grad_(True)
-            # print('self.local_pred:',self.local_pred.requires_grad)
-            # print('self.local_gradient:',self.local_gradient.requires_grad)
 
 
             weights_grad_a = torch.autograd.grad(
-                self.local_pred,
+                self.output_tensors[0],
                 local_model_params,
                 grad_outputs=self.local_gradient,
                 retain_graph=True,
@@ -543,7 +569,7 @@ class PassiveParty_LLM(Party_LLM):
 
             # update mid with global_loss
             weights_grad_a = torch.autograd.grad(
-                self.local_pred,
+                self.output_tensors[0],
                 self.mid_model.parameters(),
                 grad_outputs=self.local_gradient,
                 retain_graph=True,
@@ -563,8 +589,8 @@ class PassiveParty_LLM(Party_LLM):
                     local_model_params.append(param)
             if len(local_model_params) > 0:
                 self.weights_grad_a = torch.autograd.grad(
-                    self.local_pred,
-                    local_model_params,  # self.local_model.parameters()
+                    self.output_tensors[0],
+                    local_model_params,
                     grad_outputs=self.local_gradient,
                     retain_graph=True,
                     allow_unused=True,
@@ -575,6 +601,8 @@ class PassiveParty_LLM(Party_LLM):
                             w.grad += g.detach()
                         else:
                             w.grad = g.detach()
+            
+            # print('passive weights_grad_a:',self.weights_grad_a)
 
             self.local_model_optimizer.step()
 
@@ -588,7 +616,7 @@ class PassiveParty_LLM(Party_LLM):
             self.mid_loss.backward(retain_graph=True)
             # with global_loss -> local_gradient
             self.weights_grad_a = torch.autograd.grad(
-                self.local_pred,
+                self.output_tensors[0],
                 self.local_model.inner_mid_model.parameters(),
                 grad_outputs=self.local_gradient,
                 retain_graph=True,
@@ -608,7 +636,7 @@ class PassiveParty_LLM(Party_LLM):
                     local_model_params.append(param)
             if len(local_model_params) > 0:
                 self.weights_grad_a = torch.autograd.grad(
-                    self.local_pred,
+                    self.output_tensors[0],
                     local_model_params,  # self.local_model.parameters()
                     grad_outputs=self.local_gradient,
                     retain_graph=True,
@@ -639,11 +667,10 @@ class PassiveParty_LLM(Party_LLM):
                 for param in self.local_model.parameters():
                     if param.requires_grad:
                         local_model_params.append(param)
-                # print('local_model_params:',local_model_params)
-                self.local_gradient = self.local_gradient.to(self.local_pred.device)
+                self.local_gradient = self.local_gradient.to(self.output_tensors[0].device)
                 if len(local_model_params) > 0:
                     self.weights_grad_a = torch.autograd.grad(
-                        self.local_pred,
+                        self.output_tensors[0],
                         local_model_params,  # self.local_model.parameters()
                         grad_outputs=self.local_gradient,
                         retain_graph=True,
@@ -669,13 +696,13 @@ class PassiveParty_LLM(Party_LLM):
                     local_model_tail_params.append(param)
 
             if len(local_model_tail_params) > 0:
-                self.weights_grad_a = torch.autograd.grad(
+                self.weights_grad_a_tail = torch.autograd.grad(
                     self.global_loss, # model tail output, the final pred
                     local_model_tail_params,  # self.local_model.parameters()
                     retain_graph=True,
                     allow_unused=True,
                 )
-                for w, g in zip(local_model_tail_params, self.weights_grad_a):
+                for w, g in zip(local_model_tail_params, self.weights_grad_a_tail):
                     if w.requires_grad and g != None:
                         if w.grad != None:
                             w.grad += g.detach()

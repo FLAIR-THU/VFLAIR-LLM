@@ -12,9 +12,10 @@ LABEL_INFERENCE = ['BatchLabelReconstruction', 'DirectLabelScoring', 'NormbasedS
                    'DirectionbasedScoring', 'PassiveModelCompletion', 'ActiveModelCompletion']
 ATTRIBUTE_INFERENCE = ['AttributeInference']
 FEATURE_INFERENCE = ['GenerativeRegressionNetwork', 'ResSFL']
-# LLM attacks
-INVERSION = ["VanillaModelInversion_WhiteBox", "VanillaModelInversion_BlackBox", "WhiteBoxInversion"]
 
+# LLM attacks
+INVERSION_LLM = ["VanillaModelInversion_WhiteBox", "VanillaModelInversion_BlackBox", "WhiteBoxInversion"]
+LABEL_INFERENCE_LLM = ['BatchLabelReconstruction_LLM']
 communication_protocol_list = ['FedSGD', 'FedBCD_p', 'FedBCD_s', 'CELU', 'Quantization', 'Topk']
 
 
@@ -414,7 +415,6 @@ def do_load_basic_configs(config_dict, args):
                         args.feature_inference_list.append(_name)
                         args.feature_inference_index.append(ik)
 
-                    # LLM attacks
                     elif _name in INVERSION:
                         args.inversion_list.append(_name)
                         args.inversion_index.append(ik)
@@ -489,6 +489,7 @@ def do_load_basic_configs_llm(config_dict, args):
         args.num_classes = 10
         args.use_prompt = 0
         args.n_shot = 0
+    
     args.num_classes = args.dataset_split['num_classes'] if ('num_classes' in args.dataset_split) else 10
     args.use_prompt = args.dataset_split['use_prompt'] if ('use_prompt' in args.dataset_split) else 0
     args.n_shot = args.dataset_split['n_shot'] if ('n_shot' in args.dataset_split) else 0
@@ -547,6 +548,7 @@ def do_load_basic_configs_llm(config_dict, args):
         args.vfl_model_slice_num = config_model_dict['vfl_model_slice_num'] if('vfl_model_slice_num' in config_model_dict) else 2
         args.local_encoders_num = config_model_dict['local_encoders_num'] if('local_encoders_num' in config_model_dict) else 1
         args.local_tail_encoders_num = config_model_dict['local_tail_encoders_num'] if('local_tail_encoders_num' in config_model_dict) else 0
+        args.kwargs_model_loading = config_model_dict['kwargs_model_loading'] if('kwargs_model_loading' in config_model_dict) else None
 
         args.max_sequence = config_model_dict['0']['max_sequence'] if ('max_sequence' in config_model_dict['0']) else -1
         
@@ -739,28 +741,28 @@ def do_load_basic_configs_llm(config_dict, args):
             for ik in range(args.attack_num):
                 if 'name' in attack_config_dict[str(ik)]:
                     _name = attack_config_dict[str(ik)]['name']
-                    if _name in TARGETED_BACKDOOR:
-                        args.targeted_backdoor_list.append(_name)
-                        args.targeted_backdoor_index.append(ik)
+                    # if _name in TARGETED_BACKDOOR:
+                    #     args.targeted_backdoor_list.append(_name)
+                    #     args.targeted_backdoor_index.append(ik)
 
-                    elif _name in UNTARGETED_BACKDOOR:
-                        args.untargeted_backdoor_list.append(_name)
-                        args.untargeted_backdoor_index.append(ik)
+                    # elif _name in UNTARGETED_BACKDOOR:
+                    #     args.untargeted_backdoor_list.append(_name)
+                    #     args.untargeted_backdoor_index.append(ik)
 
-                    elif _name in LABEL_INFERENCE:
+                    if _name in LABEL_INFERENCE_LLM:
                         args.label_inference_list.append(_name)
                         args.label_inference_index.append(ik)
 
-                    elif _name in ATTRIBUTE_INFERENCE:
-                        args.attribute_inference_list.append(_name)
-                        args.attribute_inference_index.append(ik)
+                    # elif _name in ATTRIBUTE_INFERENCE:
+                    #     args.attribute_inference_list.append(_name)
+                    #     args.attribute_inference_index.append(ik)
 
-                    elif _name in FEATURE_INFERENCE:
-                        args.feature_inference_list.append(_name)
-                        args.feature_inference_index.append(ik)
+                    # elif _name in FEATURE_INFERENCE:
+                    #     args.feature_inference_list.append(_name)
+                    #     args.feature_inference_index.append(ik)
 
                     # LLM attacks
-                    elif _name in INVERSION:
+                    elif _name in _LLM:
                         args.inversion_list.append(_name)
                         args.inversion_index.append(ik)
                 else:
@@ -845,8 +847,12 @@ def load_attack_configs(config_file_name, args, index):
         elif args.attack_name in FEATURE_INFERENCE:
             args.attack_type = 'feature_inference'
 
-        elif args.attack_name in INVERSION:
+        ## LLM Attacks
+        elif args.attack_name in INVERSION_LLM:
             args.attack_type = 'inversion'
+        
+        elif args.attack_name in LABEL_INFERENCE_LLM:
+            args.attack_type = 'label_inference'
 
         else:
             assert 0, 'attack type not supported'

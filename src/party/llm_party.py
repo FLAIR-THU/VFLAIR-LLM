@@ -71,8 +71,11 @@ class Party(object):
         self.train_target_list = None
         self.test_target_list = None
         # store attributes of model slices
-        self.input_tensors = {}  # type:dict[int,torch.Tensor]
-        self.output_tensors = {}  # type:dict[int,torch.Tensor]
+        self.input_tensors = {}  # input intermediate type:dict[int,torch.Tensor]
+        self.output_tensors = {}  # output embeddings type:dict[int,torch.Tensor]
+        self.output_attention_mask = {}  # output attention mask type:dict[int,torch.Tensor]
+
+        self.received_grads = {}  #type:dict[int,torch.Tensor]
         self.models = {}  # type:dict[int,PreTrainedModel]
         self.optimizers = {}  # type:dict[int,torch.optim.Optimizer]
         self.lr_schedulers = {}  # type:dict[int,torch.optim.lr_scheduler.LinearLR]
@@ -240,8 +243,8 @@ class Party(object):
         for _key in self.models.keys(): # update pad token configs
             self.models[_key].config.pad_token_id = args.pad_id
 
+        self.args.model_config = result['config']
         self.args.model_dtype = result['model_dtype']
-        print('self.args.model_dtype:',self.args.model_dtype)
         self.args.config = result['config'] # model config
         self.args.config.pad_token_id = args.pad_id
         self.args.generation_config = result['generation_config'] 
@@ -304,55 +307,63 @@ class Party(object):
             if isinstance(v,torch.Tensor):
                 dict_like[k] = v.to(device)
 
-    @timer()
-    def give_pred(self, use_cache=False):
-        # print('give_pred_dev:',self.local_data_input.keys())
-        self.local_data_input['use_cache'] = use_cache
-        self._tensor_to_device(self.local_data_input , self.models[0].device)
+    # @timer()
+    # def give_pred(self, use_cache=False):
+    #     self.local_data_input['use_cache'] = use_cache
+    #     self._tensor_to_device(self.local_data_input , self.models[0].device)
 
-        intermediate = self.forward(model_index=0,**self.local_data_input)
-        if not isinstance(intermediate, dict):
-            intermediate = intermediate.prepare_for_forward()
+    #     intermediate = self.forward(model_index=0,**self.local_data_input)
+    #     # if not isinstance(intermediate, dict):
+    #     #     intermediate = intermediate.prepare_for_forward()
+        
+    #     # self.local_pred = intermediate['inputs_embeds']
+    #     ####
+    #     # print('=== DEbug ===')
+    #     # local_model_params = []
+    #     # for param in self.models[0].parameters():
+    #     #     if param.requires_grad:
+    #     #         local_model_params.append(param)
+    #     # if len(local_model_params) > 0:
+    #     #     self.weights_grad_a = torch.autograd.grad(
+    #     #         self.local_pred,
+    #     #         local_model_params,  # self.local_model.parameters()
+    #     #         grad_outputs=self.local_gradient,
+    #     #         retain_graph=True,
+    #     #         # allow_unused=True,
+    #     #     )
+    #     #     print('passive self.weights_grad_a:',self.weights_grad_a)
+            
+    #     ####
+    #     self.local_attention_mask = intermediate['attention_mask'] if ('attention_mask' in intermediate) else None
+    #     self.local_pred_clone = self.local_pred.detach().clone()
+    #     if self.local_attention_mask != None:
+    #         self.local_attention_mask = self.local_attention_mask.detach().clone()
 
-        self.local_pred = intermediate['inputs_embeds']
-        self.local_attention_mask = intermediate['attention_mask'] if ('attention_mask' in intermediate) else None
-        self.local_pred_clone = self.local_pred.detach().clone()
-        if self.local_attention_mask != None:
-            self.local_attention_mask = self.local_attention_mask.detach().clone()
+    #     ######### Defense Applied on Local Model Prediction Process ###########
+    #     if self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "out"):
+    #         self.local_pred, self.mid_loss = self.mid_model(self.local_pred)  # , self.local_attention_mask
+    #         self.local_pred_clone = self.local_pred.detach().clone()
 
-        ######### Defense Applied on Local Model Prediction Process ###########
-        if self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "out"):
-            self.local_pred, self.mid_loss = self.mid_model(self.local_pred)  # , self.local_attention_mask
-            self.local_pred_clone = self.local_pred.detach().clone()
+    #     elif self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (
+    #             self.mid_position == "inner"):
+    #         # print('inner mid: self.mid_position=',self.mid_position)
+    #         self.mid_loss = self.local_model.mid_loss
+    #         # print(' self.local_model.mid_loss:', self.local_model.mid_loss)
 
-        elif self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (
-                self.mid_position == "inner"):
-            # print('inner mid: self.mid_position=',self.mid_position)
-            self.mid_loss = self.local_model.mid_loss
-            # print(' self.local_model.mid_loss:', self.local_model.mid_loss)
+    #     elif (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"])):
+    #         self.origin_pred = self.local_pred.clone()
+    #         self.local_pred = self.adversarial_model(self.origin_pred)
+    #         self.local_pred_clone = self.local_pred.detach().clone()
+    #     ######### Defense Applied on Local Model Prediction Process ###########
 
-        elif (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"])):
-            self.origin_pred = self.local_pred.clone()
-            # if self.args.model_type == 'ChatGLM':
-            #     self.origin_pred = self.origin_pred.transpose(0,1)
+    #     self.output_tensors[0] = self.local_pred
+    #     self.output_attention_mask[0] = self.local_attention_mask
 
-            self.local_pred = self.adversarial_model(self.origin_pred)
+    #     intermediate['inputs_embeds'] = self.local_pred_clone
+    #     if self.local_attention_mask != None:
+    #         intermediate['attention_mask'] = self.local_attention_mask
 
-            # if self.args.model_type == 'ChatGLM':
-            #     self.local_pred = self.local_pred.transpose(0,1)
-                
-            self.local_pred_clone = self.local_pred.detach().clone()
-        ######### Defense Applied on Local Model Prediction Process ###########
-
-        # self.transferred_past_key_values = None # no need to transmit past_key_values
-        # if use_cache: # need to transmit past_key_values
-        #     self.transferred_past_key_values = self.past_key_values
-
-        intermediate['inputs_embeds'] = self.local_pred_clone
-        if self.local_attention_mask != None:
-            intermediate['attention_mask'] = self.local_attention_mask
-
-        return intermediate
+    #     return intermediate
 
     @timer()
     def forward(self, model_index, **kwargs):
@@ -362,10 +373,12 @@ class Party(object):
 
         if model_index == self.args.vfl_model_slice_num - 1:
             self.output_tensors[model_index] = resp.get('logits')
+            self.output_attention_mask[model_index] = None
         else:
             self.output_tensors[model_index] = resp.get('inputs_embeds')
-
-        return self._detach_tensor(resp)
+            self.output_attention_mask[model_index] = resp.get('attention_mask')
+        # self.output_tensors[model_index].requires_grad = True
+        return resp #self._detach_tensor(resp)
 
     def give_current_lr(self):
         return (self.local_model_optimizer.state_dict()['param_groups'][0]['lr'])
@@ -494,9 +507,9 @@ class Party(object):
         #         dict_like[key].requires_grad = True
         # return dict_like
 
-    def backward(self, model_index, **kwargs):
-        logger.debug(f"model_{model_index} backward")
-        self.output_tensors[model_index].backward(**kwargs)
+    # def backward(self, model_index, **kwargs):
+    #     logger.debug(f"model_{model_index} backward")
+    #     self.output_tensors[model_index]['inputs_embeds'].backward(**kwargs)
 
     def optimizer_step(self, model_index):
         logger.debug(f"model_{model_index} optimize")

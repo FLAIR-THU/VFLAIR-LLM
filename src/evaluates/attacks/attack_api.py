@@ -4,6 +4,7 @@ sys.path.append(os.pardir)
 
 from evaluates.attacks.AttributeInference import AttributeInference
 from evaluates.attacks.BatchLabelReconstruction import BatchLabelReconstruction
+
 from evaluates.attacks.DataReconstruct import DataReconstruction
 from evaluates.attacks.DirectionbasedScoring import DirectionbasedScoring
 from evaluates.attacks.NormbasedScoring import NormbasedScoring
@@ -18,6 +19,7 @@ from evaluates.attacks.ASB import ASB
 from evaluates.attacks.VanillaModelInversion_WhiteBox import VanillaModelInversion_WhiteBox
 from evaluates.attacks.VanillaModelInversion_BlackBox import VanillaModelInversion_BlackBox
 from evaluates.attacks.WhiteBoxInversion import WhiteBoxInversion
+from evaluates.attacks.BatchLabelReconstruction_LLM import BatchLabelReconstruction_LLM
 
 
 def AttackerLoader(vfl, args):

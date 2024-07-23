@@ -26,7 +26,7 @@ class MistralModelLoader(LLMModelLoader):
 
         p = ModelPartitionPipelineMistral(args=args, all_layer_num = all_encoders_num, 
                             split_index=split_index, is_server=is_active_party)
-        self._models=p.from_pretrained(model_path)# **vfl_basic_config.kwargs_model_loading))
+        self._models=p.from_pretrained(model_path, **args.kwargs_model_loading)
         print(f'===== is_active_party={is_active_party}---{self._models.keys()} ======')
 
 
@@ -47,7 +47,7 @@ class MistralModelLoader(LLMModelLoader):
             model_head_encoder_trainable_ids = args.encoder_trainable_ids['head']
             for encoder_id in range(len(self._models[0].layers)):
                 if encoder_id not in model_head_encoder_trainable_ids: # freeze encoders that's not needed
-                    for param in self._models[0].layers.parameters():
+                    for param in self._models[0].layers[encoder_id].parameters():
                         param.requires_grad = False
             print(f'passive_model_head: encoder_trainable_ids={model_head_encoder_trainable_ids}; embedding_trainable={model_head_embedding_trainable}')
 
@@ -55,7 +55,7 @@ class MistralModelLoader(LLMModelLoader):
                 model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
                 for encoder_id in range(len(self._models[2].model.layers)):
                     if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
-                        for param in self._models[2].model.layers.parameters():
+                        for param in self._models[2].model.layers[encoder_id].parameters():
                             param.requires_grad = False
                 model_tail_head_layer_trainable = args.head_layer_trainable
                 if not model_tail_head_layer_trainable: # freeze embeddings that's not needed
@@ -67,7 +67,7 @@ class MistralModelLoader(LLMModelLoader):
                 model_body_encoder_trainable_ids = args.encoder_trainable_ids['body']
                 for encoder_id in range(len(self._models[1].layers)):
                     if encoder_id not in model_body_encoder_trainable_ids: # freeze encoders that's not needed
-                        for param in self._models[1].layers.parameters():
+                        for param in self._models[1].layers[encoder_id].parameters():
                             param.requires_grad = False
                 print(f'active_model_body: encoder_trainable_ids={model_body_encoder_trainable_ids}')
                 
@@ -75,7 +75,7 @@ class MistralModelLoader(LLMModelLoader):
                 model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
                 for encoder_id in range(len(self._models[1].model.layers)):
                     if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
-                        for param in self._models[1].model.layers.parameters():
+                        for param in self._models[1].model.layers[encoder_id].parameters():
                             param.requires_grad = False
                 model_tail_head_layer_trainable = args.head_layer_trainable
                 if not model_tail_head_layer_trainable: # freeze embeddings that's not needed

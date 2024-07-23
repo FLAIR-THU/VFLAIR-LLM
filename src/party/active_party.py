@@ -116,8 +116,6 @@ class ActiveParty_LLM(Party_LLM):
     def receive_loss_and_gradients(self, gradients):
         # self.global_loss = loss
         self.global_gradients = gradients
-        # print('Active Party receive self.global_gradients:')
-        # print(self.global_gradients)
 
     def global_LR_decay(self, i_epoch):
         if self.global_model_optimizer != None:
@@ -144,24 +142,31 @@ class ActiveParty_LLM(Party_LLM):
             return convert_tensor_to_batch_msg(passive_local_gradient, 'test_logit')
         return passive_local_gradient
     
-
     def global_backward(self):
+        '''
+        3-slice: model body backward
+        2-slive: model tail backward
+        '''
         # print('=== Active Global Backward ===')
 
         if self.global_model_optimizer != None:
-            if self.args.model_architect == 'TQA': #self.args.task_type == 'QuestionAnswering':
+            # trainable layer parameters
+            global_model_params = []
+            for param in self.models[1].parameters():
+                if param.requires_grad:
+                    global_model_params.append(param)
+
+
+            if self.args.vfl_model_slice_num==2 and self.args.model_architect == 'TQA':
                 # update global model
                 self.global_model_optimizer.zero_grad()
 
-                # trainable layer parameters
-                parameters = []
-
                 # load grads into parameters
                 weights_grad_a_start = torch.autograd.grad(self.global_output.start_logits,
-                                                           self.global_model.head_layer.parameters(),
+                                                           global_model_params, #self.global_model.head_layer.parameters(),
                                                            grad_outputs=self.global_gradients, retain_graph=True)
                 weights_grad_a_end = torch.autograd.grad(self.global_output.end_logits,
-                                                         self.global_model.head_layer.parameters(),
+                                                         global_model_params, #self.global_model.head_layer.parameters(),
                                                          grad_outputs=self.global_gradients, retain_graph=True)
 
                 self.weights_grad_a = []
@@ -169,36 +174,31 @@ class ActiveParty_LLM(Party_LLM):
                     self.weights_grad_a.append(weights_grad_a_start[_i] + weights_grad_a_end[_i])
                 self.weights_grad_a = tuple(self.weights_grad_a)
 
-                for w, g in zip(self.global_model.head_layer.parameters(), self.weights_grad_a):
-                    if w.requires_grad:
+            else:
+                self.global_model_optimizer.zero_grad()
+                self.global_gradients = self.global_gradients.to(self.output_tensors[1].device)
+                self.weights_grad_a = torch.autograd.grad(self.output_tensors[1],
+                                                        global_model_params, 
+                                                        grad_outputs=self.global_gradients, 
+                                                        allow_unused=True,
+                                                        retain_graph=True)
+                # print('active weights_grad_a:',self.weights_grad_a)
+                # except Exception as e:
+                #     logger.debug(f"active party step optimizer 1")
+                #     self.global_model_optimizer.zero_grad()
+                #     self.global_gradients=self.global_gradients.to(self.output_tensors[1].device)
+                #     self.output_tensors[1].backward(gradient=self.global_gradients, retain_graph=True)
+                #     self.global_model_optimizer.step()
+                #     self.global_model_optimizer.zero_grad()
+            
+            for w, g in zip(global_model_params, self.weights_grad_a):
+                if w.requires_grad and g!=None:
+                    if w.grad != None:
+                        w.grad += g.detach()
+                    else:
                         w.grad = g.detach()
 
-                self.global_model_optimizer.step()
-
-            else:
-                # update global model
-                try:
-                    # todo: here should update all trainable params
-                    self.global_model_optimizer.zero_grad()
-                    self.global_gradients = self.global_gradients.to(self.global_output.logits.device)
-                    weights_grad_a = torch.autograd.grad(self.global_output.logits,
-                                                         self.global_model.head_layer.parameters(), \
-                                                         grad_outputs=self.global_gradients, retain_graph=True)
-                    self.weights_grad_a = weights_grad_a
-
-                    for w, g in zip(self.global_model.head_layer.parameters(), weights_grad_a):
-                        if w.requires_grad:
-                            w.grad = g.detach()
-
-                    self.global_model_optimizer.step()
-
-                except Exception as e:
-                    logger.debug(f"active party step optimizer 1")
-                    self.global_model_optimizer.zero_grad()
-                    self.global_gradients=self.global_gradients.to(self.output_tensors[1].device)
-                    self.output_tensors[1].backward(gradient=self.global_gradients, retain_graph=True)
-                    self.global_model_optimizer.step()
-                    self.global_model_optimizer.zero_grad()
+            self.global_model_optimizer.step()
 
     @property
     def device(self):
@@ -310,9 +310,6 @@ class ActiveParty(Party):
             # active party with trainable global layer
             _gradients = torch.autograd.grad(self.global_loss, self.global_pred, retain_graph=True)
             _gradients_clone = _gradients[0].detach().clone()
-
-            # if self.args.apply_mid == False and self.args.apply_trainable_layer == False:
-            #     return # no need to update
 
             # update global model
             self.global_model_optimizer.zero_grad()

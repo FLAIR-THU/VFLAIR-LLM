@@ -47,7 +47,7 @@ class FalconModelLoader(LLMModelLoader):
             model_head_encoder_trainable_ids = args.encoder_trainable_ids['head']
             for encoder_id in range(len(self._models[0].h)):
                 if encoder_id not in model_head_encoder_trainable_ids: # freeze encoders that's not needed
-                    for param in self._models[0].h.parameters():
+                    for param in self._models[0].h[encoder_id].parameters():
                         param.requires_grad = False
             print(f'passive_model_head: encoder_trainable_ids={model_head_encoder_trainable_ids}; embedding_trainable={model_head_embedding_trainable}')
 
@@ -57,7 +57,7 @@ class FalconModelLoader(LLMModelLoader):
                 print('2 ',type(self._models[2].transformer))
                 for encoder_id in range(len(self._models[2].transformer.h)):
                     if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
-                        for param in self._models[2].transformer.h.parameters():
+                        for param in self._models[2].transformer.h[encoder_id].parameters():
                             param.requires_grad = False
                 model_tail_head_layer_trainable = args.head_layer_trainable
                 if not model_tail_head_layer_trainable: # freeze embeddings that's not needed
@@ -69,7 +69,7 @@ class FalconModelLoader(LLMModelLoader):
                 model_body_encoder_trainable_ids = args.encoder_trainable_ids['body']
                 for encoder_id in range(len(self._models[1].h)):
                     if encoder_id not in model_body_encoder_trainable_ids: # freeze encoders that's not needed
-                        for param in self._models[1].h.parameters():
+                        for param in self._models[1].h[encoder_id].parameters():
                             param.requires_grad = False
                 print(f'active_model_body: encoder_trainable_ids={model_body_encoder_trainable_ids}')
                 
@@ -77,7 +77,7 @@ class FalconModelLoader(LLMModelLoader):
                 model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
                 for encoder_id in range(len(self._models[1].transformer.h)):
                     if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
-                        for param in self._models[1].transformer.h.parameters():
+                        for param in self._models[1].transformer.h[encoder_id].parameters():
                             param.requires_grad = False
                 model_tail_head_layer_trainable = args.head_layer_trainable
                 if not model_tail_head_layer_trainable: # freeze embeddings that's not needed

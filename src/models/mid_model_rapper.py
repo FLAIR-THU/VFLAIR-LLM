@@ -324,10 +324,10 @@ class MIDModel_Linear(nn.Module):
         self.to(model_dtype) 
 
     def forward(self, x):
-        print('== MID Model Forward ==')
-        print('x:',x.dtype) # bs, 30 ,768
-        print('mid_model:',self.enlarge_layer[0].weight.dtype)
-        print('mid_model:',self.decoder_layer[0].weight.dtype)
+        # print('== MID Model Forward ==')
+        # print('x:',x.dtype) # bs, 30 ,768
+        # print('mid_model:',self.enlarge_layer[0].weight.dtype)
+        # print('mid_model:',self.decoder_layer[0].weight.dtype)
         
         input_shape = x.shape
 

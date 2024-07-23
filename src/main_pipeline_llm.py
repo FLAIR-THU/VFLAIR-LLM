@@ -22,10 +22,7 @@ from evaluates.MainTaskVFL_LLM import *
 from utils.basic_functions import append_exp_res
 from utils import recorder
 
-from load.LoadConfigs import INVERSION
-
 import warnings
-
 warnings.filterwarnings("ignore")
 
 
@@ -114,6 +111,42 @@ def evaluate_inversion_attack(args):
         print(exp_result)
         append_exp_res(args.exp_res_path, exp_result)
         return precision, recall
+
+def evaluate_label_inference_attack(args):
+    for index in args.label_inference_index:
+        torch.cuda.empty_cache()
+        set_seed(args.current_seed)
+
+        args = load_attack_configs(args.configs, args, index)
+        print('======= Test Attack', index, ': ', args.attack_name, ' =======')
+        print('attack configs:', args.attack_configs)
+
+        if args.basic_vfl != None:
+            vfl = args.basic_vfl
+            main_tack_acc = args.main_acc_noattack
+        else:
+            # args.need_auxiliary = 1
+            args = load_parties_llm(args)
+            vfl = MainTaskVFL_LLM(args)
+            vfl.init_communication()
+
+            if args.pipeline == 'finetune':
+                _exp_result, metric_val, training_time = vfl.train_vfl()
+            elif args.pipeline == 'pretrained':
+                _exp_result, metric_val = vfl.inference()
+            main_tack_acc = metric_val
+            print(_exp_result)
+
+        print('=== Begin Attack ===')
+        training_time = vfl.training_time
+        train_party_time = vfl.train_party_time
+        inference_party_time = vfl.inference_party_time
+        rec_rate , attack_total_time= vfl.evaluate_attack()
+
+        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
+        print(exp_result)
+        append_exp_res(args.exp_res_path, exp_result)
+        return rec_rate
 
 
 def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
@@ -281,4 +314,8 @@ if __name__ == '__main__':
         if args.inversion_list != []:
             evaluate_inversion_attack(args)
 
+        if args.label_inference_list != []:
+            evaluate_label_inference_attack(args)
+
+        
         logger.info(recorder)

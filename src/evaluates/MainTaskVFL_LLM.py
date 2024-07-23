@@ -339,8 +339,8 @@ def create_main_task(global_model_type: GenerationMixin):
                 self.train_party_time[0] += end_time - start_time
 
             self.communication_cost += get_size_of(global_gradients)
-
-            self._communication.send_global_loss_and_gradients(self.parties[0].global_gradients)  # self.parties[0].global_loss,
+            # self.parties[0].global_gradients is global_gradients
+            self._communication.send_global_loss_and_gradients(self.parties[0].global_gradients)  
             
             return global_loss
 
@@ -1087,7 +1087,7 @@ def create_main_task(global_model_type: GenerationMixin):
 
             return final_output
 
-        def backward(self, final_pred):
+        def transmit_relevant_gradient(self, final_pred):
             '''
             calculate and transmit relevant gradient
             '''
@@ -1164,7 +1164,7 @@ def create_main_task(global_model_type: GenerationMixin):
             final_pred = self.forward(**data_inputs)
             self._clear_past_key_values()
 
-            self.backward(final_pred)
+            self.transmit_relevant_gradient(final_pred)
             # ============= Model Update =============
 
             # if self.args.vfl_model_slice_num == 3: # vfl_basic_config.num_of_slice
@@ -1225,62 +1225,6 @@ def create_main_task(global_model_type: GenerationMixin):
 
                 batch_train_acc = 0
 
-                # batch_target_word, batch_predict_word, sample_cnt = self.generate_result(pred, gt_one_hot_label, parties_data)
-                # print('train_batch batch_target_word:',type(batch_target_word),type(batch_target_word[0]))
-                # print('len:',batch_target_word[0].shape) # torch.size[512]  # torch.size[]
-
-                # print('train_batch batch_predict_word:',type(batch_predict_word),type(batch_predict_word[0]))
-                # print('len:',batch_predict_word[0].shape)# torch.size[]  # torch.size[]
-
-                # result_dict = self.generate_assessment(batch_predict_word, batch_target_word)
-                # batch_train_acc = result_dict['acc']
-
-                # if self.args.dataset == "Lambada":
-                #     # print('gt_one_hot_label:',type(gt_one_hot_label),gt_one_hot_label)
-                #     target_label_list = [int(_p) for _p in gt_one_hot_label]
-
-                #     # predict_word_list : bs * predicted words
-                #     enc_predict_prob = nn.functional.softmax(next_token_logits, dim=-1)
-                #     if self.args.metric_type == "best_pred":
-                #         predict_label_list = torch.argmax(enc_predict_prob, dim=-1)  # [bs]
-                #     elif self.args.metric_type == "n_best":
-                #         logit_list, index_list = torch.sort(enc_predict_prob, descending=True)
-                #         # print('index_list:',index_list.shape)
-                #         predict_label_list = index_list[:, :self.args.n_best_size]
-
-                #     if self.args.metric_type == "best_pred":
-                #         suc_cnt = 0
-                #         for i in range(len(target_label_list)):
-                #             if target_label_list[i] == predict_label_list[i]:
-                #                 suc_cnt += 1
-                #         batch_train_acc = suc_cnt / float(len(target_label_list))  # ACC
-                #     elif self.args.metric_type == "n_best":
-                #         suc_cnt = 0
-                #         for i in range(len(target_label_list)):
-                #             if target_label_list[i] in predict_label_list[i]:
-                #                 suc_cnt += 1
-                #         batch_train_acc = suc_cnt / float(len(target_label_list))  # ACC
-                #     else:
-                #         assert 1 > 2, 'metric type not supported'
-
-                # else:  # MMLU
-                #     choice_id_list = []
-                #     for choice in self.args.label_dict.keys():
-                #         choice_id_list.append(self.args.tokenizer(choice).input_ids[-1])
-                #         _id = self.args.tokenizer(choice).input_ids[-1]
-                #     enc = next_token_logits[:, choice_id_list]  # [bs, num_choice]
-                #     enc_predict_prob = nn.functional.softmax(enc, dim=-1)  # [bs, num_choice]
-
-                #     predict_label = torch.argmax(enc_predict_prob, dim=-1)  # [bs]
-                #     actual_label = gt_one_hot_label  # torch.argmax(gt_one_hot_label, dim=-1)
-
-                #     # test_predict_labels = predict_label.detach().cpu().tolist()
-                #     # test_actual_labels = actual_label.detach().cpu().tolist()
-                #     # test_full_predict_labels.extend( list(full_predict_label.detach().cpu()) )
-
-                #     sample_cnt += predict_label.shape[0]
-                #     suc_cnt += torch.sum(predict_label == actual_label).item()
-
                 return loss.item(), batch_train_acc
         
         def train(self,*args,**kwargs):
@@ -1336,16 +1280,17 @@ def create_main_task(global_model_type: GenerationMixin):
             optimize_step = 0
 
             data_record = pd.DataFrame(columns=['Epoch', 'train_loss', 'train_acc', 'test_acc'])
-            if (not is_test) and (self.args.model_type.lower() == 'qwen2'):
-                self.eval()
-                with torch.no_grad():
-                    _exp_result, test_acc = self.inference()
-                tensorboard_writer.add_scalar('train/eval_loss', self._loss, 0)
+            # if (not is_test) and (self.args.model_type.lower() == 'qwen2'):
+            #     self.eval()
+            #     with torch.no_grad():
+            #         _exp_result, test_acc = self.inference()
+            #     tensorboard_writer.add_scalar('train/eval_loss', self._loss, 0)
+            
             for i_epoch in range(self.epochs):
                 self.train()
                 self.current_epoch = i_epoch
-                if self.args.model_type.lower() == 'qwen2':
-                    tensorboard_writer.add_scalar('train/epoch', i_epoch, optimize_step)
+                # if self.args.model_type.lower() == 'qwen2':
+                #     tensorboard_writer.add_scalar('train/epoch', i_epoch, optimize_step)
 
                 postfix = {'train_loss': 0.0, 'train_acc': 0.0, 'test_acc': 0.0}
                 i = -1
@@ -1380,39 +1325,45 @@ def create_main_task(global_model_type: GenerationMixin):
                     self._communication.send_global_model_train_message()
 
                     # ====== train batch (start) ======
+                    if i == 0 and i_epoch == 0:
+                        self.first_epoch_state = self.save_state(True)
+
                     enter_time = time.time()
                     self.loss, self.train_acc = self.train_batch(parties_data, gt_one_hot_label)
                     exit_time = time.time()
+
+                    if i == 0 and i_epoch == 0:
+                        self.first_epoch_state.update(self.save_state(False))
+
+                    # if self.args.model_type.lower() == 'qwen2':
+                    #     tensorboard_writer.add_scalar('train/loss', self.loss, optimize_step)
+                    #     # todo： 添加逻辑，通过判断训练的层来获取lr
+                    #     try:
+                    #         tensorboard_writer.add_scalar('train/lr_local',
+                    #                                       self.parties[0].local_model_optimizer.param_groups[0]['lr'],
+                    #                                       optimize_step)
+                    #     except Exception as e:
+                    #         logger.debug(repr(e))
+                    #         pass
+                    #     try:
+                    #         tensorboard_writer.add_scalar('train/lr_global',
+                    #                                       self.parties[1].global_model_optimizer.param_groups[0]['lr'],
+                    #                                       optimize_step)
+                    #     except Exception as e:
+                    #         logger.debug(repr(e))
+                    #         pass
+                    #     try:
+                    #         tensorboard_writer.add_scalar('train/lr_model_2',
+                    #                                       self.parties[0].optimizers[2].param_groups[0]['lr'],
+                    #                                       optimize_step)
+                    #     except Exception as e:
+                    #         logger.debug(repr(e))
+                    #         pass
+
+                    #     gc.collect()
+                    # ====== train batch (end) ======
                     total_time += (exit_time - enter_time)
                     optimize_step += 1
-
-                    if self.args.model_type.lower() == 'qwen2':
-                        tensorboard_writer.add_scalar('train/loss', self.loss, optimize_step)
-                        # todo： 添加逻辑，通过判断训练的层来获取lr
-                        try:
-                            tensorboard_writer.add_scalar('train/lr_local',
-                                                          self.parties[0].local_model_optimizer.param_groups[0]['lr'],
-                                                          optimize_step)
-                        except Exception as e:
-                            logger.debug(repr(e))
-                            pass
-                        try:
-                            tensorboard_writer.add_scalar('train/lr_global',
-                                                          self.parties[1].global_model_optimizer.param_groups[0]['lr'],
-                                                          optimize_step)
-                        except Exception as e:
-                            logger.debug(repr(e))
-                            pass
-                        try:
-                            tensorboard_writer.add_scalar('train/lr_model_2',
-                                                          self.parties[0].optimizers[2].param_groups[0]['lr'],
-                                                          optimize_step)
-                        except Exception as e:
-                            logger.debug(repr(e))
-                            pass
-
-                        gc.collect()
-                    # ====== train batch (end) ======
                     self.num_total_comms = self.num_total_comms + 1
                     # if self.num_total_comms % 10 == 0:
                     #     print(f"total time for {self.num_total_comms} communication is {total_time}")
@@ -1505,11 +1456,20 @@ def create_main_task(global_model_type: GenerationMixin):
                     self.save_defense_models()
             return exp_result, self.test_acc, total_time  # , self.stopping_iter, self.stopping_time, self.stopping_commu_cost
 
+        def dict_deepcopy(self, origin_dict):
+            new_dict = {}
+            for _key in origin_dict.keys():
+                # print(f'{_key}:{type(origin_dict[_key])}')
+                if origin_dict[_key]!=None:
+                    new_dict[_key] = copy.deepcopy(origin_dict[_key].detach())
+            return new_dict
+            
         def save_state(self, BEFORE_MODEL_UPDATE=True):
             if BEFORE_MODEL_UPDATE:
                 return {
-                    "model": [copy.deepcopy(self.parties[ik].local_model) for ik in range(self.args.k)],
-                    "global_model": copy.deepcopy(self.parties[self.args.k - 1].global_model),
+                    "local_model_head": copy.deepcopy(self.parties[0].local_model),
+                    "local_model_tail": copy.deepcopy(self.parties[0].local_model_tail),
+                    # "global_model": copy.deepcopy(self.parties[self.args.k - 1].global_model),
                     "model_names": [str(type(self.parties[ik].local_model)).split('.')[-1].split('\'')[-2] for ik in
                                     range(self.args.k)] + [
                                        str(type(self.parties[self.args.k - 1].global_model)).split('.')[-1].split('\'')[
@@ -1518,16 +1478,30 @@ def create_main_task(global_model_type: GenerationMixin):
                 }
             else:
                 return {
-                    # "model": [copy.deepcopy(self.parties[ik].local_model) for ik in range(self.args.k)]+[self.parties[self.args.k-1].global_model],
-                    "data": copy.deepcopy(self.parties_data),
+                    # Batch Label
                     "label": copy.deepcopy(self.gt_one_hot_label),
-                    # "predict": [copy.deepcopy(self.parties[ik].local_pred_clone) for ik in range(self.k)],
-                    # "gradient": [copy.deepcopy(self.parties[ik].local_gradient) for ik in range(self.k)],
-                    # "local_model_gradient": [copy.deepcopy(self.parties[ik].weights_grad_a) for ik in range(self.k)],
+
+                    # Transmission
+                    "passive_predict": self.dict_deepcopy(self.parties[0].output_tensors),
+                    "passive_predict_attention_mask": self.dict_deepcopy(self.parties[0].output_attention_mask) ,
+
+                    "active_predict": self.dict_deepcopy(self.parties[1].output_tensors) ,
+                    "active_predict_attention_mask": self.dict_deepcopy(self.parties[1].output_attention_mask) ,
+                    
+                    "local_gradient": copy.deepcopy(self.parties[0].local_gradient),
+                    "global_gradient": copy.deepcopy(self.parties[1].global_gradients),
+                    
+                    # Gradient
+                    "local_model_head_gradient": copy.deepcopy(self.parties[0].weights_grad_a),
+                    "local_model_tail_gradient": copy.deepcopy(self.parties[0].weights_grad_a_tail) ,
+                    "global_model_body_gradient": copy.deepcopy(self.parties[1].weights_grad_a) ,
+                    
+                    # Result
                     "train_acc": copy.deepcopy(self.train_acc),
                     "loss": copy.deepcopy(self.loss),
+                    
                     # "global_pred": self.parties[self.k - 1].global_output,
-                    "final_model": [copy.deepcopy(self.parties[ik].local_model) for ik in range(self.args.k)],
+                    # "final_model": [copy.deepcopy(self.parties[ik].local_model) for ik in range(self.args.k)],
                     # "final_global_model": copy.deepcopy(self.parties[self.args.k - 1].global_model),
                 }
 

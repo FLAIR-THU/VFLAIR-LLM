@@ -351,6 +351,17 @@ def load_basic_models_llm(args, index):
     model_path = args.model_list['path']
     result = loader.load(args=args, model_path=model_path, is_active_party = is_active_party)
     return result
+'''
+return {
+    "models": self._models,
+    "config": model_config,
+    "generation_config": generation_config,
+    "model_architectures": model_architectures,
+    "model_embedded_dim": model_embedded_dim,
+    "all_encoders_num": all_encoders_num,
+    "model_dtype": model_dtype
+}
+'''
 
 def load_models_per_party_llm(args, index):
     result = load_basic_models_llm(args,index)

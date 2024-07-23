@@ -26,7 +26,7 @@ class XLNetModelLoader(LLMModelLoader):
 
         p = ModelPartitionPipelineXLNet(args=args, all_layer_num = all_encoders_num, 
                             split_index=split_index, is_server=is_active_party)
-        self._models=p.from_pretrained(model_path)# **vfl_basic_config.kwargs_model_loading))
+        self._models=p.from_pretrained(model_path, **args.kwargs_model_loading)
         print(f'===== is_active_party={is_active_party}---{self._models.keys()} ======')
 
 
