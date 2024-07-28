@@ -15,7 +15,6 @@ from party.party import Party
 from party.llm_party import Party as Party_LLM
 
 from dataset.party_dataset import *
-from dataset.party_dataset import ActiveDataset
 from load.LoadModels import load_models_per_party, QuestionAnsweringModelOutput
 from utils import timer
 from utils.squad_utils import normalize_answer, _get_best_indexes, compute_exact, compute_f1
@@ -260,41 +259,42 @@ class PassiveParty_LLM(Party_LLM):
 
     def cal_global_gradient_2slice(self, global_loss, global_pred):
         '''
-        self.global_gradients = \partial global_loss / \partial global_pred
+        self.global_gradient = \partial global_loss / \partial global_pred
         '''
 
         if self.args.task_type == 'QuestionAnswering':
             _gradients_start = torch.autograd.grad(global_loss, global_pred.start_logits, retain_graph=True)
             _gradients_end = torch.autograd.grad(global_loss, global_pred.end_logits, retain_graph=True)
-            global_gradients = _gradients_end + _gradients_start
-            global_gradients_clone = global_gradients[0].detach().clone()
-            global_gradients_clone = global_gradients_clone / 2
-            self.global_gradients = global_gradients_clone
+            global_gradient = _gradients_end + _gradients_start
+            global_gradient_clone = global_gradient[0].detach().clone()
+            global_gradient_clone = global_gradient_clone / 2
+            self.global_gradient = global_gradient_clone
         else:
             logits_gradients = torch.autograd.grad(global_loss, global_pred.logits, retain_graph=True)[0]
             if vfl_basic_config.num_of_slice==2:
-                global_gradients_clone = logits_gradients.detach().clone()
+                global_gradient_clone = logits_gradients.detach().clone()
             else:
                 self.backward(2,retain_graph=True,gradient=logits_gradients)
                 if self.input_tensors[2].grad is not None:
-                    global_gradients_clone=self.input_tensors[2].grad.detach().clone()
+                    global_gradient_clone=self.input_tensors[2].grad.detach().clone()
                 else:
-                    global_gradients_clone=torch.autograd.grad(self.output_tensors[2],self.input_tensors[2],grad_outputs=logits_gradients,retain_graph=True)[0]
-            self.global_gradients = global_gradients_clone
-        return global_gradients_clone
+                    global_gradient_clone=torch.autograd.grad(self.output_tensors[2],self.input_tensors[2],grad_outputs=logits_gradients,retain_graph=True)[0]
+            self.global_gradient = global_gradient_clone
+        return global_gradient_clone
 
     def cal_global_gradient_3slice(self, global_loss, global_intermediate):
         '''
-        self.global_gradients = \partial global_loss / \partial global_intermediate
-        self.input_tensors[2] = global_intermediate
+        self.global_gradient = \partial global_loss / \partial global_intermediate
+        self.input_tensors[2] = global_intermediate model body output/model tail input
         '''
         # logits_gradients = torch.autograd.grad(global_loss, global_pred, retain_graph=True)[0]
-        # global_gradients_clone=torch.autograd.grad(self.output_tensors[2],self.input_tensors[2],grad_outputs=logits_gradients,retain_graph=True)[0]
-        
-        global_gradients_clone=torch.autograd.grad(global_loss,global_intermediate,retain_graph=True)[0]
-        self.global_gradients = global_gradients_clone
-        
-        return global_gradients_clone
+        # global_gradient_clone=torch.autograd.grad(self.output_tensors[2],self.input_tensors[2],grad_outputs=logits_gradients,retain_graph=True)[0]
+        global_gradient_clone=torch.autograd.grad(global_loss,global_intermediate,retain_graph=True)[0]
+        self.global_gradient = global_gradient_clone
+        # print(f'cal global_loss:{global_loss} global_intermediate:{global_intermediate[0,0,:5]}')
+        # print(f'cal global_gradient_clone:{global_gradient_clone[0,0,:5]}')
+
+        return global_gradient_clone
 
     def cal_loss(self, pred, test=False):
         gt_one_hot_label = self.gt_one_hot_label  # label
@@ -320,10 +320,6 @@ class PassiveParty_LLM(Party_LLM):
                     loss = loss_fct(pooled_logits, labels)
             elif self.problem_type == "single_label_classification":
                 loss_fct = CrossEntropyLoss()
-                # print('labels:',labels.shape)
-                # print('self.num_labels:',self.num_labels)
-                # print('pooled_logits:',pooled_logits.shape)
-                # print('pooled_logits.view(-1, self.num_labels):',pooled_logits.view(-1, self.num_labels).shape)
                 loss = loss_fct(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
@@ -434,7 +430,7 @@ class PassiveParty_LLM(Party_LLM):
         elif self.args.apply_mid == True and (self.index in self.args.defense_configs['party']):
             # print(f'main_loss={self.global_loss},mid_loss={self.mid_loss}')
             # print('self.mid_loss.requires_grad:',self.mid_loss.requires_grad)
-            self.global_loss = self.global_loss + self.mid_loss
+            self.global_loss = self.global_loss #+ self.mid_loss
         # ########### Defense on Loss ###############
 
         return self.global_loss
@@ -564,10 +560,10 @@ class PassiveParty_LLM(Party_LLM):
               and (self.index < self.args.k - 1) and self.mid_position == "out"):
             self.local_model_optimizer.zero_grad()  # self.mid_model_optimizer.zero_grad()
 
-            # update mid+local_model with mid_loss
+            # update mid_model+local_model with mid_loss
             self.mid_loss.backward(retain_graph=True)
 
-            # update mid with global_loss
+            # update mid_model and local model with global_loss
             weights_grad_a = torch.autograd.grad(
                 self.output_tensors[0],
                 self.mid_model.parameters(),
@@ -582,7 +578,6 @@ class PassiveParty_LLM(Party_LLM):
                     else:
                         w.grad = g.detach()
 
-            # update local model trainable part with global_loss
             local_model_params = []
             for param in self.local_model.parameters():
                 if param.requires_grad:
@@ -602,8 +597,6 @@ class PassiveParty_LLM(Party_LLM):
                         else:
                             w.grad = g.detach()
             
-            # print('passive weights_grad_a:',self.weights_grad_a)
-
             self.local_model_optimizer.step()
 
         elif (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])

@@ -17,8 +17,7 @@ from scipy import optimize
 from evaluates.attacks.attacker import Attacker
 from models.global_models import *
 from utils.basic_functions import cross_entropy_for_onehot, append_exp_res
-from dataset.party_dataset import PassiveDataset, PassiveDataset_LLM
-from dataset.party_dataset import ActiveDataset
+from dataset.party_dataset import *
 
 from evaluates.defenses.defense_functions import LaplaceDP_for_pred,GaussianDP_for_pred
 
@@ -113,7 +112,7 @@ class VanillaModelInversion_WhiteBox(Attacker):
             index = attacker_ik
 
             # collect necessary information
-            local_model = self.vfl_info['local_model_head'][0].to(self.device) # Passive
+            local_model = self.vfl_info['local_model_head'].to(self.device) # Passive
             local_model.eval()
 
             batch_size = self.attack_batch_size
@@ -129,7 +128,11 @@ class VanillaModelInversion_WhiteBox(Attacker):
                 test_label = test_label[:self.attack_sample_num]
                 # attack_test_dataset = attack_test_dataset[:self.attack_sample_num]
             
-            attack_test_dataset = PassiveDataset_LLM(self.args, test_data, test_label)
+            if self.args.dataset == 'Lambada':
+                attack_test_dataset = LambadaDataset_LLM(self.args, test_data, test_label, 'test')
+            else:
+                attack_test_dataset = PassiveDataset_LLM(self.args, test_data, test_label)
+
             attack_info = f'Attack Sample Num:{len(attack_test_dataset)}'
             print(attack_info)
             append_exp_res(self.args.exp_res_path, attack_info)
@@ -158,7 +161,7 @@ class VanillaModelInversion_WhiteBox(Attacker):
                     if isinstance(batch_input_dicts[0][key_name], torch.Tensor):
                         data_inputs[key_name] = torch.stack( [batch_input_dicts[i][key_name] for i in range(len(batch_input_dicts))] )
                     else:
-                        data_inputs[key_name] = [batch_input_dicts[i][key_name] for i in range(len(batch_input_dicts))]
+                        data_inputs[key_name] = [batch_input_dicts[i][key_name] for i in range(len(batch_input_dicts))]         
 
                 # real received intermediate result
                 self.top_vfl.parties[0].obtain_local_data(data_inputs)
@@ -221,6 +224,7 @@ class VanillaModelInversion_WhiteBox(Attacker):
                         return _cost
         
                     cost_function = torch.tensor(10000000)
+                    last_cost = torch.tensor(10000000)
                     _iter = 0
                     while _iter<self.epochs: # cost_function.item()>=0.1 and 
                         optimizer.zero_grad()
@@ -232,8 +236,14 @@ class VanillaModelInversion_WhiteBox(Attacker):
                         
                         optimizer.step()
                         _iter+=1
+
+                        
                         # if _iter%20 == 0:
                         #     print('=== iter ',_iter,'  cost:',cost_function)
+                        
+                        # if last_cost < cost_function:
+                        #     break
+                        # last_cost = min(last_cost, cost_function)
                     
                     # recover tokens from dummy embeddings
                     dummy_embedding = dummy_embedding.squeeze()
@@ -288,7 +298,6 @@ class VanillaModelInversion_WhiteBox(Attacker):
 
                     
                     pred_text = self.args.tokenizer.decode(predicted_indexs)
-
                     if flag == 0:
                         print('len:',len(clean_sample_origin_id),'  precision:',precision, ' recall:',recall)
                         print('origin_text:\n',origin_text)

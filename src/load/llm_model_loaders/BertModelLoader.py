@@ -77,7 +77,7 @@ class BertModelLoader(LLMModelLoader):
                 
             else:
                 model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
-                for encoder_id in range(len(self._models[1].bert.encoder.laye)):
+                for encoder_id in range(len(self._models[1].bert.encoder.layer)):
                     if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
                         for param in self._models[1].bert.encoder.layer[encoder_id].parameters():
                             param.requires_grad = False

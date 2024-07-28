@@ -369,6 +369,7 @@ class Party(object):
     def forward(self, model_index, **kwargs):
         logger.debug(f"model_{model_index} forward")
         self.input_tensors[model_index] = kwargs.get('inputs_embeds')
+        
         resp = self.models[model_index](**kwargs)
 
         if model_index == self.args.vfl_model_slice_num - 1:

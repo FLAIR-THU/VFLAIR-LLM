@@ -12,11 +12,12 @@ import matplotlib.pyplot as plt
 import itertools
 
 from evaluates.attacks.attacker import Attacker
-from models.global_models import *  # ClassificationModelHostHead, ClassificationModelHostTrainableHead
-from utils.basic_functions import cross_entropy_for_onehot, append_exp_res
+from utils.basic_functions import append_exp_res # cross_entropy_for_onehot
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 torch.backends.cudnn.enabled = False
 
+def cross_entropy_for_onehot(pred, target):
+    return torch.mean(torch.sum(- target * pred, 1))
 
 def label_to_one_hot(target, num_classes=10):
     # print('label_to_one_hot:', target, type(target))
@@ -73,16 +74,27 @@ class BatchLabelReconstruction_LLM(Attacker):
         torch.backends.cudnn.benchmark = True
 
     def calc_label_recovery_rate(self, dummy_label, gt_label):
-        success = torch.sum(torch.argmax(dummy_label, dim=-1) == gt_label).item()
+        if len(gt_label.shape)==1:
+            success = torch.sum(torch.argmax(dummy_label, dim=-1) == gt_label).item()
+        else:
+            success = torch.sum(torch.argmax(dummy_label, dim=-1) == torch.argmax(gt_label, dim=-1)).item()
+
         total = dummy_label.shape[0]
         return success / total
 
     def cal_loss(self, pred, real_label):
-        if self.args.model_architect == 'CLM':
+        if self.args.model_architect == 'CLM': # label: bs, vocab_size
             lm_logits = pred.logits  # [bs, seq_len, vocab_size]
             next_token_logits = lm_logits[:, -1, :]
             # print(f'cal loss next_token_logits={next_token_logits.shape} real_label={real_label.shape}')
             loss = self.criterion(next_token_logits, real_label)
+        elif self.args.model_architect == 'CLS': # label: bs, num_labels
+            pooled_logits = pred.logits # [bs, num_labels]
+            real_label = torch.argmax(real_label,-1) # [bs, num_labels] -> [bs]
+            # print('pooled_logits.view(-1, self.num_labels):',pooled_logits.view(-1, self.num_labels).shape)
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(pooled_logits.view(-1, self.label_size), real_label.view(-1))
+        
         return loss
 
     def attack(self):
@@ -97,15 +109,17 @@ class BatchLabelReconstruction_LLM(Attacker):
 
 
             ####### collect necessary information #######
-            # passive_model_head_pred = self.vfl_info['passive_predict'][0]  
-            # passive_model_tail_pred = self.vfl_info['passive_predict'][2]  
+            # intermediate pred calculated by active party  
             active_model_body_pred = self.vfl_info['active_predict'][1]  # bs, seq_len, embed_dim
             active_model_body_attention_mask = self.vfl_info['active_predict_attention_mask'][1]  
             active_model_body_pred.requires_grad = True
 
+            passive_model_tail_pred = self.vfl_info['passive_predict'][2]  
+            print('passive_model_tail_pred:',passive_model_tail_pred[:5])
+
             # gradient received by active party
             global_gradient = self.vfl_info['global_gradient'] # bs, seq_len, embed_dim
-            print(f'global_gradient:{type(global_gradient)} {global_gradient.shape}')
+            print(f'global_gradient:{global_gradient.shape} {global_gradient[0,0,:5]}')
             
             # original_dy_dx = self.vfl_info['global_model_body_gradient']  # gradient calculated for local model update
             # print(f'original_dy_dx:{type(original_dy_dx)} {len(original_dy_dx)}')
@@ -115,18 +129,30 @@ class BatchLabelReconstruction_LLM(Attacker):
             #     else:
             #         print(_dy_dx)
 
+            # passive party model tail
             local_model_tail = self.vfl_info['local_model_tail'].to(self.device)
-            local_model_tail.eval()
+            # local_model_tail.eval()
 
+            dummy_local_model_tail = copy.deepcopy(local_model_tail).to(self.device)
+            for name, m in dummy_local_model_tail.named_parameters():
+                print(f'{name} {type(m)} original:',m[0])
+                torch.nn.init.zeros_(m)
+                print(f'{name} after:',m[0])
+
+                    
+
+            # target
             true_label = self.vfl_info['label'].to(self.device)  # CLM: bs, seq_len
             if self.args.model_architect == 'CLM': 
                 true_label = true_label[:,-1]
 
+            ################ Begin Attack ################
             print(f"sample_count = {active_model_body_pred.size()[0]}, number of classes = {self.label_size}")
             sample_count = active_model_body_pred.size()[0]
 
             recovery_history = []
             recovery_rate_history = []
+            rec_rate = 0
 
             # set fake label
             dummy_label = torch.randn(sample_count, self.label_size).to(self.device)
@@ -146,17 +172,45 @@ class BatchLabelReconstruction_LLM(Attacker):
                 def closure():
                     optimizer.zero_grad()
 
-                    # fake pred/loss using fake top model/fake label
+                    # pred/loss using fake top model/fake label
+                    # print('model tail input active_model_body_pred:',active_model_body_pred[0,0,:5])
+                    # print('model tail input active_model_body_attention_mask:',active_model_body_attention_mask[0,:5])
+                    # print('local_model_tail:',local_model_tail.head_layer.weight[0,:5])
+                    
                     dummy_local_model_tail_pred = local_model_tail(
                         inputs_embeds = active_model_body_pred,
-                        attention_mask=active_model_body_attention_mask)
+                        attention_mask= active_model_body_attention_mask)
+                    print('dummy_local_model_tail_pred logits:',dummy_local_model_tail_pred.logits[:5])
+                    print('passive_model_tail_pred logits:',passive_model_tail_pred[:5])
+
+
+                    
 
                     dummy_loss = self.cal_loss(dummy_local_model_tail_pred, dummy_label)
+                    dummy_gradient = torch.autograd.grad(dummy_loss, active_model_body_pred, 
+                        create_graph=True, retain_graph=True)[0] # 4, 256, 768
+                    print(f'dummy_loss:{dummy_loss} dummy_label:{dummy_label[:2]}')
+                    print(f'dummy_gradient:{dummy_gradient[0,0,:5]}')
+
+                    real_loss = self.cal_loss(dummy_local_model_tail_pred, true_label)
+                    real_gradient = torch.autograd.grad(real_loss, active_model_body_pred, 
+                        create_graph=True, retain_graph=True)[0] # 4, 256, 768
+                    print(f'real_loss:{real_loss} true_label:{true_label[:2]}')
+                    print(f'real_gradient:{real_gradient[0,0,:5]}')
+
+                    assert 1>2
+
+                    
+                    grad_diff = ((dummy_gradient-global_gradient) ** 2).mean()
+                    grad_diff.backward(retain_graph=True)
 
                     # local_model_tail_params = []
-                    # for param in local_model_tail.parameters():
+                    # for name, param in local_model_tail.named_parameters():
                     #     if param.requires_grad:
-                    #         local_model_tail_params.append(param)
+                    #         weight = torch.autograd.grad(dummy_loss, local_model_tail_params, 
+                    #     retain_graph=True, allow_unused=True)
+                    #         print(f'{name} {param.shape}')
+                                                    
                     # dummy_dy_dx_a = torch.autograd.grad(dummy_loss, local_model_tail_params, 
                     #     retain_graph=True, allow_unused=True)
                     # print(f'dummy_dy_dx_a:{type(dummy_dy_dx_a)} {len(dummy_dy_dx_a)}')
@@ -171,18 +225,11 @@ class BatchLabelReconstruction_LLM(Attacker):
                     #     grad_diff += ((gx - gy) ** 2).sum()
                     # grad_diff.backward(retain_graph=True)
                     
-                    dummy_gradient = torch.autograd.grad(dummy_loss, active_model_body_pred, 
-                        create_graph=True, retain_graph=True)[0] # 4, 256, 768
                     
-                    # weight_grad = torch.autograd.grad(dummy_gradient, dummy_label, retain_graph=True, allow_unused=True) # 4, 256, 768
-                    # print(f'dummy_gradient weight_grad:',weight_grad)
 
-                    # print(f'dummy_gradient:{dummy_gradient.shape}  global_gradient:{global_gradient.shape}')
-                    grad_diff = ((dummy_gradient-global_gradient) ** 2).mean()
-                    grad_diff.backward(retain_graph=True)
-
-                    if iters%20==0:
-                        print('Iters',iters,' grad_diff:',grad_diff.item())
+                    if iters%2==0:
+                        print('Iters',iters,' grad_diff:',grad_diff.item(),' rec_rate:',rec_rate)
+                        assert 1>2
                     return grad_diff
 
                 optimizer.step(closure)
@@ -194,9 +241,8 @@ class BatchLabelReconstruction_LLM(Attacker):
                         break
 
                 rec_rate = self.calc_label_recovery_rate(dummy_label, true_label)
-                # if iters%100==0:
-                #     print('Iters',iters,' rec_rate:',rec_rate)
                 recovery_rate_history.append(rec_rate)
+
                 end_time = time.time()
 
             ########## Clean #########

@@ -33,6 +33,9 @@
         "model_type": "Falcon",
         "max_sequence": 512,
         "path": "/home/DAIR/guzx/Git_FedProject/Models/tiiuaefalcon-rw-1b",
+        "kwargs_model_loading":{
+          "device_map": "auto"
+        },
         "0": {
             "head":{
                 "embedding_trainable": 1,

@@ -614,7 +614,6 @@ def do_load_basic_configs_llm(config_dict, args):
             assert 'body' in active_model_dict, "Model Body not specified in active party model configs"
             args.encoder_trainable['body'] = active_model_dict['body']['encoder_trainable'] if 'encoder_trainable' in active_model_dict['body'] else False
             args.encoder_trainable_ids['body'] = active_model_dict['body']['encoder_trainable_ids'] if 'encoder_trainable_ids' in active_model_dict['body'] else []
-        
         else:
             assert 'tail' in active_model_dict, "Model Tail not specified in active party model configs"
             args.encoder_trainable['tail'] = active_model_dict['tail']['encoder_trainable'] if 'encoder_trainable' in active_model_dict['tail'] else False
@@ -762,7 +761,7 @@ def do_load_basic_configs_llm(config_dict, args):
                     #     args.feature_inference_index.append(ik)
 
                     # LLM attacks
-                    elif _name in _LLM:
+                    elif _name in INVERSION_LLM:
                         args.inversion_list.append(_name)
                         args.inversion_index.append(ik)
                 else:

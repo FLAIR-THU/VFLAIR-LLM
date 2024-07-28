@@ -331,16 +331,16 @@ def create_main_task(global_model_type: GenerationMixin):
             start_time = time.time()
             global_loss = self.parties[0].cal_loss(final_pred)
             if self.args.vfl_model_slice_num == 2:
-                global_gradients = self.parties[0].cal_global_gradient_2slice(global_loss, final_pred)
+                global_gradient = self.parties[0].cal_global_gradient_2slice(global_loss, final_pred)
             else:
-                global_gradients = self.parties[0].cal_global_gradient_3slice(global_loss, self.global_pred)
+                global_gradient = self.parties[0].cal_global_gradient_3slice(global_loss, self.global_pred)
             end_time = time.time()
             if count_time == 'train':
                 self.train_party_time[0] += end_time - start_time
 
-            self.communication_cost += get_size_of(global_gradients)
-            # self.parties[0].global_gradients is global_gradients
-            self._communication.send_global_loss_and_gradients(self.parties[0].global_gradients)  
+            self.communication_cost += get_size_of(global_gradient)
+            # self.parties[0].global_gradient is global_gradient
+            self._communication.send_global_loss_and_gradients(self.parties[0].global_gradient)  
             
             return global_loss
 
@@ -1073,13 +1073,19 @@ def create_main_task(global_model_type: GenerationMixin):
             resp = self.global_pred_transmit(pred_list, use_cache=False, count_time=count_time)
 
             if self.args.vfl_model_slice_num > 2:
+                
                 self.global_pred = resp['inputs_embeds']#.to(self.device)
 
                 p = self.parties[0]
                 p._tensor_to_device(resp, p.models[2].device)
-                final_output = p.forward(2, **resp)
 
-                # final_output = self.parties[0].model_tail_forward(**resp)
+                
+                final_output = p.forward(2, **resp)
+                # print(f'1  model tail input :{resp.keys()}')
+                # print('model tail input inputs_embeds:',resp['inputs_embeds'][0,0,:5])
+                # print('model tail input inputs_embeds:',resp['attention_mask'][0,:5])
+                # print('model tail forward:',p.models[2].head_layer.weight[0,:5])
+                # print('final_output:',final_output.logits[:5])
             else:
                 final_output = resp
 
@@ -1126,7 +1132,6 @@ def create_main_task(global_model_type: GenerationMixin):
                 # exp_result, self.test_acc =
                 exp_result, main_task_result = self.seq_inference()
                 self.final_state = self.save_state()
-                # self.final_state.update(self.save_state(False))
                 self.final_state.update(self.save_party_data())
                 exp_result = f'|inference_party_time={self.inference_party_time}' + exp_result
                 return exp_result, main_task_result
@@ -1333,7 +1338,10 @@ def create_main_task(global_model_type: GenerationMixin):
                     exit_time = time.time()
 
                     if i == 0 and i_epoch == 0:
+                        print('=== fisrt epoch')
                         self.first_epoch_state.update(self.save_state(False))
+                        print('=== fisrt epoch')
+                        # assert 1>2
 
                     # if self.args.model_type.lower() == 'qwen2':
                     #     tensorboard_writer.add_scalar('train/loss', self.loss, optimize_step)
@@ -1434,11 +1442,8 @@ def create_main_task(global_model_type: GenerationMixin):
                 exp_result = f'|train_party_time={self.train_party_time}|training_time={total_time}|train_loss={self.loss}|train_acc={self.train_acc}|\
             test_acc={self.test_acc}|final_epoch={self.final_epoch}'
 
-            self.final_state = self.save_state()
-            self.final_state.update(self.save_state(False))
-            self.final_state.update(self.save_party_data())
-
-            # self.final_state = self.save_state(False)
+            # self.final_state = self.save_state()
+            # self.final_state.update(self.save_state(False))
             # self.final_state.update(self.save_party_data())
 
             result_path = f'exp_result/{self.args.dataset}/Q{str(self.args.Q)}/'
@@ -1466,6 +1471,7 @@ def create_main_task(global_model_type: GenerationMixin):
             
         def save_state(self, BEFORE_MODEL_UPDATE=True):
             if BEFORE_MODEL_UPDATE:
+                # print('save:',self.parties[0].local_model_tail.head_layer.weight[0,:5])
                 return {
                     "local_model_head": copy.deepcopy(self.parties[0].local_model),
                     "local_model_tail": copy.deepcopy(self.parties[0].local_model_tail),
@@ -1477,6 +1483,9 @@ def create_main_task(global_model_type: GenerationMixin):
 
                 }
             else:
+                # print(f'save self.parties[1].global_gradient:{self.parties[1].global_gradient[0,0,:5]}')
+                # print(f'save self.parties[0].output_tensors[2]:{self.parties[0].output_tensors[2][:5]}')
+
                 return {
                     # Batch Label
                     "label": copy.deepcopy(self.gt_one_hot_label),
@@ -1489,7 +1498,7 @@ def create_main_task(global_model_type: GenerationMixin):
                     "active_predict_attention_mask": self.dict_deepcopy(self.parties[1].output_attention_mask) ,
                     
                     "local_gradient": copy.deepcopy(self.parties[0].local_gradient),
-                    "global_gradient": copy.deepcopy(self.parties[1].global_gradients),
+                    "global_gradient": copy.deepcopy(self.parties[1].global_gradient),
                     
                     # Gradient
                     "local_model_head_gradient": copy.deepcopy(self.parties[0].weights_grad_a),

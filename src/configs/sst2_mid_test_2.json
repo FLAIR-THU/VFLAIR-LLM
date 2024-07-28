@@ -1,5 +1,5 @@
 {
-    "epochs": 1,
+    "epochs": 20,
     "lr": 0.0001,
     "k": 2,
     "batch_size": 128,
@@ -40,15 +40,11 @@
                 "embedding_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
-            },
-            "tail":{
-                "head_layer_trainable": 1,
-                "encoder_trainable": 0,
-                "encoder_trainable_ids":[]
             }
         },
         "1": {
-            "body":{
+            "tail":{
+                "head_layer_trainable": 1,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
             }
@@ -56,18 +52,33 @@
         "task":{
             "task_type": "SequenceClassification"
         },
-        "vfl_model_slice_num": 3,
+        "vfl_model_slice_num": 2,
         "local_encoders_num": 3,
         "local_tail_encoders_num": 0
     },
-    "attack_list": {
-      "0": {
-        "name": "BatchLabelReconstruction_LLM",
+    "defense": {
+        "name": "MID",
         "parameters": {
-          "party": [1],
-          "lr": 0.1,
-          "epochs": 1000
-      }
+            "party": [0],
+            "mid_model_name":"MIDModel_Linear",
+            "lr": 0.0001,
+            "lambda": 0.5,
+            "mid_position": "out",
+            "current_bottleneck_scale": 1,
+            "seq_length": 70,
+            "embed_dim": 768
+        }
+    },
+    "attack_list": {
+        "0":{
+            "name": "VanillaModelInversion_WhiteBox",
+            "parameters": {
+                "party": [1],
+                "lr": 0.01,
+                "epochs": 100,
+                "batch_size": 32,
+                "attack_sample_num": 100
+            }
+        }
     }
-  }
 }

@@ -379,6 +379,12 @@ class BertModelTail(BertModelSplitter):
         # and head_mask is converted to shape [num_hidden_layers x batch x num_heads x seq_length x seq_length]
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
 
+        # print(f'Tail inputs_embeds:{inputs_embeds[0,0,:5]}')
+        # print(f'Tail extended_attention_mask:{extended_attention_mask}')
+        # print(f'Tail head_mask:{head_mask}')
+        # print(f'Tail encoder_hidden_states:{encoder_hidden_states}')
+        # if past_key_values!= None:
+        #     print(f'Tail past_key_values:{len(past_key_values)} {past_key_values[0]}')
         encoder_outputs = self.encoder(
             hidden_states=inputs_embeds,  # intermediate,
             attention_mask=extended_attention_mask,
@@ -391,13 +397,14 @@ class BertModelTail(BertModelSplitter):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-
         sequence_output = encoder_outputs[0]
+
         pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
 
         if not return_dict:
             return (sequence_output, pooled_output) + encoder_outputs[1:]
 
+        # print('Tail sequence_output:',sequence_output[0,:5],' pooled_output:',pooled_output[0,:5])
         return BaseModelOutputWithPoolingAndCrossAttentions(
             last_hidden_state=sequence_output,
             pooler_output=pooled_output,

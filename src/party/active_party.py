@@ -37,7 +37,7 @@ class ActiveParty_LLM(Party_LLM):
 
         self.global_output = None  # transmitted to passive party
         self.global_loss = None  # transmitted from passive party
-        self.global_gradients = None  # transmitted from passive party
+        self.global_gradient = None  # transmitted from passive party
 
         self.weights_grad_a = None
 
@@ -101,7 +101,7 @@ class ActiveParty_LLM(Party_LLM):
         # print(' == Active Aggregate == ')
 
         self.passive_pred_list = pred_list
-        self.passive_pred_list[0].update({'use_cache':use_cache})
+        # self.passive_pred_list[0].update({'use_cache':use_cache})
         self._tensor_to_device(self.passive_pred_list[0],self.device)
         self.global_output = self.forward(model_index=1,**self.passive_pred_list[0])  # use_cache = use_cache,return_dict=True
         if not isinstance(self.global_output,dict):
@@ -115,7 +115,8 @@ class ActiveParty_LLM(Party_LLM):
 
     def receive_loss_and_gradients(self, gradients):
         # self.global_loss = loss
-        self.global_gradients = gradients
+        self.global_gradient = gradients
+        # print(f'receive_global_gradient:',self.global_gradient[0,0,:5])
 
     def global_LR_decay(self, i_epoch):
         if self.global_model_optimizer != None:
@@ -133,11 +134,11 @@ class ActiveParty_LLM(Party_LLM):
             passive_local_gradient = \
             torch.autograd.grad(self.global_output.start_logits + self.global_output.end_logits,
                                 self.passive_pred_list[ik]['inputs_embeds'], \
-                                grad_outputs=self.global_gradients, retain_graph=True)[0].detach().clone()
+                                grad_outputs=self.global_gradient, retain_graph=True)[0].detach().clone()
         else:
             passive_local_gradient = \
                 torch.autograd.grad(self.output_tensors[1], self.passive_pred_list[ik]['inputs_embeds'], \
-                                    grad_outputs=self.global_gradients, retain_graph=True)[0].detach().clone()
+                                    grad_outputs=self.global_gradient, retain_graph=True)[0].detach().clone()
         if remote:
             return convert_tensor_to_batch_msg(passive_local_gradient, 'test_logit')
         return passive_local_gradient
@@ -164,10 +165,10 @@ class ActiveParty_LLM(Party_LLM):
                 # load grads into parameters
                 weights_grad_a_start = torch.autograd.grad(self.global_output.start_logits,
                                                            global_model_params, #self.global_model.head_layer.parameters(),
-                                                           grad_outputs=self.global_gradients, retain_graph=True)
+                                                           grad_outputs=self.global_gradient, retain_graph=True)
                 weights_grad_a_end = torch.autograd.grad(self.global_output.end_logits,
                                                          global_model_params, #self.global_model.head_layer.parameters(),
-                                                         grad_outputs=self.global_gradients, retain_graph=True)
+                                                         grad_outputs=self.global_gradient, retain_graph=True)
 
                 self.weights_grad_a = []
                 for _i in range(len(weights_grad_a_start)):
@@ -176,18 +177,18 @@ class ActiveParty_LLM(Party_LLM):
 
             else:
                 self.global_model_optimizer.zero_grad()
-                self.global_gradients = self.global_gradients.to(self.output_tensors[1].device)
+                self.global_gradient = self.global_gradient.to(self.output_tensors[1].device)
                 self.weights_grad_a = torch.autograd.grad(self.output_tensors[1],
                                                         global_model_params, 
-                                                        grad_outputs=self.global_gradients, 
+                                                        grad_outputs=self.global_gradient, 
                                                         allow_unused=True,
                                                         retain_graph=True)
                 # print('active weights_grad_a:',self.weights_grad_a)
                 # except Exception as e:
                 #     logger.debug(f"active party step optimizer 1")
                 #     self.global_model_optimizer.zero_grad()
-                #     self.global_gradients=self.global_gradients.to(self.output_tensors[1].device)
-                #     self.output_tensors[1].backward(gradient=self.global_gradients, retain_graph=True)
+                #     self.global_gradient=self.global_gradient.to(self.output_tensors[1].device)
+                #     self.output_tensors[1].backward(gradient=self.global_gradient, retain_graph=True)
                 #     self.global_model_optimizer.step()
                 #     self.global_model_optimizer.zero_grad()
             

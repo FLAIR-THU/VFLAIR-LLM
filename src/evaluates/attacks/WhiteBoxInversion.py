@@ -17,8 +17,7 @@ from scipy import optimize
 from evaluates.attacks.attacker import Attacker
 from models.global_models import *
 from utils.basic_functions import cross_entropy_for_onehot, append_exp_res
-from dataset.party_dataset import PassiveDataset, PassiveDataset_LLM
-from dataset.party_dataset import ActiveDataset
+from dataset.party_dataset import *
 
 from evaluates.defenses.defense_functions import LaplaceDP_for_pred,GaussianDP_for_pred
 
@@ -75,7 +74,7 @@ class WhiteBoxInversion(Attacker):
             index = attacker_ik
 
             # collect necessary information
-            local_model = self.vfl_info['local_model_head'][0].to(self.device) # Passive
+            local_model = self.vfl_info['local_model_head'].to(self.device) # Passive
             local_model.eval()
             batch_size = self.attack_batch_size
 
@@ -98,11 +97,16 @@ class WhiteBoxInversion(Attacker):
                 test_label = test_label[:self.attack_sample_num]
                 # attack_test_dataset = attack_test_dataset[:self.attack_sample_num]
             
-            attack_test_dataset = PassiveDataset_LLM(self.args, test_data, test_label)
+            if self.args.dataset == 'Lambada':
+                attack_test_dataset = LambadaDataset_LLM(self.args, test_data, test_label, 'test')
+            else:
+                attack_test_dataset = PassiveDataset_LLM(self.args, test_data, test_label)
+
             attack_info = f'Attack Sample Num:{len(attack_test_dataset)}'
             print(attack_info)
             append_exp_res(self.args.exp_res_path, attack_info)
 
+            
             test_data_loader = DataLoader(attack_test_dataset, batch_size=batch_size ,collate_fn=lambda x:x ) # ,
             del(self.vfl_info)
             

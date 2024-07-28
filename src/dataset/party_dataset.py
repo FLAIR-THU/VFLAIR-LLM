@@ -100,11 +100,11 @@ class PassiveDataset_LLM(Dataset):
                         padding=args.padding,truncation=args.truncation ,\
                         max_length=args.max_length,return_tensors='pt')
 
-                        if i == 0:
-                            print('TEXT:',texts[i])
-                            print('text_id:',ids['input_ids'].shape, ids['input_ids'])
-                            print('label:',labels[i],args.tokenizer.convert_tokens_to_ids( labels[i] ) )
-                            print('-'*25)
+                        # if i == 0:
+                        #     print('TEXT:',texts[i])
+                        #     print('text_id:',ids['input_ids'].shape, ids['input_ids'])
+                        #     print('label:',labels[i],args.tokenizer.convert_tokens_to_ids( labels[i] ) )
+                        #     print('-'*25)
 
                         self.labels.append( args.tokenizer.convert_tokens_to_ids( labels[i] ) )
                         self.input_dicts.append(ids)
@@ -114,11 +114,11 @@ class PassiveDataset_LLM(Dataset):
                     padding=args.padding,truncation=args.truncation ,\
                     max_length=args.max_length,return_tensors='pt')
 
-                    if i == 0:
-                        print('TEXT:',texts[i])
-                        print('text_id:',ids['input_ids'].shape, ids['input_ids'])
-                        print('label:',labels[i],args.tokenizer.convert_tokens_to_ids( labels[i] ) )
-                        print('-'*25)
+                    # if i == 0:
+                    #     print('TEXT:',texts[i])
+                    #     print('text_id:',ids['input_ids'].shape, ids['input_ids'])
+                    #     print('label:',labels[i],args.tokenizer.convert_tokens_to_ids( labels[i] ) )
+                    #     print('-'*25)
 
                     self.labels.append(ids['input_ids'])#args.tokenizer.convert_tokens_to_ids( labels[i] ) )
                     self.input_dicts.append(ids)
@@ -175,9 +175,7 @@ class LambadaDataset_LLM(Dataset):
 
         if split_name == 'test':
             for i in range(len(texts)):
-                ids = args.tokenizer(texts[i], \
-                padding=args.padding,truncation=args.truncation ,\
-                max_length=args.max_length,return_tensors='pt')
+                ids = args.tokenizer(texts[i],return_tensors='pt')
 
                 self.labels.append( args.tokenizer.convert_tokens_to_ids( labels[i] ) )
                 self.input_dicts.append(ids)
@@ -234,11 +232,11 @@ class MMLUDataset_LLM(Dataset):
                                  padding=args.padding, truncation=args.truncation, \
                                  max_length=args.max_length, return_tensors='pt')
 
-            if i == 0:
-                print('TEXT:', texts[i])
-                print('text_id:', ids['input_ids'].shape, ids['input_ids'])
-                print('label:', labels[i], args.tokenizer.convert_tokens_to_ids(labels[i]))
-                print('-' * 25)
+            # if i == 0:
+            #     print('TEXT:', texts[i])
+            #     print('text_id:', ids['input_ids'].shape, ids['input_ids'])
+            #     print('label:', labels[i], args.tokenizer.convert_tokens_to_ids(labels[i]))
+            #     print('-' * 25)
 
             self.labels.append(args.tokenizer.convert_tokens_to_ids(labels[i]))
             self.input_dicts.append(ids)
@@ -619,13 +617,13 @@ class PassiveDataset_LLM_old(Dataset):
                     if 'token_type_ids' in list(ids.keys()):
                         self.token_type_ids.append(torch.tensor(ids['token_type_ids']).squeeze())
 
-                    if flag == 0:
-                        print('TEXT:', texts[i])
+                    # if flag == 0:
+                    #     print('TEXT:', texts[i])
 
-                        print('text_id:', self.texts[-1].shape, self.texts[-1])
-                        print('label:', labels[i], self.labels[-1])
-                        print('-' * 25)
-                        flag = flag + 1
+                    #     print('text_id:', self.texts[-1].shape, self.texts[-1])
+                    #     print('label:', labels[i], self.labels[-1])
+                    #     print('-' * 25)
+                    #     flag = flag + 1
 
                 self.labels = [int(aa) for aa in self.labels]
                 self.texts = [aa.tolist() for aa in self.texts]
