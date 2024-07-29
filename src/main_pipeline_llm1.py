@@ -146,7 +146,7 @@ def evaluate_label_inference_attack(args):
         exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
         print(exp_result)
         append_exp_res(args.exp_res_path, exp_result)
-    return rec_rate
+    # return rec_rate
 
 
 def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
@@ -167,7 +167,7 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
     return target_cls
 
 def create_exp_dir_and_file(dataset, Q, model_name, pipeline, defense_name='', defense_param=''):
-    exp_res_dir = f'exp_result/{dataset}/Q{str(Q)}/'
+    exp_res_dir = f'exp_result/{dataset}_1/Q{str(Q)}/'
     if not os.path.exists(exp_res_dir):
         os.makedirs(exp_res_dir)
     if pipeline == 'pretrained':

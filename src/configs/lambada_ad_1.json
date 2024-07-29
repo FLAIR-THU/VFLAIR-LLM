@@ -60,7 +60,7 @@
           "n_best_size": 3
       },
       "vfl_model_slice_num": 2,
-      "local_encoders_num": 3,
+      "local_encoders_num": 1,
       "local_tail_encoders_num": 0
   },
   "defense": {
@@ -71,7 +71,7 @@
         "adversarial_model_lr": 0.001,
         "imagined_adversary": "ImaginedAdversary_MLP3",
         "imagined_adversary_lr": 0.001,
-        "lambda": 0.1,
+        "lambda": 5.0,
         "seq_length": 512,
         "embed_dim": 768
         }
