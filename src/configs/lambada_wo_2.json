@@ -5,7 +5,7 @@
   "batch_size": 32,
   "test_batch_size": 1,
   "early_stop_threshold": 1,
-  "pipeline": "finetune",
+  "pipeline": "pretrained",
   "model_architect":"CLM",
   "communication":{
       "communication_protocol": "FedSGD",
@@ -61,34 +61,21 @@
           "n_best_size": 3
       },
       "vfl_model_slice_num": 2,
-      "local_encoders_num": 1,
+      "local_encoders_num": 2,
       "local_tail_encoders_num": 0
   },
-  "defense": {
-        "name": "AdversarialTraining",
+"attack_list": {
+    "0":{
+        "name": "VanillaModelInversion_WhiteBox",
         "parameters": {
-        "party": [0],
-        "adversarial_model": "Mapping_MLP3",
-        "adversarial_model_lr": 0.001,
-        "imagined_adversary": "ImaginedAdversary_MLP3",
-        "imagined_adversary_lr": 0.001,
-        "lambda": 0.001,
-        "seq_length": 512,
-        "embed_dim": 768
+            "party": [1],
+            "lr": 0.001,
+            "epochs": 400,
+            "batch_size": 1,
+            "attack_sample_num": 200
         }
     },
-    "attack_list": {
-        "0":{
-            "name": "VanillaModelInversion_WhiteBox",
-            "parameters": {
-                "party": [1],
-                "lr": 0.001,
-                "epochs": 400,
-                "batch_size": 1,
-                "attack_sample_num": 200
-                }
-        },
-        "1":{
+    "1":{
             "name": "WhiteBoxInversion",
             "parameters": {
                 "party": [1],
@@ -99,7 +86,6 @@
                 "attack_sample_num": 200
             }
         }
-        }
-      
+    }
   
 }

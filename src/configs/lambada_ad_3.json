@@ -3,6 +3,7 @@
   "lr": 0.001,
   "k": 2,
   "batch_size": 32,
+  "test_batch_size": 1,
   "early_stop_threshold": 1,
   "pipeline": "finetune",
   "model_architect":"CLM",
@@ -71,7 +72,7 @@
         "adversarial_model_lr": 0.001,
         "imagined_adversary": "ImaginedAdversary_MLP3",
         "imagined_adversary_lr": 0.001,
-        "lambda": 0.1,
+        "lambda": 0.001,
         "seq_length": 512,
         "embed_dim": 768
         }

@@ -38,7 +38,9 @@ class BatchLabelReconstruction_LLM(Attacker):
         super().__init__(args)
         self.args = args
         # get information for launching BLI attack
-        self.vfl_info = top_vfl.first_epoch_state
+        self.top_vfl = top_vfl
+        self.vfl_info = top_vfl.final_state
+
         # prepare parameters
         self.device = args.device
         self.num_classes = args.num_classes
@@ -49,6 +51,7 @@ class BatchLabelReconstruction_LLM(Attacker):
         self.early_stop = args.attack_configs['early_stop'] if 'early_stop' in args.attack_configs else 0
         self.early_stop_threshold = args.attack_configs[
             'early_stop_threshold'] if 'early_stop_threshold' in args.attack_configs else 1e-7
+        
         if self.args.model_architect != 'CLM':
             self.label_size = args.num_classes
         else:
@@ -109,8 +112,6 @@ class BatchLabelReconstruction_LLM(Attacker):
 
 
             ####### collect necessary information #######
-            # [Active Model Body] -> active_model_body_pred -> [Passive Model Tail] 
-            # -> final_pred + true label -> Loss
             # intermediate pred calculated by active party  
             active_model_body_pred = self.vfl_info['active_predict'][1]  # bs, seq_len, embed_dim
             active_model_body_attention_mask = self.vfl_info['active_predict_attention_mask'][1]  
@@ -123,29 +124,76 @@ class BatchLabelReconstruction_LLM(Attacker):
             global_gradient = self.vfl_info['global_gradient'] # bs, seq_len, embed_dim
             print(f'global_gradient:{global_gradient.shape} {global_gradient[0,0,:5]}')
             
-            # original_dy_dx = self.vfl_info['global_model_body_gradient']  # gradient calculated for local model update
-            # print(f'original_dy_dx:{type(original_dy_dx)} {len(original_dy_dx)}')
-            # for _dy_dx in original_dy_dx:
-            #     if _dy_dx != None:
-            #         print(_dy_dx.shape)
-            #     else:
-            #         print(_dy_dx)
 
             # passive party model tail
             local_model_tail = self.vfl_info['local_model_tail'].to(self.device)
             # local_model_tail.eval()
 
-            # dummy_local_model_tail = copy.deepcopy(local_model_tail).to(self.device)
-            # for name, m in dummy_local_model_tail.named_parameters():
-            #     print(f'{name} {type(m)} original:',m[0])
-            #     torch.nn.init.zeros_(m)
-            #     print(f'{name} after:',m[0])
+            dummy_local_model_tail = copy.deepcopy(local_model_tail).to(self.device)
+            for name, m in dummy_local_model_tail.named_parameters():
+                print(f'{name} {type(m)} original:',m[0])
+                torch.nn.init.zeros_(m)
+                print(f'{name} after:',m[0])
 
-                
+                    
+
             # target
-            true_label = self.vfl_info['label'].to(self.device)  # CLM: bs, seq_len
-            if self.args.model_architect == 'CLM': 
-                true_label = true_label[:,-1]
+            test_data = self.vfl_info["test_data"][0] 
+            test_label = self.vfl_info["test_label"][0] 
+            
+            if len(test_data) > self.attack_sample_num:
+                test_data = test_data[:self.attack_sample_num]
+                test_label = test_label[:self.attack_sample_num]
+                # attack_test_dataset = attack_test_dataset[:self.attack_sample_num]
+            
+            if self.args.dataset == 'Lambada':
+                attack_test_dataset = LambadaDataset_LLM(self.args, test_data, test_label, 'test')
+            else:
+                attack_test_dataset = PassiveDataset_LLM(self.args, test_data, test_label)
+
+            attack_info = f'Attack Sample Num:{len(attack_test_dataset)}'
+            print(attack_info)
+            append_exp_res(self.args.exp_res_path, attack_info)
+
+            # true_label = self.vfl_info['label'].to(self.device)  # CLM: bs, seq_len
+            # if self.args.model_architect == 'CLM': 
+            #     true_label = true_label[:,-1]
+
+            test_data_loader = DataLoader(attack_test_dataset, batch_size=batch_size ,collate_fn=lambda x:x ) # ,
+            del(self.vfl_info)
+            # test_data_loader = self.vfl_info["test_loader"][0] # Only Passive party has origin input
+            
+            flag = 0
+            enter_time = time.time()
+            for origin_input in test_data_loader:
+                ## origin_input: list of bs * (input_discs, label)
+                batch_input_dicts = []
+                batch_label = []
+                for bs_id in range(len(origin_input)):
+                    # Input Dict
+                    batch_input_dicts.append(origin_input[bs_id][0])
+                        # Label
+                    if type(origin_input[bs_id][1]) != str:
+                        batch_label.append(origin_input[bs_id][1].tolist())
+                    else:
+                        batch_label.append(origin_input[bs_id][1])
+
+                data_inputs = {}
+                for key_name in batch_input_dicts[0].keys():
+                    if isinstance(batch_input_dicts[0][key_name], torch.Tensor):
+                        data_inputs[key_name] = torch.stack( [batch_input_dicts[i][key_name] for i in range(len(batch_input_dicts))] )
+                    else:
+                        data_inputs[key_name] = [batch_input_dicts[i][key_name] for i in range(len(batch_input_dicts))]         
+
+                # real received intermediate result
+                self.top_vfl.parties[0].obtain_local_data(data_inputs)
+                self.top_vfl.parties[0].gt_one_hot_label = batch_label
+
+                all_pred_list = self.top_vfl.pred_transmit()
+                real_results = all_pred_list[0]
+                self.top_vfl._clear_past_key_values()
+
+
 
             ################ Begin Attack ################
             print(f"sample_count = {active_model_body_pred.size()[0]}, number of classes = {self.label_size}")

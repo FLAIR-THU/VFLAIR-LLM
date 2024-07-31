@@ -1475,6 +1475,8 @@ def create_main_task(global_model_type: GenerationMixin):
                 return {
                     "local_model_head": copy.deepcopy(self.parties[0].local_model),
                     "local_model_tail": copy.deepcopy(self.parties[0].local_model_tail),
+                    "active_model_body": copy.deepcopy(self.parties[1].global_model),
+
                     # "global_model": copy.deepcopy(self.parties[self.args.k - 1].global_model),
                     "model_names": [str(type(self.parties[ik].local_model)).split('.')[-1].split('\'')[-2] for ik in
                                     range(self.args.k)] + [

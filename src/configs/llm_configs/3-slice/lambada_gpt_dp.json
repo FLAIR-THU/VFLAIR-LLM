@@ -5,7 +5,7 @@
   "batch_size": 32,
   "test_batch_size": 1,
   "early_stop_threshold": 1,
-  "pipeline": "finetune",
+  "pipeline": "pretrained",
   "model_architect":"CLM",
   "communication":{
       "communication_protocol": "FedSGD",
@@ -44,11 +44,15 @@
               "embedding_trainable": 0,
               "encoder_trainable": 0,
               "encoder_trainable_ids":[]
+          },
+          "tail":{
+              "head_layer_trainable": 1,
+              "encoder_trainable": 0,
+              "encoder_trainable_ids":[]
           }
       },
       "1": {
-          "tail":{
-              "head_layer_trainable": 1,
+          "body":{
               "encoder_trainable": 0,
               "encoder_trainable_ids":[]
           }
@@ -65,41 +69,36 @@
       "local_tail_encoders_num": 0
   },
   "defense": {
-        "name": "AdversarialTraining",
+        "name": "LaplaceDP",
         "parameters": {
-        "party": [0],
-        "adversarial_model": "Mapping_MLP3",
-        "adversarial_model_lr": 0.001,
-        "imagined_adversary": "ImaginedAdversary_MLP3",
-        "imagined_adversary_lr": 0.001,
-        "lambda": 0.001,
-        "seq_length": 512,
-        "embed_dim": 768
+        "party": [
+            0
+        ],
+        "epsilon": 50
         }
-    },
-    "attack_list": {
-        "0":{
-            "name": "VanillaModelInversion_WhiteBox",
-            "parameters": {
-                "party": [1],
-                "lr": 0.001,
-                "epochs": 400,
-                "batch_size": 1,
-                "attack_sample_num": 200
-                }
-        },
-        "1":{
-            "name": "WhiteBoxInversion",
-            "parameters": {
-                "party": [1],
-                "T": 0.05,
-                "lr": 0.005,
-                "epochs": 300,
-                "batch_size": 1,
-                "attack_sample_num": 200
+},
+"attack_list": {
+    "0":{
+        "name": "VanillaModelInversion_WhiteBox",
+        "parameters": {
+            "party": [1],
+            "lr": 0.001,
+            "epochs": 400,
+            "batch_size": 1,
+            "attack_sample_num": 200
             }
+    },
+    "1":{
+        "name": "WhiteBoxInversion",
+        "parameters": {
+            "party": [1],
+            "T": 0.05,
+            "lr": 0.005,
+            "epochs": 300,
+            "batch_size": 1,
+            "attack_sample_num": 200
         }
-        }
-      
+    }
+    }
   
 }
