@@ -348,7 +348,7 @@ def load_basic_models_llm(args, index):
     assert args.model_type in Loader_Map.keys(), f'{args.model_type} not supported'
     is_active_party = (index == args.k - 1)
     loader = Loader_Map[args.model_type]()
-    model_path = args.model_list['path']
+    model_path = args.model_path[index]
     result = loader.load(args=args, model_path=model_path, is_active_party = is_active_party)
     return result
 '''

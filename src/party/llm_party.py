@@ -234,7 +234,7 @@ class Party(object):
         #     self._set_peft()
 
         # Load Tokenizer
-        model_path = args.model_list['path']
+        model_path = args.model_path[index]
         self.prepare_tokenizer(args, model_path)
         
         # Load Model

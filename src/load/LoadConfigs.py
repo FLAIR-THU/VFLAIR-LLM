@@ -577,10 +577,8 @@ def do_load_basic_configs_llm(config_dict, args):
         
         # Model Path
         if 'path' in config_model_dict :
-            args.model_path = config_model_dict['path']
             args.pretrained = config_model_dict['pretrained'] if 'pretrained' in config_model_dict else 1
         else:
-            args.model_path = ""
             args.pretrained = 1
         # Overall LLM type/None for non-llm scenario
         args.model_type = config_model_dict['model_type'] if 'model_type' in config_model_dict else None  
@@ -591,9 +589,11 @@ def do_load_basic_configs_llm(config_dict, args):
         args.head_layer_trainable = False
         args.encoder_trainable = {}
         args.encoder_trainable_ids = {}
+        args.model_path = []
         # Passive Party Models
         assert '0' in config_model_dict, "Passive Party not specified in model list"
         passive_model_dict = config_model_dict['0']
+        args.model_path.append(passive_model_dict['path'])
         
         assert 'head' in passive_model_dict, "Model Head not specified in passive party model configs"
         args.encoder_trainable['head'] = passive_model_dict['head']['encoder_trainable'] if 'encoder_trainable' in passive_model_dict['head'] else False
@@ -609,6 +609,7 @@ def do_load_basic_configs_llm(config_dict, args):
         # Active Party Models
         assert '1' in config_model_dict, "Active Party not specified in model list"
         active_model_dict = config_model_dict['1']
+        args.model_path.append(active_model_dict['path'])
         
         if args.vfl_model_slice_num==3:
             assert 'body' in active_model_dict, "Model Body not specified in active party model configs"
