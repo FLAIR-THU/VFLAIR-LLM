@@ -39,7 +39,7 @@ class GPT2ModelLoader(LLMModelLoader):
             for _key in self._models.keys():
                 print(_key)
                 self._models[_key].print_trainable_parameters()
-
+        
         if not is_active_party:
             model_head_embedding_trainable = args.embedding_trainable
             if not model_head_embedding_trainable: # freeze embeddings that's not needed

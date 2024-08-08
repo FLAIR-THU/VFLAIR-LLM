@@ -45,7 +45,7 @@ class MambaModelHead(MambaModelSplitter):
         super().__init__(config)
         self.past_key_values = None
         # todo: del norm will cause error when load from original model weight
-        # del self.norm
+        del self.norm_f
 
     def _clear_past_key_values(self):
         self.past_key_values = None
@@ -104,7 +104,8 @@ class MambaModelBody(MambaModelSplitter):
         super().__init__(config)
         self.past_key_values = None
         # todo: del norm will cause error when load from original model weight
-        # del self.norm
+        del self.norm_f
+        
 
     def forward(
         self,

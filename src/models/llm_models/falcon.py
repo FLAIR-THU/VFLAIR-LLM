@@ -46,6 +46,7 @@ class FalconModelHead(FalconModelSplitter):
         self.past_key_values = None
         self.embedding_output = None
 
+        del self.ln_f
         # todo: del norm will cause error when load from original model weight
         # del self.norm
 
@@ -220,6 +221,9 @@ class FalconModelBody(FalconModelSplitter):
     def __init__(self, config: FalconConfig):
         super().__init__(config)
         self.past_key_values = None
+
+        del self.ln_f
+
         # todo: del norm will cause error when load from original model weight
         # del self.norm
 
@@ -445,7 +449,8 @@ class FalconModelTail(FalconModelSplitter):
         # Compute alibi tensor: check build_alibi_tensor documentation
         past_key_values_length = 0
         if past_key_values[0] is not None:
-            past_key_values_length = past_key_values[0][0].shape[-2]
+            if len(past_key_values[0])>0:# add
+                past_key_values_length = past_key_values[0][0].shape[-2]
 
         if self.use_alibi:
             mask = (

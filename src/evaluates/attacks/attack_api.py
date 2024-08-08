@@ -20,6 +20,8 @@ from evaluates.attacks.VanillaModelInversion_WhiteBox import VanillaModelInversi
 from evaluates.attacks.VanillaModelInversion_BlackBox import VanillaModelInversion_BlackBox
 from evaluates.attacks.WhiteBoxInversion import WhiteBoxInversion
 from evaluates.attacks.BatchLabelReconstruction_LLM import BatchLabelReconstruction_LLM
+from evaluates.attacks.DirectionbasedScoring_LLM import DirectionbasedScoring_LLM
+
 
 
 def AttackerLoader(vfl, args):

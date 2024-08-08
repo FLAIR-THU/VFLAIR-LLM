@@ -49,6 +49,7 @@ class BaichuanModelHead(BaichuanModelSplitter):
     def __init__(self, config: BaiChuanConfig):
         super().__init__(config)
         self.past_key_values = None
+        del self.norm
         # todo: del norm will cause error when load from original model weight
         # del self.norm
 
@@ -198,6 +199,8 @@ class BaichuanModelBody(BaichuanModelSplitter):
     def __init__(self, config: BaiChuanConfig):
         super().__init__(config)
         self.past_key_values = None
+        del self.norm
+        del self.embed_tokens
         # todo: del norm will cause error when load from original model weight
         # del self.norm
 
@@ -351,7 +354,7 @@ class BaichuanModelTail(BaichuanModelSplitter):
     def __init__(self, config: BaiChuanConfig):
         super().__init__(config)
         self.past_key_values = None
-
+        # del self.embed_tokens
         # todo: del norm will cause error when load from original model weight
         # del self.norm
     

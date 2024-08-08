@@ -113,6 +113,8 @@ class ChatGLMModelBody(ChatGLMModelSplitter):
     def __init__(self, config: ChatGLMConfig):
         super().__init__(config)
         self.past_key_values = None
+        del self.embedding
+
         # todo: del norm will cause error when load from original model weight
         # del self.norm
 
@@ -192,6 +194,7 @@ class ChatGLMModelTail(ChatGLMModelSplitter):
     def __init__(self, config: ChatGLMConfig):
         super().__init__(config)
         self.past_key_values = None
+        # del self.embedding
 
         # todo: del norm will cause error when load from original model weight
         # del self.norm

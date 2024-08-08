@@ -43,7 +43,7 @@ class Qwen2ModelHead(Qwen2ModelSplitter):
         super().__init__(config)
         self.past_key_values = None
         # todo: del norm will cause error when load from original model weight
-        # del self.norm
+        del self.norm
 
     def _clear_past_key_values(self):
         self.past_key_values = None
@@ -193,7 +193,7 @@ class Qwen2ModelBody(Qwen2ModelSplitter):
         super().__init__(config)
         self.past_key_values = None
         # todo: del norm will cause error when load from original model weight
-        # del self.norm
+        del self.norm
     
     def forward(
         self,

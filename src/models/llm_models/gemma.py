@@ -41,7 +41,7 @@ class GemmaModelHead(GemmaModelSplitter):
         self.past_key_values = None
         self.embedding_output = None
         # todo: del norm will cause error when load from original model weight
-        # del self.norm
+        del self.norm
 
     def _clear_past_key_values(self):
         self.past_key_values = None
@@ -158,7 +158,7 @@ class GemmaModelBody(GemmaModelSplitter):
         super().__init__(config)
         self.past_key_values = None
         # todo: del norm will cause error when load from original model weight
-        # del self.norm
+        del self.norm
     
     def forward(
         self,

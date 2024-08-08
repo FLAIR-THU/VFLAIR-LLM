@@ -42,6 +42,7 @@ class LlamaModelHead(LlamaModelSplitter):
         super().__init__(config)
         self.past_key_values = None
         self.embedding_output = None
+        del self.norm
         # todo: del norm will cause error when load from original model weight
         # del self.norm
 
@@ -153,6 +154,8 @@ class LlamaModelBody(LlamaModelSplitter):
     def __init__(self, config: LlamaConfig):
         super().__init__(config)
         self.past_key_values = None
+        del self.norm
+        del self.embed_tokens
         # todo: del norm will cause error when load from original model weight
         # del self.norm
     
@@ -261,7 +264,7 @@ class LlamaModelTail(LlamaModelSplitter):
     def __init__(self, config: LlamaConfig):
         super().__init__(config)
         self.past_key_values = None
-
+        del self.embed_tokens
         # todo: del norm will cause error when load from original model weight
         # del self.norm
     

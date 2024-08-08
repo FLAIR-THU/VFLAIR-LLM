@@ -40,6 +40,7 @@ class GPT2ModelHead(GPT2ModelSplitter):
     def __init__(self, config: GPT2Config):
         super().__init__(config)
         self.past_key_values = None
+        del self.ln_f
         # todo: del norm will cause error when load from original model weight
         # del self.norm
 
@@ -253,6 +254,11 @@ class GPT2ModelBody(GPT2ModelSplitter):
     def __init__(self, config: GPT2Config):
         super().__init__(config)
         self.past_key_values = None
+        del self.drop
+        del self.wte
+        del self.wpe
+        del self.ln_f
+
         # todo: del norm will cause error when load from original model weight
         # del self.norm
 
@@ -457,7 +463,7 @@ class GPT2ModelTail(GPT2ModelSplitter):
     def __init__(self, config: GPT2Config):
         super().__init__(config)
         self.past_key_values = None
-
+        del self.drop
         # todo: del norm will cause error when load from original model weight
         # del self.norm
 

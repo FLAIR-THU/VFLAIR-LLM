@@ -51,6 +51,7 @@ class BertModelHead(BertModelSplitter):
         self.past_key_values = None
         self.embedding_output = None
         
+        del self.pooler
         # defense related
         self.inner_mid_model = None
 
@@ -189,6 +190,9 @@ class BertModelBody(BertModelSplitter):
     def __init__(self, config: BertConfig):
         super().__init__(config)
         self.past_key_values = None
+
+        del self.pooler
+
         # todo: del norm will cause error when load from original model weight
         # del self.norm
 
@@ -294,7 +298,7 @@ class BertModelTail(BertModelSplitter):
     def __init__(self, config: BertConfig):
         super().__init__(config)
         self.past_key_values = None
-
+        
         # todo: del norm will cause error when load from original model weight
         # del self.norm
 

@@ -15,7 +15,7 @@ FEATURE_INFERENCE = ['GenerativeRegressionNetwork', 'ResSFL']
 
 # LLM attacks
 INVERSION_LLM = ["VanillaModelInversion_WhiteBox", "VanillaModelInversion_BlackBox", "WhiteBoxInversion"]
-LABEL_INFERENCE_LLM = ['BatchLabelReconstruction_LLM']
+LABEL_INFERENCE_LLM = ['BatchLabelReconstruction_LLM','DirectionbasedScoring_LLM']
 communication_protocol_list = ['FedSGD', 'FedBCD_p', 'FedBCD_s', 'CELU', 'Quantization', 'Topk']
 
 
@@ -437,7 +437,7 @@ def do_load_basic_configs_llm(config_dict, args):
 
     # args.main_lr, learning rate for main task
     args.main_lr = config_dict['lr'] if ('lr' in config_dict) else 0.001
-    assert (args.main_lr > 0), "main learning rate should be >0"
+    assert (args.main_lr >= 0), "main learning rate should be >= 0"
 
     # args.main_epochs, iterations for main task
     args.main_epochs = config_dict['epochs'] if ('epochs' in config_dict) else 50

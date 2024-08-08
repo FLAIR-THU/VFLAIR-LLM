@@ -1987,6 +1987,103 @@ def load_dataset_per_party_llm(args, index):
         print('X_train:', len(X_train), '  X_test:', len(X_test))
         train_dst = (X_train, y_train)
         test_dst = (X_test, y_test)
+    
+    elif args.dataset == 'Lambada_test':
+        # def create_chat_prompt(prompt, text):
+        #     return [
+        #         {"role": "system", "content": prompt}, 
+        #         {"role": "user", "content": text}
+        #     ]
+        prompt = "Please complete the passages with the correct next word."
+        # def create_chat_prompt(text, prompt=prompt):
+        #     return [
+        #         {"role": "system", "content": prompt},
+        #         {"role": "user", "content": text}
+        #     ]
+
+        dataset_split = args.model_list[str(index)]
+        if 'train_set_file' in dataset_split and 'test_set_file' in dataset_split:
+            data_file = dataset_split['train_set_file']
+        else:
+            data_file = DATA_PATH + 'Lambada'
+        print(data_file)
+
+        dataset = load_dataset(data_file)
+
+        doc_stride = args.doc_stride
+
+        prompt_tokens = args.tokenizer.tokenize(prompt)  # .strip().split()
+        max_seq_length = args.max_seq_length - len(prompt_tokens)
+
+        ## train
+        train_all_texts = dataset['train'][:]['text']
+        train_domain = dataset['train'][:]['domain']
+        texts = []
+        target_word = []
+
+        for _all_text in train_all_texts[:1]:
+            all_doc_tokens = args.tokenizer.tokenize(_all_text)#.strip().split()
+            # all_doc_tokens = [c for c in all_doc_tokens if c not in string.punctuation]
+
+            start_offset = 0
+            while start_offset < len(all_doc_tokens):
+                length = len(all_doc_tokens) - start_offset - 1  # max length left
+                if length > max_seq_length:
+                    length = max_seq_length
+
+                text_tokens = all_doc_tokens[start_offset: start_offset + length]  # 0 1...7
+
+                text = args.tokenizer.convert_tokens_to_string(prompt_tokens + text_tokens)
+                last_word = all_doc_tokens[start_offset + length]
+                # print('text:',text)
+                # print('last_word:',last_word)
+
+                # text = " ".join(text)
+
+                # message = create_chat_prompt(text)
+                # text = prompt+text #args.tokenizer.apply_chat_template(message, tokenize=False)
+
+                texts.append(text)
+                target_word.append(last_word)
+
+                if start_offset + doc_stride + 1 >= len(all_doc_tokens) or \
+                        start_offset + length + 1 >= len(all_doc_tokens):
+                    break
+
+                start_offset += min(length, doc_stride)
+
+        X_train = np.array(texts)
+        y_train = np.array(target_word)
+
+        ## test
+        test_all_texts = dataset['test'][:]['text']
+        test_domain = dataset['test'][:]['domain']
+        texts = []
+        target_word = []
+        for _all_text in test_all_texts[:10]:
+            all_doc_tokens = args.tokenizer.tokenize(_all_text)  # .strip().split()
+
+            text_tokens = all_doc_tokens[:-1]
+
+            # pad_length = args.max_seq_length - len(prompt_tokens) - len(text_tokens)
+
+            # if pad_length > 0:
+            #     text_tokens = [args.tokenizer.eos_token *pad_length] + prompt_tokens + text_tokens
+            # else:
+            text_tokens = prompt_tokens + text_tokens
+
+            text = args.tokenizer.convert_tokens_to_string(text_tokens)
+
+            texts.append(text)  # messages.append( )
+            target_word.append(all_doc_tokens[-1])
+
+        X_test = np.array(texts)
+        y_test = target_word
+
+        print('X_train:', len(X_train), '  X_test:', len(X_test))
+        train_dst = (X_train, y_train)
+        test_dst = (X_test, y_test)
+
 
     elif args.dataset == 'SQuAD':
         train_set_file, test_set_file = get_dataset_path(args.model_list[str(index)])
