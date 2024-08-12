@@ -70,7 +70,7 @@
           "parameters": {
           "party": [0],
           "type": "grad",
-          "epsilon": 70
+          "epsilon": 50
           }
     },
     "attack_list": {

@@ -135,6 +135,7 @@ class BatchLabelReconstruction_LLM(Attacker):
 
             # passive party model tail
             active_model_body = self.vfl_info['active_model_body'].to(self.device)
+                
             active_model_body_params = list(filter(lambda x: x.requires_grad, active_model_body.parameters()))
             print('active_model_body_params:',len(active_model_body_params))
 

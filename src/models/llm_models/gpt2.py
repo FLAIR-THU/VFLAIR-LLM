@@ -25,6 +25,7 @@ class GPT2ModelSplitter(GPT2Model, VFLModel):
         for i, layer in enumerate(self.h):
             if i in idx_of_layers:
                 new_layers.append(layer)
+        
         self.h = new_layers
         # update config
         self.config.n_layer = len(new_layers)
@@ -457,7 +458,6 @@ class GPT2ModelBody(GPT2ModelSplitter):
 
         return {'inputs_embeds':hidden_states,
                 'attention_mask':attention_mask}
-        
 
 class GPT2ModelTail(GPT2ModelSplitter):
     def __init__(self, config: GPT2Config):
@@ -723,7 +723,6 @@ class GPT2TailForCausalLM(GPT2LMHeadModel, VFLModel):
     def head_layer(self, lm_head):
         self.lm_head = lm_head
 
-
 class GPT2TailForQuestionAnswering(GPT2ForQuestionAnswering, VFLModel):
     def __init__(self, config: GPT2Config, **kwargs):
         super().__init__(config)
@@ -778,7 +777,7 @@ class ModelPartitionPipelineGPT2(ModelPartitionPipeline):
             # print(list(split_range))
             # print(f'Model Head:{len(model_head.h)} {do_split}')
 
-        return model_head
+        return model_head.to(self.device)
 
     def _load_model_tail(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         if self.args.model_architect == 'CLM':
@@ -800,7 +799,7 @@ class ModelPartitionPipelineGPT2(ModelPartitionPipeline):
             # print(f'Model Tail:{len(model_tail.transformer.h)} {do_split}')
 
 
-        return model_tail
+        return model_tail.to(self.device)
 
     def _load_model_body(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         model_body = GPT2ModelBody.from_pretrained(model_name_or_path, **kwargs)
@@ -812,4 +811,4 @@ class ModelPartitionPipelineGPT2(ModelPartitionPipeline):
             # print(f'Model Body:{len(model_body.h)} {do_split}')
            
         
-        return model_body
+        return model_body.to(self.device)

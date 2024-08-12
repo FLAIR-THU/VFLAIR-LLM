@@ -615,14 +615,15 @@ def do_load_basic_configs_llm(config_dict, args):
         assert '1' in config_model_dict, "Active Party not specified in model list"
         active_model_dict = config_model_dict['1']
         args.model_path.append(active_model_dict['path'])
-        args.model_slice_trainable[1] = active_model_dict['body']['trainable'] if 'trainable' in active_model_dict['body'] else False
         
         if args.vfl_model_slice_num==3:
             assert 'body' in active_model_dict, "Model Body not specified in active party model configs"
+            args.model_slice_trainable[1] = active_model_dict['body']['trainable'] if 'trainable' in active_model_dict['body'] else False
             args.encoder_trainable['body'] = active_model_dict['body']['encoder_trainable'] if 'encoder_trainable' in active_model_dict['body'] else False
             args.encoder_trainable_ids['body'] = active_model_dict['body']['encoder_trainable_ids'] if 'encoder_trainable_ids' in active_model_dict['body'] else []
         else:
             assert 'tail' in active_model_dict, "Model Tail not specified in active party model configs"
+            args.model_slice_trainable[1] = active_model_dict['tail']['trainable'] if 'trainable' in active_model_dict['tail'] else False
             args.encoder_trainable['tail'] = active_model_dict['tail']['encoder_trainable'] if 'encoder_trainable' in active_model_dict['tail'] else False
             args.encoder_trainable_ids['tail'] = active_model_dict['tail']['encoder_trainable_ids'] if 'encoder_trainable_ids' in active_model_dict['tail'] else []
             args.head_layer_trainable = active_model_dict['tail']['head_layer_trainable'] if 'head_layer_trainable' in active_model_dict['tail'] else False
@@ -779,6 +780,10 @@ def do_load_basic_configs_llm(config_dict, args):
             assert len(config_dict['attack_list']) > 0, 'empty attack_list'
     else:
         print('===== No Attack ======')
+
+    args.need_save_state = 1
+    if args.attack_num == 0:
+        args.need_save_state = 0
 
     # Check: Centralized Training
     if args.k == 1:

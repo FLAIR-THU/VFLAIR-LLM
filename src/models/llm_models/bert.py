@@ -194,8 +194,8 @@ class BertModelBody(BertModelSplitter):
         self.past_key_values = None
 
         del self.pooler
-        # del self.embeddings
-        # self.embeddings = None
+        del self.embeddings
+        self.embeddings = None
 
         # todo: del norm will cause error when load from original model weight
         # del self.norm
@@ -304,8 +304,8 @@ class BertModelTail(BertModelSplitter):
         self.past_key_values = None
         
         # todo: del norm will cause error when load from original model weight
-        # del self.embeddings
-        # self.embeddings = None
+        del self.embeddings
+        self.embeddings = None
 
     def forward(
         self,

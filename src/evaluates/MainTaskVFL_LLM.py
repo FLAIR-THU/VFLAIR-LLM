@@ -1143,25 +1143,29 @@ def create_main_task(global_model_type: GenerationMixin):
 
             if self.args.model_architect == 'TQA':  # task_type == "QuestionAnswering":
                 exp_result, main_task_result = self.qa_inference()
-                self.final_state = self.save_state()
-                # self.final_state.update(self.save_state(False))
-                self.final_state.update(self.save_party_data())
+                if self.args.need_save_state:
+                    self.final_state = self.save_state()
+                    # self.final_state.update(self.save_state(False))
+                    self.final_state.update(self.save_party_data())
                 exp_result = f'|inference_party_time={self.inference_party_time}' + exp_result
                 return exp_result, main_task_result
 
             if self.args.model_architect == 'CLS':  # task_type == "SequenceClassification":
                 # exp_result, self.test_acc =
                 exp_result, main_task_result = self.seq_inference()
-                self.final_state = self.save_state()
-                self.final_state.update(self.save_party_data())
+                if self.args.need_save_state:
+                    self.final_state = self.save_state()
+                    self.final_state.update(self.save_party_data())
                 exp_result = f'|inference_party_time={self.inference_party_time}' + exp_result
                 return exp_result, main_task_result
 
             if self.args.model_architect == 'CLM':  # task_type == "CausalLM":
                 exp_result, main_task_result = self.causal_lm_inference()
-                self.final_state = self.save_state()
-                # self.final_state.update(self.save_state(False))
-                self.final_state.update(self.save_party_data())
+                
+                if self.args.need_save_state:
+                    self.final_state = self.save_state()
+                    # self.final_state.update(self.save_state(False))
+                    self.final_state.update(self.save_party_data())
                 exp_result = f'|inference_party_time={self.inference_party_time}' + str(exp_result)
                 return exp_result, main_task_result
 
@@ -1350,17 +1354,15 @@ def create_main_task(global_model_type: GenerationMixin):
                     self._communication.send_global_model_train_message()
 
                     # ====== train batch (start) ======
-                    if i == 0 and i_epoch == 0:
+                    if self.args.need_save_state and i == 0 and i_epoch == 0:
                         self.first_epoch_state = self.save_state(True)
 
                     enter_time = time.time()
                     self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
                     exit_time = time.time()
 
-                    if i == 0 and i_epoch == 0:
-                        print('=== fisrt epoch')
+                    if self.args.need_save_state and i == 0 and i_epoch == 0:
                         self.first_epoch_state.update(self.save_state(False))
-                        print('=== fisrt epoch')
                         # assert 1>2
 
                     # if self.args.model_type.lower() == 'qwen2':
@@ -1489,53 +1491,54 @@ def create_main_task(global_model_type: GenerationMixin):
             return new_dict
             
         def save_state(self, BEFORE_MODEL_UPDATE=True):
-            if BEFORE_MODEL_UPDATE:
-                # print('save:',self.parties[0].local_model_tail.head_layer.weight[0,:5])
-                return {
-                    "local_model_head": copy.deepcopy(self.parties[0].local_model),
-                    "local_model_tail": copy.deepcopy(self.parties[0].local_model_tail),
-                    "active_model_body": copy.deepcopy(self.parties[1].global_model),
+            if self.args.need_save_state:
+                if BEFORE_MODEL_UPDATE:
+                    # print('save:',self.parties[0].local_model_tail.head_layer.weight[0,:5])
+                    return {
+                        "local_model_head": copy.deepcopy(self.parties[0].local_model),
+                        "local_model_tail": copy.deepcopy(self.parties[0].local_model_tail),
+                        "active_model_body": copy.deepcopy(self.parties[1].global_model),
 
-                    # "global_model": copy.deepcopy(self.parties[self.args.k - 1].global_model),
-                    "model_names": [str(type(self.parties[ik].local_model)).split('.')[-1].split('\'')[-2] for ik in
-                                    range(self.args.k)] + [
-                                       str(type(self.parties[self.args.k - 1].global_model)).split('.')[-1].split('\'')[
-                                           -2]]
+                        # "global_model": copy.deepcopy(self.parties[self.args.k - 1].global_model),
+                        "model_names": [str(type(self.parties[ik].local_model)).split('.')[-1].split('\'')[-2] for ik in
+                                        range(self.args.k)] + [
+                                        str(type(self.parties[self.args.k - 1].global_model)).split('.')[-1].split('\'')[
+                                            -2]]
 
-                }
-            else:
-                # print(f'save self.parties[1].global_gradient:{self.parties[1].global_gradient[0,0,:5]}')
-                # print(f'save self.parties[0].output_tensors[2]:{self.parties[0].output_tensors[2][:5]}')
+                    }
+                else:
+                    # print(f'save self.parties[1].global_gradient:{self.parties[1].global_gradient[0,0,:5]}')
+                    # print(f'save self.parties[0].output_tensors[2]:{self.parties[0].output_tensors[2][:5]}')
 
-                return {
-                    # Batch Label
-                    "label": copy.deepcopy(self.gt_one_hot_label),
-                    # Batch Data
-                    # "batch_data": self.dict_deepcopy(self.parties[0].local_data_input),
+                    return {
+                        # Batch Label
+                        "label": copy.deepcopy(self.gt_one_hot_label),
+                        # Batch Data
+                        # "batch_data": self.dict_deepcopy(self.parties[0].local_data_input),
 
-                    # Transmission
-                    "passive_predict": self.dict_deepcopy(self.parties[0].output_tensors),
-                    "passive_predict_attention_mask": self.dict_deepcopy(self.parties[0].output_attention_mask) ,
+                        # Transmission
+                        "passive_predict": self.dict_deepcopy(self.parties[0].output_tensors),
+                        "passive_predict_attention_mask": self.dict_deepcopy(self.parties[0].output_attention_mask) ,
 
-                    "active_predict": self.dict_deepcopy(self.parties[1].output_tensors) ,
-                    "active_predict_attention_mask": self.dict_deepcopy(self.parties[1].output_attention_mask) ,
-                    
-                    "local_gradient": copy.deepcopy(self.parties[0].local_gradient),
-                    "global_gradient": copy.deepcopy(self.parties[1].global_gradient),
-                    
-                    # Gradient
-                    "local_model_head_gradient": copy.deepcopy(self.parties[0].weights_grad_a),
-                    "local_model_tail_gradient": copy.deepcopy(self.parties[0].weights_grad_a_tail) ,
-                    "global_model_body_gradient": copy.deepcopy(self.parties[1].weights_grad_a) ,
-                    
-                    # Result
-                    "train_acc": copy.deepcopy(self.train_acc),
-                    "loss": copy.deepcopy(self.loss),
-                    
-                    # "global_pred": self.parties[self.k - 1].global_output,
-                    # "final_model": [copy.deepcopy(self.parties[ik].local_model) for ik in range(self.args.k)],
-                    # "final_global_model": copy.deepcopy(self.parties[self.args.k - 1].global_model),
-                }
+                        "active_predict": self.dict_deepcopy(self.parties[1].output_tensors) ,
+                        "active_predict_attention_mask": self.dict_deepcopy(self.parties[1].output_attention_mask) ,
+                        
+                        "local_gradient": copy.deepcopy(self.parties[0].local_gradient),
+                        "global_gradient": copy.deepcopy(self.parties[1].global_gradient),
+                        
+                        # Gradient
+                        "local_model_head_gradient": copy.deepcopy(self.parties[0].weights_grad_a),
+                        "local_model_tail_gradient": copy.deepcopy(self.parties[0].weights_grad_a_tail) ,
+                        "global_model_body_gradient": copy.deepcopy(self.parties[1].weights_grad_a) ,
+                        
+                        # Result
+                        "train_acc": copy.deepcopy(self.train_acc),
+                        "loss": copy.deepcopy(self.loss),
+                        
+                        # "global_pred": self.parties[self.k - 1].global_output,
+                        # "final_model": [copy.deepcopy(self.parties[ik].local_model) for ik in range(self.args.k)],
+                        # "final_global_model": copy.deepcopy(self.parties[self.args.k - 1].global_model),
+                    }
 
         def save_party_data(self):
             return {

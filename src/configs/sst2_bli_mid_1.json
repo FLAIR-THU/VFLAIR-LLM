@@ -71,7 +71,7 @@
             "party": [0],
             "mid_model_name":"MIDModel_Linear",
             "lr": 0.5,
-            "lambda": 0.005,
+            "lambda": 0.5,
             "mid_position": "tail",
             "current_bottleneck_scale": 1,
             "seq_length": 70,
