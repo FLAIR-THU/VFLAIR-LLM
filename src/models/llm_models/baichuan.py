@@ -57,7 +57,10 @@ class BaichuanModelHead(BaichuanModelSplitter):
         self.past_key_values = None
 
     def get_input_embeddings(self):
-        return self.embed_tokens
+        if self.embed_tokens != None:
+            return self.embed_tokens
+        else:
+            return None
 
     def forward(
             self,

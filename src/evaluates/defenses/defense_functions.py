@@ -537,7 +537,7 @@ DELTAF = {'Bert': 81.82, 'Roberta': 4.15, 'GPT2': 110.2}
 # todo need to change Llama's value
 
 
-def LaplaceDP_for_llm(args, original_object):
+def LaplaceDP_for_llm_pred(args, original_object):
     # print('LaplaceDP_for_llm:',type(original_object),original_object[0].shape)
     original_object = original_object[0]  # bs, 12, 768
     assert ('epsilon' in args.defense_configs), "missing defense parameter: 'epsilon'"
@@ -563,3 +563,58 @@ def LaplaceDP_for_llm(args, original_object):
                 new_object.append(original_object[ik] + dist_a.sample(original_object[ik].shape).to(args.device))
         # print("norm of gradients after laplace:", torch.norm(original_object, dim=1), torch.max(torch.norm(original_object, dim=1)))
     return new_object
+
+def LaplaceDP_for_llm_grad(args, original_object):
+    original_object = original_object[0]
+
+    assert ('epsilon' in args.defense_configs), "missing defense parameter: 'epsilon'"
+    if args.model_type in DELTAF:
+        delta_f = DELTAF[args.model_type]
+    else:
+        delta_f = 100
+
+    epsilon = args.defense_configs['epsilon']
+    dp_strength = delta_f / epsilon
+
+    if dp_strength > 0.0:
+        location = 0.0
+        threshold = 0.2  # 1e9
+        with torch.no_grad():
+            scale = dp_strength
+            # clip 2-norm per sample
+            # print("norm of gradients:", torch.norm(original_object[ik], dim=1), torch.max(torch.norm(original_object[ik], dim=1)))
+            norm_factor_a = torch.div(torch.max(torch.norm(original_object, dim=1)),
+                                        threshold + 1e-6).clamp(min=1.0)
+            # add laplace noise
+            dist_a = torch.distributions.laplace.Laplace(location, scale)
+            new_object = torch.div(original_object, norm_factor_a) + \
+                                dist_a.sample(original_object.shape).to(args.device)
+            # print("norm of gradients after laplace:", torch.norm(original_object, dim=1), torch.max(torch.norm(original_object, dim=1)))
+        return new_object
+    else:
+        return original_object
+
+def GradientSparsification_for_llm_grad(args, original_object):
+    print("using gradient sparsification function")
+    original_object = original_object[0]
+    print('original_object:',type(original_object),original_object.shape)
+    
+    assert ('gradient_sparse_rate' in args.defense_configs), "missing defense parameter: 'gradient_sparse_rate'"
+    grad_spars_ratio = args.defense_configs['gradient_sparse_rate']
+    while grad_spars_ratio > 1.0:
+        grad_spars_ratio = grad_spars_ratio / 100.0
+    
+    if grad_spars_ratio > 0.0:
+        with torch.no_grad():
+            percent = grad_spars_ratio / 100.0  # percent to drop
+            if args.gradients_res_a is not None and \
+                    original_object.shape[0] == args.gradients_res_a.shape[0]:
+                original_object = original_object + args.gradients_res_a
+            a_thr = torch.quantile(torch.abs(original_object), grad_spars_ratio)
+            args.gradients_res_a = torch.where(torch.abs(original_object).double() < a_thr.item(),
+                                                    original_object.double(), float(0.)).to(args.device)
+            # new_object.append(original_object[ik])
+            new_object = original_object - args.gradients_res_a
+        return new_object
+    else:
+        return original_object

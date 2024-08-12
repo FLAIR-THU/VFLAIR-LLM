@@ -1592,6 +1592,39 @@ def load_dataset_per_party_llm(args, index):
         train_dst = (X_train, y_train)
         test_dst = (X_test, y_test)
 
+    elif args.dataset == 'SST-2-test':
+        # task_prompt = {
+        # 'imdb': """Analyze the following movie review and determine if the sentiment is: positive or negative. Return answer in single word as either positive or negative: {}""",
+        # "yelp": """Analyze the following restaurant review and determine if the sentiment is: positive or negative. Return answer in single word as either positive or negative: {}""",
+        # "SST-2": """Analyze the following sentence and determine if the sentiment is: positive or negative.\n{}\nThe awnser is:""",
+        #     }
+        train_set_file, test_set_file = get_dataset_path(args.model_list[str(index)])
+        if train_set_file is None or test_set_file is None:
+            train_set_file = DATA_PATH + 'SST-2/train.tsv'
+            test_set_file = DATA_PATH + 'SST-2/dev.tsv'
+        df = pd.read_csv(train_set_file, delimiter='\t')  # names=[  'sentence','label'] , names=['label', 'sentence']
+        sentences = df.sentence.values[:100]
+        labels = df.label.values[:100]
+
+
+        X_train = np.array(sentences)
+        y_train = np.array([int(_label) for _label in labels])
+
+        df = pd.read_csv(test_set_file, delimiter='\t')  # names=[  'sentence','label']
+        sentences = df.sentence.values[:10]
+        labels = df.label.values[:10]
+
+
+        X_test = np.array(sentences)
+        y_test = np.array([int(_label) for _label in labels])
+        # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=args.current_seed)
+
+        print(type(X_train), X_train.shape, X_test.shape)  #
+        print(type(y_train), y_train.shape, y_test.shape)  #
+
+        train_dst = (X_train, y_train)
+        test_dst = (X_test, y_test)
+
     elif args.dataset == 'STS-B':
         text_path = DATA_PATH + 'STS-B/train.tsv'
         df = pd.read_csv(text_path, sep='\t', on_bad_lines="skip")
@@ -2083,8 +2116,7 @@ def load_dataset_per_party_llm(args, index):
         print('X_train:', len(X_train), '  X_test:', len(X_test))
         train_dst = (X_train, y_train)
         test_dst = (X_test, y_test)
-
-
+    
     elif args.dataset == 'SQuAD':
         train_set_file, test_set_file = get_dataset_path(args.model_list[str(index)])
         if train_set_file is None or test_set_file is None:

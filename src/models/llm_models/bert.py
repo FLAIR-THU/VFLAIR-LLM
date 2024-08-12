@@ -59,8 +59,10 @@ class BertModelHead(BertModelSplitter):
         self.past_key_values = None
 
     def get_input_embeddings(self):
-        return self.embeddings.word_embeddings
-    
+        if self.embeddings != None:
+            return self.embeddings.word_embeddings
+        else:
+            return None
     def forward(
             self,
             input_ids: Optional[torch.Tensor] = None,
@@ -192,6 +194,8 @@ class BertModelBody(BertModelSplitter):
         self.past_key_values = None
 
         del self.pooler
+        # del self.embeddings
+        # self.embeddings = None
 
         # todo: del norm will cause error when load from original model weight
         # del self.norm
@@ -300,7 +304,8 @@ class BertModelTail(BertModelSplitter):
         self.past_key_values = None
         
         # todo: del norm will cause error when load from original model weight
-        # del self.norm
+        # del self.embeddings
+        # self.embeddings = None
 
     def forward(
         self,

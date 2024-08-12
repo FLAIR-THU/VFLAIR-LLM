@@ -82,18 +82,19 @@ class BatchLabelReconstruction_LLM(Attacker):
         total = dummy_label.shape[0]
         return success / total
 
-    def cal_loss(self, pred, real_label):
+    def cal_loss(self, pred, label):
+        # print(f'=== cal_loss label:{label.shape} {label.requires_grad} pred:{pred.shape} ===')
         if self.args.model_architect == 'CLM': # label: bs, vocab_size
-            lm_logits = pred.logits  # [bs, seq_len, vocab_size]
+            lm_logits = pred#.logits  # [bs, seq_len, vocab_size]
             next_token_logits = lm_logits[:, -1, :]
-            # print(f'cal loss next_token_logits={next_token_logits.shape} real_label={real_label.shape}')
-            loss = self.criterion(next_token_logits, real_label)
+            # print(f'cal loss next_token_logits={next_token_logits.shape} label={real_label.shape}')
+            loss = self.criterion(next_token_logits, label)
         elif self.args.model_architect == 'CLS': # label: bs, num_labels
-            pooled_logits = pred.logits # [bs, num_labels]
-            real_label = torch.argmax(real_label,-1) # [bs, num_labels] -> [bs]
-            # print('pooled_logits.view(-1, self.num_labels):',pooled_logits.view(-1, self.num_labels).shape)
-            loss_fct = CrossEntropyLoss()
-            loss = loss_fct(pooled_logits.view(-1, self.label_size), real_label.view(-1))
+            pooled_logits = pred#.logits # [bs, num_labels]
+            # loss_fct = CrossEntropyLoss()
+            # loss = loss_fct(pooled_logits.view(-1, self.label_size), label.view(-1))
+            loss = self.criterion(pooled_logits, label)
+
         
         return loss
 
@@ -111,20 +112,21 @@ class BatchLabelReconstruction_LLM(Attacker):
             ####### collect necessary information #######
             # [Active Model Body] -> active_model_body_pred -> [Passive Model Tail] 
             # -> final_pred + true label -> Loss
-            # intermediate pred calculated by active party  
-            active_model_body_pred = self.vfl_info['active_predict'][1]  # bs, seq_len, embed_dim
-            active_model_body_attention_mask = self.vfl_info['active_predict_attention_mask'][1]  
-            active_model_body_pred.requires_grad = True
+            # intermediate pred calculated by passive party  
+            passive_model_head_pred = self.vfl_info['passive_predict'][0]  # bs, seq_len, embed_dim
+            passive_model_head_attention_mask = self.vfl_info['passive_predict_attention_mask'][0]  # bs, seq_len, embed_dim
+            # passive_model_tail_pred = self.vfl_info['passive_predict'][2]
 
-            passive_model_tail_pred = self.vfl_info['passive_predict'][2]  
-            print('passive_model_tail_pred:',passive_model_tail_pred[:5])
+            # intermediate pred calculated by active party  
+            # active_model_body_pred = self.vfl_info['active_predict'][1]  # bs, seq_len, embed_dim
+            # active_model_body_attention_mask = self.vfl_info['active_predict_attention_mask'][1]  
+            # active_model_body_pred.requires_grad = True
 
             # gradient received by active party
             global_gradient = self.vfl_info['global_gradient'] # bs, seq_len, embed_dim
-            print(f'global_gradient:{global_gradient.shape} {global_gradient[0,0,:5]}')
             
-            # original_dy_dx = self.vfl_info['global_model_body_gradient']  # gradient calculated for local model update
-            # print(f'original_dy_dx:{type(original_dy_dx)} {len(original_dy_dx)}')
+            original_dy_dx = self.vfl_info['global_model_body_gradient']  # gradient calculated for local model update
+            print(f'original_dy_dx:{type(original_dy_dx)} {len(original_dy_dx)}')
             # for _dy_dx in original_dy_dx:
             #     if _dy_dx != None:
             #         print(_dy_dx.shape)
@@ -132,119 +134,95 @@ class BatchLabelReconstruction_LLM(Attacker):
             #         print(_dy_dx)
 
             # passive party model tail
-            local_model_tail = self.vfl_info['local_model_tail'].to(self.device)
-            # local_model_tail.eval()
+            active_model_body = self.vfl_info['active_model_body'].to(self.device)
+            active_model_body_params = list(filter(lambda x: x.requires_grad, active_model_body.parameters()))
+            print('active_model_body_params:',len(active_model_body_params))
 
-            # dummy_local_model_tail = copy.deepcopy(local_model_tail).to(self.device)
-            # for name, m in dummy_local_model_tail.named_parameters():
-            #     print(f'{name} {type(m)} original:',m[0])
-            #     torch.nn.init.zeros_(m)
-            #     print(f'{name} after:',m[0])
+            passive_model_tail = self.vfl_info['local_model_tail'].to(self.device)
+            passive_model_tail.eval()
 
-                
             # target
             true_label = self.vfl_info['label'].to(self.device)  # CLM: bs, seq_len
             if self.args.model_architect == 'CLM': 
                 true_label = true_label[:,-1]
+            
+            del self.vfl_info
+
+            
 
             ################ Begin Attack ################
-            print(f"sample_count = {active_model_body_pred.size()[0]}, number of classes = {self.label_size}")
-            sample_count = active_model_body_pred.size()[0]
+            print(f"sample_count = {true_label.size()[0]}, number of classes = {self.label_size}")
+            sample_count = true_label.size()[0]
 
             recovery_history = []
             recovery_rate_history = []
             rec_rate = 0
 
+            # simulate model forward 
+            active_model_body_result = active_model_body(
+                        inputs_embeds = passive_model_head_pred,
+                        attention_mask= passive_model_head_attention_mask)
+            active_model_body_pred = active_model_body_result['inputs_embeds']
+            active_model_body_attention_mask = active_model_body_result['attention_mask']
+
+            
+            passive_model_tail_result = passive_model_tail(
+                        inputs_embeds = active_model_body_pred,
+                        attention_mask= active_model_body_attention_mask)
+            passive_model_tail_pred = passive_model_tail_result.logits
+
+
             # set fake label
             dummy_label = torch.randn(sample_count, self.label_size).to(self.device)
             dummy_label.requires_grad = True
             print(f'dummy_label={dummy_label.shape} true_label={true_label.shape}')
-
-            optimizer = torch.optim.Adam(
-                [dummy_label],
-                lr=self.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)  #
-
-            # === Begin Attack ===
+            
+            # set optimizer
+            optimizer = torch.optim.Adam([dummy_label],
+                        lr=self.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)  #
+            scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95, last_epoch=-1, verbose=False)
+            
             start_time = time.time()
 
+            min_loss = 100000
+            early_stop = 0
             for iters in range(1, self.epochs + 1):
-                # s_time = time.time()
+                optimizer.zero_grad()
 
-                def closure():
-                    optimizer.zero_grad()
+                dummy_onehot_label = F.softmax(dummy_label, dim=-1)
+                dummy_loss = self.cal_loss(passive_model_tail_pred, dummy_onehot_label)
+                dummy_dy_dx_a = torch.autograd.grad(dummy_loss, active_model_body_params, create_graph=True)
 
-                    # pred/loss using fake top model/fake label
-                    # print('model tail input active_model_body_pred:',active_model_body_pred[0,0,:5])
-                    # print('model tail input active_model_body_attention_mask:',active_model_body_attention_mask[0,:5])
-                    # print('local_model_tail:',local_model_tail.head_layer.weight[0,:5])
-                    
-                    dummy_local_model_tail_pred = local_model_tail(
-                        inputs_embeds = active_model_body_pred,
-                        attention_mask= active_model_body_attention_mask)
-                    print('dummy_local_model_tail_pred logits:',dummy_local_model_tail_pred.logits[:5])
-                    print('passive_model_tail_pred logits:',passive_model_tail_pred[:5])
+                # loss: L-L'
+                grad_diff = 0
+                for (gx, gy) in zip(dummy_dy_dx_a, original_dy_dx):
+                    grad_diff += ((gx - gy) ** 2).sum()
+                grad_diff.backward(retain_graph=True)
 
+                if grad_diff.item() > min_loss:
+                    early_stop += 1
+                else:
+                    early_stop = 0
+                min_loss = min(grad_diff.item(), min_loss)
 
-                    
+                if iters%50 == 0:
+                    print('Iters',iters,' grad_diff:',grad_diff.item(),' rec_rate:',rec_rate)
 
-                    dummy_loss = self.cal_loss(dummy_local_model_tail_pred, dummy_label)
-                    dummy_gradient = torch.autograd.grad(dummy_loss, active_model_body_pred, 
-                        create_graph=True, retain_graph=True)[0] # 4, 256, 768
-                    print(f'dummy_loss:{dummy_loss} dummy_label:{dummy_label[:2]}')
-                    print(f'dummy_gradient:{dummy_gradient[0,0,:5]}')
-
-                    real_loss = self.cal_loss(dummy_local_model_tail_pred, true_label)
-                    real_gradient = torch.autograd.grad(real_loss, active_model_body_pred, 
-                        create_graph=True, retain_graph=True)[0] # 4, 256, 768
-                    print(f'real_loss:{real_loss} true_label:{true_label[:2]}')
-                    print(f'real_gradient:{real_gradient[0,0,:5]}')
-
-                    assert 1>2
-
-                    
-                    grad_diff = ((dummy_gradient-global_gradient) ** 2).mean()
-                    grad_diff.backward(retain_graph=True)
-
-                    # local_model_tail_params = []
-                    # for name, param in local_model_tail.named_parameters():
-                    #     if param.requires_grad:
-                    #         weight = torch.autograd.grad(dummy_loss, local_model_tail_params, 
-                    #     retain_graph=True, allow_unused=True)
-                    #         print(f'{name} {param.shape}')
-                                                    
-                    # dummy_dy_dx_a = torch.autograd.grad(dummy_loss, local_model_tail_params, 
-                    #     retain_graph=True, allow_unused=True)
-                    # print(f'dummy_dy_dx_a:{type(dummy_dy_dx_a)} {len(dummy_dy_dx_a)}')
-                    # for _dy_dx in dummy_dy_dx_a:
-                    #     if _dy_dx != None:
-                    #         print(_dy_dx.shape)
-                    #     else:
-                    #         print(_dy_dx)
-
-                    # grad_diff = 0
-                    # for (gx, gy) in zip(dummy_dy_dx_a, original_dy_dx):
-                    #     grad_diff += ((gx - gy) ** 2).sum()
-                    # grad_diff.backward(retain_graph=True)
-                    
-                    
-
-                    if iters%2==0:
-                        print('Iters',iters,' grad_diff:',grad_diff.item(),' rec_rate:',rec_rate)
-                        assert 1>2
-                    return grad_diff
-
-                optimizer.step(closure)
-                e_time = time.time()
+                optimizer.step()
+                # scheduler.step()
                 # print(f"in BLR, i={i}, iter={iters}, time={s_time-e_time}")
 
+                
                 if self.early_stop == 1:
-                    if closure().item() < self.early_stop_threshold:
+                    # if closure().item() < self.early_stop_threshold:
+                    #     break
+                    if early_stop > self.early_stop_threshold:
                         break
 
                 rec_rate = self.calc_label_recovery_rate(dummy_label, true_label)
                 recovery_rate_history.append(rec_rate)
 
-                end_time = time.time()
+            end_time = time.time()
 
             ########## Clean #########
             # del (local_model_tail)

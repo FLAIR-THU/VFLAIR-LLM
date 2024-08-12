@@ -1,0 +1,26 @@
+for seed in {60,61,62,63,64,65}
+    do
+    python main_pipeline_llm_0.py --seed $seed --configs sst2_bli_wo_0
+
+    # 50
+    python main_pipeline_llm_0.py --seed $seed --configs sst2_bli_dp_0
+
+    # 70
+    sed -i 's/"epsilon": 50/"epsilon": 70/g' ./configs/sst2_bli_dp_0.json
+    python main_pipeline_llm_0.py --seed $seed --configs sst2_bli_dp_0
+
+    # 80
+    sed -i 's/"epsilon": 70/"epsilon": 80/g' ./configs/sst2_bli_dp_0.json
+    python main_pipeline_llm_0.py --seed $seed --configs sst2_bli_dp_0
+
+    # 100
+    sed -i 's/"epsilon": 80/"epsilon": 100/g' ./configs/sst2_bli_dp_0.json
+    python main_pipeline_llm_0.py --seed $seed --configs sst2_bli_dp_0
+
+    # 500
+    sed -i 's/"epsilon": 100/"epsilon": 500/g' ./configs/sst2_bli_dp_0.json
+    python main_pipeline_llm_0.py --seed $seed --configs sst2_bli_dp_0
+
+    sed -i 's/"epsilon": 500/"epsilon": 50/g' ./configs/sst2_bli_dp_0.json
+
+done

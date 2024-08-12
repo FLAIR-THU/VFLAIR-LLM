@@ -95,9 +95,7 @@ class PassiveParty_LLM(Party_LLM):
                     defense_configs['party'] = [0]
                     print('[warning] default passive party selected for applying adversarial training')
                 
-                # self.batch_first = defense_configs['batch_first'] if ('batch_first' in defense_configs) else True
-                
-
+                # prepare adversarial model --  for adversarial training
                 self.adversarial_model_lr = defense_configs['adversarial_model_lr']
                 self.adversarial_model_hidden_size = defense_configs['adversarial_model_hidden_size'] if (
                         'adversarial_model_hidden_size' in defense_configs) else 80
@@ -105,13 +103,13 @@ class PassiveParty_LLM(Party_LLM):
                     adversarial_model_name = 'Adversarial_Mapping'
                 else:
                     adversarial_model_name = defense_configs['adversarial_model']
-
                 seq_length = defense_configs['seq_length']
                 embed_dim = self.args.model_embedded_dim  # defense_configs['embed_dim']
 
-                # prepare adversarial model --  for adversarial training
+                
                 self.adversarial_model = globals()[adversarial_model_name](seq_length, embed_dim,
-                                                    self.adversarial_model_hidden_size).to(self.args.device)
+                                                self.adversarial_model_hidden_size).to(self.args.device)
+
                 if self.local_model_optimizer == None:
                     self.local_model_optimizer = torch.optim.Adam(self.adversarial_model.parameters(),
                                                                   lr=self.adversarial_model_lr)
@@ -119,18 +117,20 @@ class PassiveParty_LLM(Party_LLM):
                     self.local_model_optimizer.add_param_group(
                         {'params': self.adversarial_model.parameters(), 'lr': self.adversarial_model_lr})
 
-                # self.adversarial_model_optimizer = torch.optim.Adam(
-                #             [{'params': self.adversarial_model.parameters(), 'lr': adversarial_model_lr}])
-
-
                 # prepare imagined adversary --  for adversarial training
+                if self.args.model_architect=='CLS':
+                    self.label_size = self.args.num_classes
                 imagined_adversary_model_name = defense_configs['imagined_adversary']
                 self.imagined_adversary_hidden_size = defense_configs['imagined_adversary_hidden_size'] if (
                         'imagined_adversary_hidden_size' in defense_configs) else 80
-                
-                self.imagined_adversary = globals()[imagined_adversary_model_name](seq_length, embed_dim,
-                                                            self.imagined_adversary_hidden_size).to(device)
                 self.imagined_adversary_lr = defense_configs['imagined_adversary_lr']
+                
+                if self.args.defense_configs['position'] == 'tail':
+                    self.imagined_adversary = globals()[imagined_adversary_model_name](seq_length, embed_dim, self.label_size,
+                                                    self.adversarial_model_hidden_size).to(self.args.device)
+                else:
+                    self.imagined_adversary = globals()[imagined_adversary_model_name](seq_length, embed_dim,
+                                                            self.imagined_adversary_hidden_size).to(device)
 
                 self.imagined_adversary_optimizer = torch.optim.Adam(list(self.imagined_adversary.parameters()),
                                                                      lr=self.imagined_adversary_lr)
@@ -164,63 +164,36 @@ class PassiveParty_LLM(Party_LLM):
                 mid_model_path = self.args.defense_configs[
                     'mid_model_path'] if 'mid_model_path' in self.args.defense_configs else None
 
-                if self.mid_position == "inner":
-                    print('init defense: inner mid')
-                    if 'Squeeze' in self.mid_model_name:
-                        self.local_model.inner_mid_model = globals()[self.mid_model_name](seq_length, embed_dim, \
-                                                                                          mid_lambda=self.mid_lambda,
-                                                                                          squeeze_dim=self.squeeze_dim,
-                                                                                          bottleneck_scale=current_bottleneck_scale,
-                                                                                          std_shift=std_shift_hyperparameter,
-                                                                                          model_dtype=model_dtype).to(
-                            self.args.device)
-                    else:
-                        self.local_model.inner_mid_model = globals()[self.mid_model_name](seq_length, embed_dim, \
-                                                                                          mid_lambda=self.mid_lambda,
-                                                                                          bottleneck_scale=current_bottleneck_scale,
-                                                                                          std_shift=std_shift_hyperparameter,
-                                                                                          model_dtype=model_dtype).to(
-                            self.args.device)
+                print('init defense: mid on model head')
+                print(self.mid_model_name)
 
-                    if self.local_model_optimizer == None:
-                        self.local_model_optimizer = torch.optim.Adam(self.local_model.inner_mid_model.parameters(),
-                                                                      lr=self.mid_lr)
-                    else:
-                        self.local_model_optimizer.add_param_group(
-                            {'params': self.local_model.inner_mid_model.parameters(), \
-                             'lr': self.mid_lr})
-
+                if mid_model_path != None and mid_model_path != "":
+                    print('Load Mid Model:', mid_model_path)
+                    with open(mid_model_path, 'rb') as f:
+                        self.mid_model = pickle.load(f)
                 else:
-                    print('init defense: out mid')
-                    print(self.mid_model_name)
-
-                    if mid_model_path != None and mid_model_path != "":
-                        print('Load Mid Model:', mid_model_path)
-                        with open(mid_model_path, 'rb') as f:
-                            self.mid_model = pickle.load(f)
+                    if 'Squeeze' in self.mid_model_name:
+                        print('Squeeze')
+                        self.mid_model = globals()[self.mid_model_name](seq_length, embed_dim, \
+                                                                        mid_lambda=self.mid_lambda,
+                                                                        squeeze_dim=self.squeeze_dim,
+                                                                        bottleneck_scale=current_bottleneck_scale,
+                                                                        std_shift=std_shift_hyperparameter,
+                                                                        model_dtype=model_dtype).to(
+                            self.args.device)
                     else:
-                        if 'Squeeze' in self.mid_model_name:
-                            print('Squeeze')
-                            self.mid_model = globals()[self.mid_model_name](seq_length, embed_dim, \
-                                                                            mid_lambda=self.mid_lambda,
-                                                                            squeeze_dim=self.squeeze_dim,
-                                                                            bottleneck_scale=current_bottleneck_scale,
-                                                                            std_shift=std_shift_hyperparameter,
-                                                                            model_dtype=model_dtype).to(
-                                self.args.device)
-                        else:
-                            self.mid_model = globals()[self.mid_model_name](seq_length, embed_dim, \
-                                                                            mid_lambda=self.mid_lambda,
-                                                                            bottleneck_scale=current_bottleneck_scale,
-                                                                            std_shift=std_shift_hyperparameter,
-                                                                            model_dtype=model_dtype).to(
-                                self.args.device)
+                        self.mid_model = globals()[self.mid_model_name](seq_length, embed_dim, \
+                                                                        mid_lambda=self.mid_lambda,
+                                                                        bottleneck_scale=current_bottleneck_scale,
+                                                                        std_shift=std_shift_hyperparameter,
+                                                                        model_dtype=model_dtype).to(
+                            self.args.device)
 
-                    if self.local_model_optimizer == None:
-                        self.local_model_optimizer = torch.optim.Adam(self.mid_model.parameters(), lr=self.mid_lr)
-                    else:
-                        self.local_model_optimizer.add_param_group(
-                            {'params': self.mid_model.parameters(), 'lr': self.mid_lr})
+                if self.local_model_optimizer == None:
+                    self.local_model_optimizer = torch.optim.Adam(self.mid_model.parameters(), lr=self.mid_lr)
+                else:
+                    self.local_model_optimizer.add_param_group(
+                        {'params': self.mid_model.parameters(), 'lr': self.mid_lr})
 
                 print(f'self.mid_model_name:{self.mid_model_name}')
 
@@ -280,21 +253,33 @@ class PassiveParty_LLM(Party_LLM):
                 else:
                     global_gradient_clone=torch.autograd.grad(self.output_tensors[2],self.input_tensors[2],grad_outputs=logits_gradients,retain_graph=True)[0]
             self.global_gradient = global_gradient_clone
-        return global_gradient_clone
+        
+        self.global_gradient = self.apply_defense_on_global_gradient(self.global_gradient)
+
+        return self.global_gradient
 
     def cal_global_gradient_3slice(self, global_loss, global_intermediate):
         '''
         self.global_gradient = \partial global_loss / \partial global_intermediate
         self.input_tensors[2] = global_intermediate model body output/model tail input
         '''
-        # logits_gradients = torch.autograd.grad(global_loss, global_pred, retain_graph=True)[0]
-        # global_gradient_clone=torch.autograd.grad(self.output_tensors[2],self.input_tensors[2],grad_outputs=logits_gradients,retain_graph=True)[0]
         global_gradient_clone=torch.autograd.grad(global_loss,global_intermediate,retain_graph=True)[0]
         self.global_gradient = global_gradient_clone
-        # print(f'cal global_loss:{global_loss} global_intermediate:{global_intermediate[0,0,:5]}')
-        # print(f'cal global_gradient_clone:{global_gradient_clone[0,0,:5]}')
 
-        return global_gradient_clone
+        self.global_gradient = self.apply_defense_on_global_gradient(self.global_gradient)
+
+        return self.global_gradient
+
+    def apply_defense_on_global_gradient(self, origin_global_gradient):
+        ######### Defense Applied on Global Gradients ###########
+        if (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"]))\
+        and (self.args.defense_configs["position"]=='tail'):
+            self.origin_global_gradient = origin_global_gradient.clone()
+            final_global_gradient = self.adversarial_model(origin_global_gradient)
+            return final_global_gradient
+        ######### Defense Applied on Global Gradients ###########
+        else:
+            return origin_global_gradient
 
     def cal_loss(self, pred, test=False):
         gt_one_hot_label = self.gt_one_hot_label  # label
@@ -398,22 +383,19 @@ class PassiveParty_LLM(Party_LLM):
         self.global_loss = loss
 
         # ########### Defense on Loss ###############
-        if self.args.apply_adversarial and (self.index in self.args.defense_configs["party"]):
+        if self.args.apply_adversarial and (self.index in self.args.defense_configs["party"]) and \
+            (self.args.defense_configs["position"]=="head"):
 
-            # [bs, seq, embed_dim] or [seq, bs, embed_dim](ChatGLM/XLNet)
             intermediate = self.output_tensors[0]  
-            adversary_recovered_embedding = self.imagined_adversary(intermediate)
-            # bs, seq_len, embed_dim
-            real_embedding = self.local_model.embedding_output 
+            
+            adversary_recovered_embedding = self.imagined_adversary(intermediate) # bs, seq_len, embed_dim
+            real_embedding = self.local_model.embedding_output  # bs, seq_len, embed_dim
 
             if intermediate.shape != real_embedding.shape:
                 real_embedding.transpose(0,1)
             if intermediate.shape != adversary_recovered_embedding.shape:
                 adversary_recovered_embedding.transpose(0,1)
-            # print('real_embedding:',real_embedding.shape) # 
-            # print('intermediate:',intermediate.shape) # 
-            # print('adversary_recovered_embedding:',adversary_recovered_embedding.shape) # 
-        
+            
             self.adversary_attack_loss = self.adversary_crit(adversary_recovered_embedding, real_embedding) / \
                                          intermediate.shape[0]
 
@@ -427,6 +409,7 @@ class PassiveParty_LLM(Party_LLM):
             self.adversarial_model_loss = self.adversary_lambda * self.mapping_distance - self.adversary_attack_loss
             self.global_loss = self.global_loss + self.adversarial_model_loss
 
+        
         elif self.args.apply_mid == True and (self.index in self.args.defense_configs['party']):
             # print(f'main_loss={self.global_loss},mid_loss={self.mid_loss}')
             # print('self.mid_loss.requires_grad:',self.mid_loss.requires_grad)
@@ -434,6 +417,40 @@ class PassiveParty_LLM(Party_LLM):
         # ########### Defense on Loss ###############
 
         return self.global_loss
+    
+    def update_loss_with_defense(self):
+        # ########### Defense on Loss ###############
+        if self.args.apply_adversarial and (self.index in self.args.defense_configs["party"]) and \
+            (self.args.defense_configs["position"]=="tail"):
+
+            intermediate_gradient = self.global_gradient # gradient transmitted from model tail
+            print(f'intermediate_gradient:{intermediate_gradient.shape}')
+            
+            real_label = self.gt_one_hot_label  # bs, seq_len, embed_dim
+            print(f'real_label:{real_label.shape}')
+            adversary_recovered_label = self.imagined_adversary(intermediate_gradient) # bs, seq_len, embed_dim
+            print(f'adversary_recovered_label:{adversary_recovered_label.shape}')
+
+            # if intermediate.shape != real_embedding.shape:
+            #     real_embedding.transpose(0,1)
+            # if intermediate.shape != adversary_recovered_embedding.shape:
+            #     adversary_recovered_embedding.transpose(0,1)
+            
+            self.adversary_attack_loss = self.adversary_crit(adversary_recovered_label, real_label)
+            print('self.adversary_attack_loss:',self.adversary_attack_loss)
+            # avrage mapping distance on bs*seq_len   self.origin_global_gradient: bs, seq_len, embed_dim
+            self.mapping_distance = torch.norm(self.origin_global_gradient - self.global_gradient, p=2) / (
+                    self.global_gradient.shape[0] * self.global_gradient.shape[1])
+
+            # print(f'main_loss={self.global_loss},mapping_distance={self.mapping_distance},adversary_attack_loss={self.adversary_attack_loss}')
+
+            # renew global loss function : loss used to update adversarial model mapping
+            self.adversarial_model_loss = self.adversary_lambda * self.mapping_distance - self.adversary_attack_loss
+            self.global_loss = self.global_loss + self.adversarial_model_loss
+        # ########### Defense on Loss ###############
+
+        return 
+
 
     def gradient_calculation(self, pred_list, loss):
         pred_gradients_list = []
@@ -474,17 +491,12 @@ class PassiveParty_LLM(Party_LLM):
             self.local_attention_mask = self.local_attention_mask.detach().clone()
 
         ######### Defense Applied on Local Model Prediction Process ###########
-        if self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "out"):
+        if self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "head"):
             self.output_tensors[0], self.mid_loss = self.mid_model(self.output_tensors[0])  # , self.local_attention_mask
             self.local_pred_clone = self.output_tensors[0].detach().clone()
-
-        elif self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (
-                self.mid_position == "inner"):
-            # print('inner mid: self.mid_position=',self.mid_position)
-            self.mid_loss = self.local_model.mid_loss
-            # print(' self.local_model.mid_loss:', self.local_model.mid_loss)
-
-        elif (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"])):
+        
+        elif (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"])) \
+            and (self.args.defense_configs["position"]=='tail'):
             self.origin_pred = self.output_tensors[0].clone()
             self.output_tensors[0] = self.adversarial_model(self.origin_pred)
             self.local_pred_clone = self.output_tensors[0].detach().clone()
@@ -497,11 +509,22 @@ class PassiveParty_LLM(Party_LLM):
             intermediate['attention_mask'] = self.local_attention_mask
 
         return intermediate
+    
+    def give_final_pred(self, resp):
+        received_pred = resp['inputs_embeds'] 
 
+        ######### Defense Applied on Local Model Tail Prediction Process ###########
+        if self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "tail"):
+            received_pred, self.mid_loss = self.mid_model(received_pred)  # , self.local_attention_mask
+            # self.local_pred_clone = self.output_tensors[0].detach().clone()
+        ######### Defense Applied on Local Model Tail Prediction Process ###########
+        
+        resp['inputs_embeds'] = received_pred
 
-    def local_backward(self):  # model head backward
+        return self.forward(2, **resp)
+
+    def local_backward(self):  
         # print(' === passive local backward === ')
-
         self.num_local_updates += 1  # another update
 
         ###### Update Model Head #########
@@ -522,10 +545,7 @@ class PassiveParty_LLM(Party_LLM):
                 if param.requires_grad:
                     local_model_params.append(param)
 
-
             self.local_gradient=self.local_gradient.to(self.output_tensors[0].device)
-            
-
 
             weights_grad_a = torch.autograd.grad(
                 self.output_tensors[0],
@@ -557,7 +577,7 @@ class PassiveParty_LLM(Party_LLM):
             self.local_model_optimizer.step()
 
         elif (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])
-              and (self.index < self.args.k - 1) and self.mid_position == "out"):
+              and (self.index < self.args.k - 1) and self.mid_position == "head"):
             self.local_model_optimizer.zero_grad()  # self.mid_model_optimizer.zero_grad()
 
             # update mid_model+local_model with mid_loss
@@ -599,57 +619,6 @@ class PassiveParty_LLM(Party_LLM):
             
             self.local_model_optimizer.step()
 
-        elif (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])
-              and (self.index < self.args.k - 1) and self.mid_position == "inner"):
-
-            self.local_model_optimizer.zero_grad()  # self.mid_model_optimizer.zero_grad()
-
-            ###########  update mid_model  ###########
-            # with mid_loss.backward
-            self.mid_loss.backward(retain_graph=True)
-            # with global_loss -> local_gradient
-            self.weights_grad_a = torch.autograd.grad(
-                self.output_tensors[0],
-                self.local_model.inner_mid_model.parameters(),
-                grad_outputs=self.local_gradient,
-                retain_graph=True,
-                allow_unused=True,
-            )
-            for w, g in zip(self.local_model.inner_mid_model.parameters(), self.weights_grad_a):
-                if w.requires_grad:
-                    if w.grad != None:
-                        w.grad += g.detach()
-                    else:
-                        w.grad = g.detach()
-
-            ###########  update local encoder  ###########
-            local_model_params = []
-            for param in self.local_model.parameters():
-                if param.requires_grad:
-                    local_model_params.append(param)
-            if len(local_model_params) > 0:
-                self.weights_grad_a = torch.autograd.grad(
-                    self.output_tensors[0],
-                    local_model_params,  # self.local_model.parameters()
-                    grad_outputs=self.local_gradient,
-                    retain_graph=True,
-                    allow_unused=True,
-                )
-                for w, g in zip(local_model_params, self.weights_grad_a):
-                    if w.requires_grad:
-                        if w.grad != None:
-                            w.grad += g.detach()
-                        else:
-                            w.grad = g.detach()
-            self.local_model_optimizer.step()
-
-            # print('after')
-            # mark = 0
-            # for name, param in self.local_model.inner_mid_model.named_parameters():
-            #     if mark == 0:
-            #         print(name, param)
-            #         mark = mark + 1
-
         else:  # W/O Defense
             if self.local_model_optimizer != None:
                 self.local_model_optimizer.zero_grad()
@@ -681,22 +650,77 @@ class PassiveParty_LLM(Party_LLM):
         ###### Update Model Tail #########
         if self.args.vfl_model_slice_num== 3 and self.local_model_tail_optimizer != None:
             self.local_model_tail_optimizer.zero_grad()
-
             # local model tail trainable part
             local_model_tail_params = []
             for param in self.local_model_tail.parameters():
                 if param.requires_grad:
                     local_model_tail_params.append(param)
 
-            if len(local_model_tail_params) > 0:
-                self.weights_grad_a_tail = torch.autograd.grad(
-                    self.global_loss, # model tail output, the final pred
-                    local_model_tail_params,  # self.local_model.parameters()
+            ### Defense
+            if (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])
+              and (self.index < self.args.k - 1) and self.mid_position == "tail"):
+                self.local_model_tail_optimizer.zero_grad()
+
+                # update mid_model+local_model with mid_loss
+                # self.mid_loss.backward(retain_graph=True)
+
+                final_loss = self.global_loss + self.mid_loss
+                # update mid_model and local model with global_loss
+                mid_weights_grad_a = torch.autograd.grad(
+                    final_loss,
+                    self.mid_model.parameters(),
                     retain_graph=True,
                     allow_unused=True,
                 )
-                for w, g in zip(local_model_tail_params, self.weights_grad_a_tail):
-                    if w.requires_grad and g != None:
+                for w, g in zip(self.mid_model.parameters(), mid_weights_grad_a):
+                    if w.requires_grad:
+                        if w.grad != None:
+                            w.grad += g.detach()
+                        else:
+                            w.grad = g.detach()
+
+                if len(local_model_tail_params) > 0:
+                    self.weights_grad_a_tail = torch.autograd.grad(
+                        final_loss, # model tail output, the final pred
+                        local_model_tail_params,  # self.local_model.parameters()
+                        retain_graph=True,
+                        allow_unused=True,
+                    )
+                    for w, g in zip(local_model_tail_params, self.weights_grad_a_tail):
+                        if w.requires_grad and g != None:
+                            if w.grad != None:
+                                w.grad += g.detach()
+                            else:
+                                w.grad = g.detach()
+                
+                self.local_model_tail_optimizer.step()
+            
+            elif (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"])) \
+                    and (self.args.defense_configs["position"] == "tail"):
+                # update imagined_adversary_model
+                self.imagined_adversary_optimizer.zero_grad()
+                self.adversary_attack_loss.backward(retain_graph=True)
+                self.imagined_adversary_optimizer.step()
+
+
+                self.local_model_tail_optimizer.zero_grad()
+
+                # local model tail trainable part
+                local_model_tail_params = list(self.adversarial_model.parameters())
+                for param in self.local_model_tail.parameters():
+                    if param.requires_grad:
+                        local_model_tail_params.append(param)
+
+                final_loss = self.adversarial_model_loss + self.global_loss
+
+                weights_grad_a = torch.autograd.grad(
+                    final_loss,
+                    local_model_tail_params,
+                    retain_graph=True,
+                    allow_unused=True,
+                )
+                for w, g in zip(local_model_tail_params, weights_grad_a):
+                    if w.requires_grad:
                         if w.grad != None:
                             w.grad += g.detach()
                         else:
@@ -704,31 +728,29 @@ class PassiveParty_LLM(Party_LLM):
 
                 self.local_model_tail_optimizer.step()
 
+            ### W/O Defense
+            else:
+                if len(local_model_tail_params) > 0:
+                    self.weights_grad_a_tail = torch.autograd.grad(
+                        self.global_loss, # model tail output, the final pred
+                        local_model_tail_params,  # self.local_model.parameters()
+                        retain_graph=True,
+                        allow_unused=True,
+                    )
+                    for w, g in zip(local_model_tail_params, self.weights_grad_a_tail):
+                        if w.requires_grad and g != None:
+                            if w.grad != None:
+                                w.grad += g.detach()
+                            else:
+                                w.grad = g.detach()
+
+                    self.local_model_tail_optimizer.step()
+
     def launch_defense(self, gradients_list, _type):
-
-        if _type == 'gradients':
-            return apply_defense(self.args, _type, gradients_list)
-        elif _type == 'pred':
-            return apply_defense(self.args, _type, gradients_list)
-        else:
-            # further extention
-            return gradients_list
-
-    def apply_defense_on_transmission(self, pred_detach):
-        # print('apply_defense_on_transmission')
-        # print('pred_detach:',type(pred_detach))
-        # print(pred_detach.shape)
-        ########### Defense applied on pred transmit ###########
-        if self.args.apply_defense == True and self.args.apply_dp == True:
-            pred_detach_list = self.launch_defense(pred_detach, "pred")
-            pred_detach = torch.stack(pred_detach_list)
-            # print('after:',pred_detach.shape)
-
-        return pred_detach
-
-    def apply_communication_protocol_on_transmission(self, pred_detach):
-        ########### communication_protocols ###########
-        if self.args.communication_protocol in ['Quantization', 'Topk']:
-            pred_detach = compress_pred(self.args, pred_detach, self.parties[ik].local_gradient, \
-                                        self.current_epoch, self.current_step).to(self.args.device)
-        return pred_detach
+            if _type == 'gradients':
+                return apply_defense(self.args, _type, gradients_list)
+            elif _type == 'pred':
+                return apply_defense(self.args, _type, gradients_list)
+            else:
+                # further extention
+                return gradients_list

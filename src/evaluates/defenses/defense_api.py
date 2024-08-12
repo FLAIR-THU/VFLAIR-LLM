@@ -20,10 +20,18 @@ def DefenderLoader(args, index):
 def apply_defense(args, _type, *params):
     # LLM scenario
     if args.model_type != None:  
-        if args.defense_name in ['LaplaceDP', 'GaussianDP']:
-            defense_name = args.defense_name + '_for_llm'
-            pred_list = params
-            return globals()[defense_name](args, pred_list)
+        
+        if _type == "gradients":
+            if args.defense_name in ['LaplaceDP', 'GaussianDP', 'GradientSparsification','DiscreteSGD']:
+                gradient_list = params
+                defense_name = args.defense_name + '_for_llm_grad'
+                return globals()[defense_name](args, gradient_list)
+        elif _type == "pred":
+            if args.defense_name in ['LaplaceDP', 'GaussianDP']:
+                defense_name = args.defense_name + '_for_llm_pred'
+                pred_list = params
+                return globals()[defense_name](args, pred_list)
+        
     # Normal VFL
     else:  
         if _type == "gradients":

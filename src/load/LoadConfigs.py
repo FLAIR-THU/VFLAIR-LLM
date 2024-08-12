@@ -15,7 +15,7 @@ FEATURE_INFERENCE = ['GenerativeRegressionNetwork', 'ResSFL']
 
 # LLM attacks
 INVERSION_LLM = ["VanillaModelInversion_WhiteBox", "VanillaModelInversion_BlackBox", "WhiteBoxInversion"]
-LABEL_INFERENCE_LLM = ['BatchLabelReconstruction_LLM','DirectionbasedScoring_LLM']
+LABEL_INFERENCE_LLM = ['BatchLabelReconstruction_LLM','DirectionbasedScoring_LLM','NormbasedScoring_LLM']
 communication_protocol_list = ['FedSGD', 'FedBCD_p', 'FedBCD_s', 'CELU', 'Quantization', 'Topk']
 
 
@@ -197,6 +197,7 @@ def do_load_basic_configs(config_dict, args):
             args.max_new_tokens = None
         
         # Finetune Configs
+
         args.embedding_trainable = []
         args.head_layer_trainable = []
         args.encoder_trainable = []
@@ -585,6 +586,7 @@ def do_load_basic_configs_llm(config_dict, args):
         
         # Finetune Configs  
         # dict:{model_slice: value}  model_slice = head/body/tail
+        args.model_slice_trainable = [False, False, False]
         args.embedding_trainable = False
         args.head_layer_trainable = False
         args.encoder_trainable = {}
@@ -599,17 +601,21 @@ def do_load_basic_configs_llm(config_dict, args):
         args.encoder_trainable['head'] = passive_model_dict['head']['encoder_trainable'] if 'encoder_trainable' in passive_model_dict['head'] else False
         args.encoder_trainable_ids['head'] = passive_model_dict['head']['encoder_trainable_ids'] if 'encoder_trainable_ids' in passive_model_dict['head'] else []
         args.embedding_trainable = passive_model_dict['head']['embedding_trainable'] if 'embedding_trainable' in passive_model_dict['head'] else False
+        args.model_slice_trainable[0] = passive_model_dict['head']['trainable'] if 'trainable' in passive_model_dict['head'] else False
         
+         
         if args.vfl_model_slice_num==3:
             assert 'tail' in passive_model_dict, "Model Tail not specified in passive party model configs"
             args.encoder_trainable['tail'] = passive_model_dict['tail']['encoder_trainable'] if 'encoder_trainable' in passive_model_dict['tail'] else False
             args.encoder_trainable_ids['tail'] = passive_model_dict['tail']['encoder_trainable_ids'] if 'encoder_trainable_ids' in passive_model_dict['tail'] else []
             args.head_layer_trainable = passive_model_dict['tail']['head_layer_trainable'] if 'head_layer_trainable' in passive_model_dict['tail'] else False
+            args.model_slice_trainable[2] = passive_model_dict['tail']['trainable'] if 'trainable' in passive_model_dict['tail'] else False
         
         # Active Party Models
         assert '1' in config_model_dict, "Active Party not specified in model list"
         active_model_dict = config_model_dict['1']
         args.model_path.append(active_model_dict['path'])
+        args.model_slice_trainable[1] = active_model_dict['body']['trainable'] if 'trainable' in active_model_dict['body'] else False
         
         if args.vfl_model_slice_num==3:
             assert 'body' in active_model_dict, "Model Body not specified in active party model configs"
@@ -650,7 +656,7 @@ def do_load_basic_configs_llm(config_dict, args):
     args.apply_dcae = False  # dcae defense
     args.apply_adversarial = False  # adversarial
     args.bin_size = [None for _ in range(args.k)]  # for discrete bins
-    args.gradients_res_a = [None for _ in range(args.k)]  # for gradient sparsification
+    args.gradients_res_a = None #[None for _ in range(args.k)]  # for gradient sparsification
     args.apply_dcor = False  # distance corrilation
     if 'defense' in config_dict:
         print(config_dict['defense'].keys())
@@ -687,7 +693,7 @@ def do_load_basic_configs_llm(config_dict, args):
             args.defense_param_name = 'lambda'
         elif args.defense_name in ["MID"]:
             mid_model_name = str(args.defense_configs['mid_model_name']) if 'mid_model_name' in args.defense_configs else 'MID'
-            mid_position = str(args.defense_configs['mid_position']) if 'mid_position' in args.defense_configs else 'out'
+            mid_position = str(args.defense_configs['mid_position']) if 'mid_position' in args.defense_configs else 'head'
             args.defense_param = mid_model_name + '_' + mid_position+ '_' + str(args.defense_configs['lambda'])
             args.defense_param_name = 'lambda'
         elif args.defense_name == "GaussianDP" or args.defense_name == "LaplaceDP":
@@ -697,6 +703,8 @@ def do_load_basic_configs_llm(config_dict, args):
             else:
                 args.defense_param = args.defense_configs['epsilon']
                 args.defense_param_name = 'epsilon'
+                # pred/grad
+                args.dp_add_position = str(args.defense_configs['position']) if 'position' in args.defense_configs else 'pred'
         elif args.defense_name == "GradientSparsification":
             args.defense_param = args.defense_configs['gradient_sparse_rate']
             args.defense_param_name = 'gradient_sparse_rate'

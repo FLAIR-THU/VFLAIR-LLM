@@ -24,7 +24,7 @@
       "add_special_tokens": 1
     },
     "finetune_configs":{
-        "name":"Vanilla",
+        "name":"LoRA",
         "configs":{}
     },
     "model_list":{
@@ -38,12 +38,14 @@
           "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
 
             "head":{
+                "trainable": 0,
                 "embedding_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
             },
             "tail":{
-                "head_layer_trainable": 1,
+                "trainable": 0,
+                "head_layer_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
             }
@@ -51,8 +53,9 @@
         "1": {
           "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
             "body":{
-                "encoder_trainable": 1,
-                "encoder_trainable_ids":[0]
+                "trainable": 1,
+                "encoder_trainable": 0,
+                "encoder_trainable_ids":[]
             }
         },
         "task":{
@@ -60,10 +63,18 @@
         },
         "vfl_model_slice_num": 3,
         "local_encoders_num": 3,
-        "local_tail_encoders_num": 3
+        "local_tail_encoders_num": 0
     },
     "attack_list": {
       "0": {
+        "name": "BatchLabelReconstruction_LLM",
+        "parameters": {
+          "party": [1],
+          "lr": 0.05,
+          "epochs": 500
+      }
+    },
+    "1": {
         "name": "DirectionbasedScoring_LLM",
         "parameters": {
           "party": [1],

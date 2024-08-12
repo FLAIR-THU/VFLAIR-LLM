@@ -135,5 +135,5 @@ class DirectionbasedScoring_LLM(Attacker):
             print(f'batch_size=%d,class_num=%d,acc=%lf,time_used=%lf'
                   % (self.args.batch_size, self.label_size, cosine_leak_acc, end_time - start_time))
 
-        print("returning from DirectionbasedScoring")
+        print("returning from DirectionbasedScoring_LLM")
         return cosine_leak_acc, cosine_leak_auc

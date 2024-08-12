@@ -211,13 +211,24 @@ def create_main_task(global_model_type: GenerationMixin):
                 self.parties[ik].LR_decay(i_epoch)
             self._communication.send_global_lr_decay(i_epoch)
 
-        def apply_defense_on_transmission(self, pred_detach):
+        def apply_defense_on_pred_transmission(self, pred_detach):
             ########### Defense applied on pred transmit ###########
-            if self.args.apply_defense == True and self.args.apply_dp == True:
-                # print('pre pred_detach:',type(pred_detach),pred_detach.shape) # torch.size bs,12,768 intermediate
-                pred_detach = torch.stack(self.launch_defense(pred_detach, "pred"))
-                # print('after pred_detach:',type(pred_detach),pred_detach.shape) # torch.size bs,12,768 intermediate
+            if self.args.apply_defense == True:
+                if self.args.apply_dp == True and self.args.dp_add_position == 'pred':
+                    # print('pre pred_detach:',type(pred_detach),pred_detach.shape) # torch.size bs,12,768 intermediate
+                    pred_detach = torch.stack(self.launch_defense(pred_detach, "pred"))
+                    # print('after pred_detach:',type(pred_detach),pred_detach.shape) # torch.size bs,12,768 intermediate
             return pred_detach
+        
+        def apply_defense_on_grad_transmission(self, grad):
+            ########### Defense applied on grad transmit ###########
+            # print('apply_defense_on_grad_transmission')
+            if self.args.apply_defense == True and self.args.apply_mid == False and self.args.apply_adversarial == False:
+                if (self.args.apply_dp == True and self.args.dp_add_position == 'grad') or (self.args.apply_dp == False):
+                    # print('pre grad:',type(grad),grad.shape) # torch.size bs,seq_len,embeddim
+                    grad = self.launch_defense(grad, "gradients")
+                    # print('after grad:',type(grad),grad.shape) # torch.size bs,12,768 intermediate
+            return grad
 
         def apply_communication_protocol_on_transmission(self, pred_detach):
             ########### communication_protocols ###########
@@ -240,8 +251,8 @@ def create_main_task(global_model_type: GenerationMixin):
                 # Defense
                 if self.args.apply_defense:
                     if (ik in self.args.defense_configs['party']):
-                        # print('Apply DP')
-                        pred_detach = self.apply_defense_on_transmission(pred_detach)
+                        pred_detach = self.apply_defense_on_pred_transmission(pred_detach)
+                
                 # Communication Process
                 pred_detach = self.apply_communication_protocol_on_transmission(pred_detach)
                 pred_clone = torch.autograd.Variable(pred_detach, requires_grad=True).to(self.args.device)
@@ -314,6 +325,9 @@ def create_main_task(global_model_type: GenerationMixin):
                 assert 1 > 2, 'Task type no supported'
 
         def local_gradient_transmit(self, count_time='train'):
+            '''
+            active party --[local gradient]--> passive party
+            '''
             for ik in range(self.k - 1):
                 if self.parties[ik].local_model_optimizer != None:
                     start_time = time.time()
@@ -328,20 +342,27 @@ def create_main_task(global_model_type: GenerationMixin):
                     self.parties[ik].local_gradient = passive_local_gradient
 
         def global_gradient_transmit(self, final_pred, count_time='train'):
-            start_time = time.time()
+            '''
+            passive party --[global gradient]--> active party
+            '''
             global_loss = self.parties[0].cal_loss(final_pred)
             if self.args.vfl_model_slice_num == 2:
                 global_gradient = self.parties[0].cal_global_gradient_2slice(global_loss, final_pred)
             else:
                 global_gradient = self.parties[0].cal_global_gradient_3slice(global_loss, self.global_pred)
-            end_time = time.time()
-            if count_time == 'train':
-                self.train_party_time[0] += end_time - start_time
 
-            self.communication_cost += get_size_of(global_gradient)
-            # self.parties[0].global_gradient is global_gradient
-            self._communication.send_global_loss_and_gradients(self.parties[0].global_gradient)  
+            # Defense
+            # Direct alter on gradients
+            if self.args.apply_defense:
+                if (0 in self.args.defense_configs['party']):
+                    global_gradient = self.apply_defense_on_grad_transmission(global_gradient)
             
+            # update_loss_with_defense
+            self.parties[0].update_loss_with_defense()
+
+            self._communication.send_global_loss_and_gradients(global_gradient)  
+            
+            self.communication_cost += get_size_of(global_gradient)
             return global_loss
 
 
@@ -1080,7 +1101,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 p._tensor_to_device(resp, p.models[2].device)
 
                 
-                final_output = p.forward(2, **resp)
+                final_output = p.give_final_pred(resp) #p.forward(2, **resp)
                 # print(f'1  model tail input :{resp.keys()}')
                 # print('model tail input inputs_embeds:',resp['inputs_embeds'][0,0,:5])
                 # print('model tail input inputs_embeds:',resp['attention_mask'][0,:5])
@@ -1147,7 +1168,6 @@ def create_main_task(global_model_type: GenerationMixin):
         def train_batch(self, parties_data, batch_label):
             ############### allocate data ###############
             gt_one_hot_label = batch_label
-            self.gt_one_hot_label = gt_one_hot_label
             
             for ik in range(self.k - 1):
                 # # allocate data (data/label/attention_mask/token_type_ids)
@@ -1317,12 +1337,12 @@ def create_main_task(global_model_type: GenerationMixin):
                             else:
                                 batch_label.append(parties_data[party_id][bs_id][1])
                         _parties_data.append([batch_input_dicts, batch_label])
-                    parties_data = _parties_data
+                    self.parties_data = _parties_data
 
                     if self.args.model_architect == 'CLS' and self.num_classes > 1:  # self.args.task_type == "SequenceClassification"
-                        gt_one_hot_label = self.label_to_one_hot(parties_data[0][1], self.num_classes)
+                        gt_one_hot_label = self.label_to_one_hot(self.parties_data[0][1], self.num_classes)
                     else:
-                        gt_one_hot_label = torch.tensor(parties_data[0][1]).to(self.current_device)
+                        gt_one_hot_label = torch.tensor(self.parties_data[0][1]).to(self.current_device)
                     self.gt_one_hot_label = gt_one_hot_label
                     i += 1
 
@@ -1334,7 +1354,7 @@ def create_main_task(global_model_type: GenerationMixin):
                         self.first_epoch_state = self.save_state(True)
 
                     enter_time = time.time()
-                    self.loss, self.train_acc = self.train_batch(parties_data, gt_one_hot_label)
+                    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
                     exit_time = time.time()
 
                     if i == 0 and i_epoch == 0:
@@ -1385,8 +1405,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 #     self.parties[0].lr_schedulers[2].step()
 
                 if self.args.apply_adversarial:
-                    print(
-                        f'global_loss={self.parties[0].global_loss} adversarial_model_loss:{self.parties[0].adversarial_model_loss.item()} adversary_attack_loss:{self.parties[0].adversary_attack_loss.item()}')
+                    print(f'global_loss={self.parties[0].global_loss} adversarial_model_loss:{self.parties[0].adversarial_model_loss.item()} adversary_attack_loss:{self.parties[0].adversary_attack_loss.item()}')
                 if self.args.apply_mid:
                     print(f'global_loss={self.parties[0].global_loss},mid_loss={self.parties[0].mid_loss}')
 
@@ -1453,8 +1472,8 @@ def create_main_task(global_model_type: GenerationMixin):
             else:
                 filename = f'{self.args.defense_name}_{self.args.defense_param},finetuned_model={model_name}'
             result_file_name = result_path + filename + f'.csv'
-            print('Save csv to:', result_file_name)
-            data_record.to_csv(result_file_name)
+            # print('Save csv to:', result_file_name)
+            # data_record.to_csv(result_file_name)
 
             if self.args.apply_defense and save_model:
                 if self.args.apply_mid or self.args.apply_adversarial:
@@ -1491,6 +1510,8 @@ def create_main_task(global_model_type: GenerationMixin):
                 return {
                     # Batch Label
                     "label": copy.deepcopy(self.gt_one_hot_label),
+                    # Batch Data
+                    # "batch_data": self.dict_deepcopy(self.parties[0].local_data_input),
 
                     # Transmission
                     "passive_predict": self.dict_deepcopy(self.parties[0].output_tensors),
