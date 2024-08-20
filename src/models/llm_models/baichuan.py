@@ -34,6 +34,8 @@ class BaichuanModelSplitter(BaichuanModel, VFLModel):
         for i, layer in enumerate(self.layers):
             if i in idx_of_layers:
                 new_layers.append(layer)
+            else:
+                del layer
         self.layers = new_layers
         # update config
         self.config.num_hidden_layers = len(new_layers)

@@ -777,7 +777,7 @@ class ModelPartitionPipelineGPT2(ModelPartitionPipeline):
             # print(list(split_range))
             # print(f'Model Head:{len(model_head.h)} {do_split}')
 
-        return model_head.to(self.device)
+        return model_head#.to(self.device)
 
     def _load_model_tail(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         if self.args.model_architect == 'CLM':
@@ -799,7 +799,7 @@ class ModelPartitionPipelineGPT2(ModelPartitionPipeline):
             # print(f'Model Tail:{len(model_tail.transformer.h)} {do_split}')
 
 
-        return model_tail.to(self.device)
+        return model_tail#.to(self.device)
 
     def _load_model_body(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         model_body = GPT2ModelBody.from_pretrained(model_name_or_path, **kwargs)
@@ -811,4 +811,4 @@ class ModelPartitionPipelineGPT2(ModelPartitionPipeline):
             # print(f'Model Body:{len(model_body.h)} {do_split}')
            
         
-        return model_body.to(self.device)
+        return model_body#.to(self.device)

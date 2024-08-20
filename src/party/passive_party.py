@@ -147,7 +147,7 @@ class PassiveParty_LLM(Party_LLM):
                     'squeeze_dim'] if 'squeeze_dim' in self.args.defense_configs else 0
 
                 self.mid_position = self.args.defense_configs['mid_position'] \
-                    if 'mid_position' in self.args.defense_configs else "out"  # "inner"
+                    if 'mid_position' in self.args.defense_configs else "head"  # "inner"
 
                 current_bottleneck_scale = int(self.args.defense_configs['bottleneck_scale']) \
                     if 'bottleneck_scale' in self.args.defense_configs else 1
@@ -161,6 +161,7 @@ class PassiveParty_LLM(Party_LLM):
                 print('self.args.model_dtype:',self.args.model_dtype)
                 seq_length = self.args.defense_configs['seq_length']
                 embed_dim = self.args.model_embedded_dim  # defense_configs['embed_dim']
+                label_size = self.args.num_classes
                 mid_model_path = self.args.defense_configs[
                     'mid_model_path'] if 'mid_model_path' in self.args.defense_configs else None
 
@@ -172,22 +173,22 @@ class PassiveParty_LLM(Party_LLM):
                     with open(mid_model_path, 'rb') as f:
                         self.mid_model = pickle.load(f)
                 else:
-                    if 'Squeeze' in self.mid_model_name:
-                        print('Squeeze')
-                        self.mid_model = globals()[self.mid_model_name](seq_length, embed_dim, \
-                                                                        mid_lambda=self.mid_lambda,
-                                                                        squeeze_dim=self.squeeze_dim,
-                                                                        bottleneck_scale=current_bottleneck_scale,
-                                                                        std_shift=std_shift_hyperparameter,
-                                                                        model_dtype=model_dtype).to(
-                            self.args.device)
-                    else:
-                        self.mid_model = globals()[self.mid_model_name](seq_length, embed_dim, \
-                                                                        mid_lambda=self.mid_lambda,
-                                                                        bottleneck_scale=current_bottleneck_scale,
-                                                                        std_shift=std_shift_hyperparameter,
-                                                                        model_dtype=model_dtype).to(
-                            self.args.device)
+                    # if 'Squeeze' in self.mid_model_name:
+                    #     print('Squeeze')
+                    #     self.mid_model = globals()[self.mid_model_name](seq_length, embed_dim, \
+                    #                                                     mid_lambda=self.mid_lambda,
+                    #                                                     squeeze_dim=self.squeeze_dim,
+                    #                                                     bottleneck_scale=current_bottleneck_scale,
+                    #                                                     std_shift=std_shift_hyperparameter,
+                    #                                                     model_dtype=model_dtype).to(
+                    #         self.args.device)
+                    # else:
+                    self.mid_model = globals()[self.mid_model_name](seq_length, embed_dim, label_size,\
+                                                                    mid_lambda=self.mid_lambda,
+                                                                    bottleneck_scale=current_bottleneck_scale,
+                                                                    std_shift=std_shift_hyperparameter,
+                                                                    model_dtype=model_dtype).to(
+                        self.args.device)
 
                 if self.local_model_optimizer == None:
                     self.local_model_optimizer = torch.optim.Adam(self.mid_model.parameters(), lr=self.mid_lr)
@@ -263,6 +264,9 @@ class PassiveParty_LLM(Party_LLM):
         self.global_gradient = \partial global_loss / \partial global_intermediate
         self.input_tensors[2] = global_intermediate model body output/model tail input
         '''
+        if (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])
+              and (self.index < self.args.k - 1) and self.mid_position == "tail"):
+            global_loss = global_loss + self.mid_loss
         global_gradient_clone=torch.autograd.grad(global_loss,global_intermediate,retain_graph=True)[0]
         self.global_gradient = global_gradient_clone
 
@@ -287,6 +291,12 @@ class PassiveParty_LLM(Party_LLM):
         # ########### Normal Loss ###############
         if self.args.model_architect == 'CLS':  # self.args.task_type == 'SequenceClassification':
             pooled_logits = pred.logits # [bs, num_labels]
+            ######### Defense ###########
+            if self.args.vfl_model_slice_num == 2 and self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "tail"):
+                print('== 2 slice mid')
+                pooled_logits, self.mid_loss = self.mid_model(pooled_logits)  # , self.local_attention_mask
+            ######### Defense ###########
+        
             labels = torch.argmax(gt_one_hot_label,-1) # [bs, num_labels] -> [bs]
             
             # copied from transformer.model.gpt2.modeling_gpt
@@ -514,7 +524,7 @@ class PassiveParty_LLM(Party_LLM):
         received_pred = resp['inputs_embeds'] 
 
         ######### Defense Applied on Local Model Tail Prediction Process ###########
-        if self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "tail"):
+        if self.args.vfl_model_slice_num == 3 and self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "tail"):
             received_pred, self.mid_loss = self.mid_model(received_pred)  # , self.local_attention_mask
             # self.local_pred_clone = self.output_tensors[0].detach().clone()
         ######### Defense Applied on Local Model Tail Prediction Process ###########
@@ -664,8 +674,9 @@ class PassiveParty_LLM(Party_LLM):
                 # update mid_model+local_model with mid_loss
                 # self.mid_loss.backward(retain_graph=True)
 
-                final_loss = self.global_loss + self.mid_loss
                 # update mid_model and local model with global_loss
+                final_loss = self.global_loss + self.mid_loss
+                
                 mid_weights_grad_a = torch.autograd.grad(
                     final_loss,
                     self.mid_model.parameters(),

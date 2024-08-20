@@ -1,4 +1,4 @@
-for seed in {60,61,62,63,64,65}
+for seed in {62,63,64,65}
     do
     python main_pipeline_llm_4.py --seed $seed --configs sst2_bli_wo_4
 

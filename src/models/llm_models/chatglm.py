@@ -27,6 +27,8 @@ class ChatGLMModelSplitter(ChatGLMModel, VFLModel):
         for i, layer in enumerate(self.encoder.layers):
             if i in idx_of_layers:
                 new_layers.append(layer)
+            else:
+                del layer
         self.encoder.layers = new_layers
 
         # update config

@@ -100,9 +100,11 @@ class DirectionbasedScoring_LLM(Attacker):
             index = ik
 
             # collect necessary information
-
             true_label = self.vfl_info['label'].to(self.device)  # copy.deepcopy(self.gt_one_hot_label)
             print('true_label:', true_label.size())
+            pred_a_gradients_clone = self.vfl_info['global_gradient']
+            print('pred_a_gradients_clone:', pred_a_gradients_clone.size())
+            del self.vfl_info
 
             ################ scoring attack ################
             start_time = time.time()
@@ -116,8 +118,6 @@ class DirectionbasedScoring_LLM(Attacker):
             print('pos_idx after:', pos_idx)
             ################ found positive gradient ################
 
-            pred_a_gradients_clone = self.vfl_info['global_gradient']
-            print('pred_a_gradients_clone:', pred_a_gradients_clone.size())
             tf_pred_a_gradients_clone = tf.convert_to_tensor(pred_a_gradients_clone.cpu().numpy())
             
             tf_true_label = tf.convert_to_tensor(

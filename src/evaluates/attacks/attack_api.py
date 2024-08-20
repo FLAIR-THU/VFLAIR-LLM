@@ -20,6 +20,8 @@ from evaluates.attacks.VanillaModelInversion_WhiteBox import VanillaModelInversi
 from evaluates.attacks.VanillaModelInversion_BlackBox import VanillaModelInversion_BlackBox
 from evaluates.attacks.WhiteBoxInversion import WhiteBoxInversion
 from evaluates.attacks.BatchLabelReconstruction_LLM import BatchLabelReconstruction_LLM
+from evaluates.attacks.BatchLabelReconstruction_LLM_2slice import BatchLabelReconstruction_LLM_2slice
+from evaluates.attacks.DirectLabelScoring_LLM import DirectLabelScoring_LLM
 from evaluates.attacks.DirectionbasedScoring_LLM import DirectionbasedScoring_LLM
 from evaluates.attacks.NormbasedScoring_LLM import NormbasedScoring_LLM
 

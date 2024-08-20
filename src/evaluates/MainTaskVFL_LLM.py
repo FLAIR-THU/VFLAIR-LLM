@@ -330,15 +330,15 @@ def create_main_task(global_model_type: GenerationMixin):
             '''
             for ik in range(self.k - 1):
                 if self.parties[ik].local_model_optimizer != None:
-                    start_time = time.time()
                     passive_local_gradient = self._communication.send_cal_passive_local_gradient_message(ik)
                     if not isinstance(passive_local_gradient, torch.Tensor):
                         passive_local_gradient = torch.Tensor(passive_local_gradient).to(self.args.device)
-                    end_time = time.time()
-
-                    if count_time == 'train':
-                        self.train_party_time[self.k - 1] += end_time - start_time
-
+                    
+                    # Direct alter on gradients
+                    if self.args.apply_defense:
+                        if (1 in self.args.defense_configs['party']):
+                            passive_local_gradient = self.apply_defense_on_grad_transmission(passive_local_gradient)
+                    
                     self.parties[ik].local_gradient = passive_local_gradient
 
         def global_gradient_transmit(self, final_pred, count_time='train'):
@@ -356,7 +356,7 @@ def create_main_task(global_model_type: GenerationMixin):
             if self.args.apply_defense:
                 if (0 in self.args.defense_configs['party']):
                     global_gradient = self.apply_defense_on_grad_transmission(global_gradient)
-            
+
             # update_loss_with_defense
             self.parties[0].update_loss_with_defense()
 
@@ -1120,6 +1120,7 @@ def create_main_task(global_model_type: GenerationMixin):
             '''
             # passive party -> global gradient -> active party
             loss = self.global_gradient_transmit(final_pred, count_time='train')
+            
             # active party -> local gradient -> passive party
             self.local_gradient_transmit(count_time='train')
 
@@ -1495,9 +1496,9 @@ def create_main_task(global_model_type: GenerationMixin):
                 if BEFORE_MODEL_UPDATE:
                     # print('save:',self.parties[0].local_model_tail.head_layer.weight[0,:5])
                     return {
-                        "local_model_head": copy.deepcopy(self.parties[0].local_model),
-                        "local_model_tail": copy.deepcopy(self.parties[0].local_model_tail),
-                        "active_model_body": copy.deepcopy(self.parties[1].global_model),
+                        "local_model_head": copy.deepcopy(self.parties[0].local_model).to("cpu") if self.parties[0].local_model != None else None,
+                        "local_model_tail": copy.deepcopy(self.parties[0].local_model_tail).to("cpu") if self.parties[0].local_model_tail != None else None,
+                        "active_model_body": copy.deepcopy(self.parties[1].global_model).to("cpu") if self.parties[1].global_model != None else None,
 
                         # "global_model": copy.deepcopy(self.parties[self.args.k - 1].global_model),
                         "model_names": [str(type(self.parties[ik].local_model)).split('.')[-1].split('\'')[-2] for ik in

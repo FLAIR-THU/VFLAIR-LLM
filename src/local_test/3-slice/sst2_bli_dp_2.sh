@@ -1,4 +1,9 @@
-for seed in {60,61,62,63,64,65}
+# 500
+sed -i 's/"epsilon": 50/"epsilon": 500/g' ./configs/sst2_bli_dp_2.json
+python main_pipeline_llm_2.py --seed 64 --configs sst2_bli_dp_2
+sed -i 's/"epsilon": 500/"epsilon": 50/g' ./configs/sst2_bli_dp_2.json
+
+for seed in {65,66}
     do
     python main_pipeline_llm_2.py --seed $seed --configs sst2_bli_wo_2
 

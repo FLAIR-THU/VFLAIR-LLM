@@ -67,7 +67,7 @@ def evaluate_no_attack_finetune(args):
     # attack_metric_name = 'acc_loss'
 
     # # Save record 
-    exp_result = f"NoAttack|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|" \
+    exp_result = f"NoAttack|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|" \
                  + exp_result
     print(exp_result)
 
@@ -107,7 +107,7 @@ def evaluate_inversion_attack(args):
         inference_party_time = vfl.inference_party_time
         precision, recall , attack_total_time= vfl.evaluate_attack()
 
-        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|main_task_acc={main_tack_acc}|precision={precision}|recall={recall}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
+        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|precision={precision}|recall={recall}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
         print(exp_result)
         append_exp_res(args.exp_res_path, exp_result)
     return precision, recall
@@ -143,7 +143,7 @@ def evaluate_label_inference_attack(args):
         inference_party_time = vfl.inference_party_time
         rec_rate , attack_total_time= vfl.evaluate_attack()
 
-        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
+        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
         print(exp_result)
         append_exp_res(args.exp_res_path, exp_result)
     # return rec_rate
@@ -317,5 +317,5 @@ if __name__ == '__main__':
         if args.label_inference_list != []:
             evaluate_label_inference_attack(args)
 
-        
+        append_exp_res(args.exp_res_path, f'\n')
         logger.info(recorder)

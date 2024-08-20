@@ -15,7 +15,7 @@ FEATURE_INFERENCE = ['GenerativeRegressionNetwork', 'ResSFL']
 
 # LLM attacks
 INVERSION_LLM = ["VanillaModelInversion_WhiteBox", "VanillaModelInversion_BlackBox", "WhiteBoxInversion"]
-LABEL_INFERENCE_LLM = ['BatchLabelReconstruction_LLM','DirectionbasedScoring_LLM','NormbasedScoring_LLM']
+LABEL_INFERENCE_LLM = ['BatchLabelReconstruction_LLM','BatchLabelReconstruction_LLM_2slice','DirectLabelScoring_LLM','DirectionbasedScoring_LLM','NormbasedScoring_LLM']
 communication_protocol_list = ['FedSGD', 'FedBCD_p', 'FedBCD_s', 'CELU', 'Quantization', 'Topk']
 
 

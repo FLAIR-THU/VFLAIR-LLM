@@ -18,7 +18,7 @@ from peft.peft_model import PeftModel
 from load.LoadConfigs import *  # load_configs load_basic_configs_llm
 from load.LoadParty import load_parties, load_parties_llm
 
-from evaluates.MainTaskVFL_LLM import *
+from evaluates.MainTaskVFL_LLM_test import *
 from utils.basic_functions import append_exp_res
 from utils import recorder
 
@@ -41,7 +41,7 @@ def evaluate_no_attack_pretrained(args):
     # No Attack
     set_seed(args.current_seed)
 
-    vfl = MainTaskVFL_LLM(args)
+    vfl = MainTaskVFL_LLM_test(args)
     vfl.init_communication()
 
     exp_result, metric_val = vfl.inference()
@@ -58,7 +58,7 @@ def evaluate_no_attack_finetune(args):
     # No Attack
     set_seed(args.current_seed)
 
-    vfl = MainTaskVFL_LLM(args)
+    vfl = MainTaskVFL_LLM_test(args)
     vfl.init_communication()
 
     exp_result, metric_val, training_time = vfl.train_vfl()
@@ -67,7 +67,7 @@ def evaluate_no_attack_finetune(args):
     # attack_metric_name = 'acc_loss'
 
     # # Save record 
-    exp_result = f"NoAttack|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|" \
+    exp_result = f"NoAttack|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|" \
                  + exp_result
     print(exp_result)
 
@@ -91,7 +91,7 @@ def evaluate_inversion_attack(args):
         else:
             # args.need_auxiliary = 1
             args = load_parties_llm(args)
-            vfl = MainTaskVFL_LLM(args)
+            vfl = MainTaskVFL_LLM_test(args)
             vfl.init_communication()
 
             if args.pipeline == 'finetune':
@@ -107,10 +107,10 @@ def evaluate_inversion_attack(args):
         inference_party_time = vfl.inference_party_time
         precision, recall , attack_total_time= vfl.evaluate_attack()
 
-        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|main_task_acc={main_tack_acc}|precision={precision}|recall={recall}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
+        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|precision={precision}|recall={recall}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
         print(exp_result)
         append_exp_res(args.exp_res_path, exp_result)
-        return precision, recall
+    return precision, recall
 
 def evaluate_label_inference_attack(args):
     for index in args.label_inference_index:
@@ -127,7 +127,7 @@ def evaluate_label_inference_attack(args):
         else:
             # args.need_auxiliary = 1
             args = load_parties_llm(args)
-            vfl = MainTaskVFL_LLM(args)
+            vfl = MainTaskVFL_LLM_test(args)
             vfl.init_communication()
 
             if args.pipeline == 'finetune':
@@ -143,10 +143,10 @@ def evaluate_label_inference_attack(args):
         inference_party_time = vfl.inference_party_time
         rec_rate , attack_total_time= vfl.evaluate_attack()
 
-        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
+        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
         print(exp_result)
         append_exp_res(args.exp_res_path, exp_result)
-        return rec_rate
+    return rec_rate
 
 
 def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
@@ -167,6 +167,10 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
     return target_cls
 
 def create_exp_dir_and_file(dataset, Q, model_name, pipeline, defense_name='', defense_param=''):
+    exp_res_dir = f'exp_result/{dataset}_test/'
+    if not os.path.exists(exp_res_dir):
+        os.makedirs(exp_res_dir)
+
     exp_res_dir = f'exp_result/{dataset}_test/Q{str(Q)}/'
     if not os.path.exists(exp_res_dir):
         os.makedirs(exp_res_dir)
@@ -266,7 +270,7 @@ if __name__ == '__main__':
         #     # ancestor_cls = args.global_model_type
         #     # todo: infer from model_type might be enough, would also work under 3-slice
         #     ancestor_cls = get_cls_ancestor(args.config.model_type, args.model_architect)
-        #     MainTaskVFL_LLM = create_main_task(ancestor_cls)
+        #     MainTaskVFL_LLM_test = create_main_task(ancestor_cls)
 
         #     # vanilla
         #     if args.pipeline == 'pretrained':
@@ -299,7 +303,7 @@ if __name__ == '__main__':
         # ancestor_cls = args.global_model_type
         # todo: infer from model_type might be enough, would also work under 3-slice
         ancestor_cls = get_cls_ancestor(args.config.model_type, args.model_architect)
-        MainTaskVFL_LLM = create_main_task(ancestor_cls)
+        MainTaskVFL_LLM_test = create_main_task(ancestor_cls)
 
         # commuinfo='== metrics:'+args.metric_type
         # append_exp_res(args.exp_res_path, commuinfo)

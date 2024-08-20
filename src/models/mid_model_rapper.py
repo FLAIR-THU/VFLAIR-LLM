@@ -215,7 +215,7 @@ class MIDModelCNN_ConvTranspose2d(nn.Module):
 
 
 class MIDModel_SqueezeLinear(nn.Module):
-    def __init__(self, seq_length, embed_dim, mid_lambda, squeeze_dim=124, bottleneck_scale=1, std_shift=0.5):
+    def __init__(self, seq_length, embed_dim, label_size, mid_lambda, squeeze_dim=124, bottleneck_scale=1, std_shift=0.5):
         super(MIDModel_SqueezeLinear, self).__init__()
         self.bottleneck_scale = bottleneck_scale
         self.input_dim = embed_dim
@@ -300,7 +300,7 @@ class MIDModel_SqueezeLinear(nn.Module):
 
 
 class MIDModel_Linear(nn.Module):
-    def __init__(self, seq_length, embed_dim, mid_lambda, bottleneck_scale=1, std_shift=0.5, model_dtype=torch.float32):
+    def __init__(self, seq_length, embed_dim, label_size, mid_lambda, bottleneck_scale=1, std_shift=0.5, model_dtype=torch.float32):
         super(MIDModel_Linear, self).__init__()
         self.bottleneck_scale = bottleneck_scale
         self.input_dim = embed_dim
@@ -389,6 +389,59 @@ class MIDModel_Linear(nn.Module):
         # assert 1>2
 
         return z, mid_loss
+
+
+class MIDModel_Linear_for2slice(nn.Module):
+    def __init__(self, seq_length, embed_dim, label_size, mid_lambda, bottleneck_scale=1, std_shift=0.5, model_dtype=torch.float32):
+        super(MIDModel_Linear_for2slice, self).__init__()
+        self.bottleneck_scale = bottleneck_scale
+        self.input_dim = label_size
+        self.output_dim = label_size
+
+        self.mid_lambda = mid_lambda
+        self.std_shift = std_shift
+        self.model_dtype = model_dtype
+
+        self.enlarge_layer = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(self.input_dim, self.input_dim * 2 * self.bottleneck_scale, bias=True),
+            nn.ReLU(inplace=True)
+        )
+        self.decoder_layer = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(self.input_dim * self.bottleneck_scale, self.input_dim * self.bottleneck_scale * 2, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Linear(self.input_dim * self.bottleneck_scale * 2, self.output_dim, bias=True),
+            nn.ReLU(inplace=True)
+        )
+        self.to(model_dtype) 
+
+    def forward(self, x):
+        # print('== MID Model Forward ==')
+        # print('x:',x.size()) # bs, 30 ,768
+        # print('mid_model:',self.enlarge_layer[1].weight.dtype)
+        # print('mid_model:',self.decoder_layer[1].weight.dtype)
+        
+        input_shape = x.shape
+
+        epsilon = torch.empty((x.size()[0], x.size()[1] * self.bottleneck_scale))
+        torch.nn.init.normal(epsilon, mean=0, std=1)  # epsilon is initialized
+        epsilon = epsilon.to(x.device)
+        # # x.size() = (batch_size, class_num)
+        x_double = self.enlarge_layer(x)
+        mu, std = x_double[:, :self.input_dim * self.bottleneck_scale], x_double[:,
+                                                                        self.input_dim * self.bottleneck_scale:]
+        # print(f"mu, std={mu.shape},{std.shape}")
+        std = F.softplus(std - self.std_shift)  # ? F.softplus(std-0.5) F.softplus(std-5)
+        z = mu + std * epsilon
+        z = z.to(x.device)
+        z = self.decoder_layer(z)
+        mid_loss = self.mid_lambda * torch.mean(torch.sum((-0.5) * (1 + 2 * torch.log(std) - mu ** 2 - std ** 2), 1))
+        # print(f'z={z.shape}')
+        # print('== MID Model Forward ==')
+
+        return z, mid_loss
+
 
 
 class MIDModel_PoolLinear(nn.Module):
@@ -530,6 +583,9 @@ class MID_model_small(nn.Module):
         )
 
     def forward(self, x):
+        print('== MID Model Forward ==')
+        print('x:',x.dtype,x.size()) # bs, 30 ,768
+        
         epsilon = torch.empty((x.size()[0], x.size()[1] * self.bottleneck_scale))
         torch.nn.init.normal(epsilon, mean=0, std=1)  # epsilon is initialized
         epsilon = epsilon.to(x.device)
@@ -537,12 +593,14 @@ class MID_model_small(nn.Module):
         x_double = self.enlarge_layer(x)
         mu, std = x_double[:, :self.input_dim * self.bottleneck_scale], x_double[:,
                                                                         self.input_dim * self.bottleneck_scale:]
-        # print(f"mu, std={mu},{std}")
+        print(f"mu, std={mu.shape},{std.shape}")
         std = F.softplus(std - self.std_shift)  # ? F.softplus(std-0.5) F.softplus(std-5)
         z = mu + std * epsilon
         z = z.to(x.device)
         z = self.decoder_layer(z)
         mid_loss = self.mid_lambda * torch.mean(torch.sum((-0.5) * (1 + 2 * torch.log(std) - mu ** 2 - std ** 2), 1))
+        print(f'z={z.shape}')
+        print('== MID Model Forward ==')
 
         return z, mid_loss
 
