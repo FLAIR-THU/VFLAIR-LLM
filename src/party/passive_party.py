@@ -221,10 +221,16 @@ class PassiveParty_LLM(Party_LLM):
         elif args.dataset == 'MATH':
             self.train_dst = MATHDataset_LLM(args, self.train_data, self.train_label, 'train')
             self.test_dst = MATHDataset_LLM(args, self.test_data, self.test_label, 'test')
+        elif args.dataset == 'CC_SBU':
+            self.train_dst = CCSBUAlignDataset(args, self.train_data, self.train_label, self.vis_processors['train'], 'train')
+            self.test_dst = CCSBUAlignDataset(args, self.test_data, self.test_label, self.vis_processors['eval'],'test')
+        elif args.dataset == 'TextVQA':
+            self.train_dst = TextVQADataset_train(args, self.train_data, self.train_label,self.vis_processors['train'], 'train')
+            self.test_dst = TextVQADataset_test(args, self.test_data, self.test_label,self.vis_processors['train'],'test')
         else:
             self.train_dst = PassiveDataset_LLM(args, self.train_data, self.train_label, 'train')
             self.test_dst = PassiveDataset_LLM(args, self.test_data, self.test_label, 'test')
-
+            
     def update_local_pred(self, pred):
         self.pred_received[self.args.k - 1] = pred
 
@@ -235,6 +241,11 @@ class PassiveParty_LLM(Party_LLM):
         '''
         self.global_gradient = \partial global_loss / \partial global_pred
         '''
+
+        if (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])
+              and (self.index < self.args.k - 1) and self.mid_position == "tail"):
+            global_loss = global_loss + self.mid_loss
+        
 
         if self.args.task_type == 'QuestionAnswering':
             _gradients_start = torch.autograd.grad(global_loss, global_pred.start_logits, retain_graph=True)
@@ -267,6 +278,7 @@ class PassiveParty_LLM(Party_LLM):
         if (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])
               and (self.index < self.args.k - 1) and self.mid_position == "tail"):
             global_loss = global_loss + self.mid_loss
+        
         global_gradient_clone=torch.autograd.grad(global_loss,global_intermediate,retain_graph=True)[0]
         self.global_gradient = global_gradient_clone
 
@@ -293,7 +305,7 @@ class PassiveParty_LLM(Party_LLM):
             pooled_logits = pred.logits # [bs, num_labels]
             ######### Defense ###########
             if self.args.vfl_model_slice_num == 2 and self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "tail"):
-                print('== 2 slice mid')
+                # print('== 2 slice mid')
                 pooled_logits, self.mid_loss = self.mid_model(pooled_logits)  # , self.local_attention_mask
             ######### Defense ###########
         
@@ -340,6 +352,34 @@ class PassiveParty_LLM(Party_LLM):
                 next_token_logits = lm_logits[:, -1, :]
                 # print('next_token_logits:',next_token_logits.shape)
                 # print('labels:',labels.shape)
+                labels = torch.tensor(labels.long()).to(self.args.device)
+                # Flatten the tokens
+                loss_fct = CrossEntropyLoss()
+                # loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+                loss = loss_fct(next_token_logits, labels)
+                # print('loss:', loss)
+
+        elif self.args.model_architect == 'MM':  # self.args.task_type == 'CausalLM':
+            gt_one_hot_label = self.processed_labels
+            
+            logits = pred.logits  # [bs, seq_len, vocab_size]
+            labels = torch.tensor(gt_one_hot_label).to(logits.device)
+            
+            if len(labels.shape) > 1:
+                # Shift so that tokens < n predict n
+                shift_logits = logits[..., :-1, :].contiguous()
+                shift_labels = labels[..., 1:].contiguous()
+                # Flatten the tokens
+                loss_fct = CrossEntropyLoss()
+                shift_logits = shift_logits.view(-1, self.args.model_config.vocab_size)
+                shift_labels = shift_labels.view(-1)
+                # Enable model parallelism
+                shift_labels = shift_labels.to(shift_logits.device)
+                loss = loss_fct(shift_logits, shift_labels)
+                # print('cal loss:',loss)
+
+            else:
+                next_token_logits = logits[:, -1, :]
                 labels = torch.tensor(labels.long()).to(self.args.device)
                 # Flatten the tokens
                 loss_fct = CrossEntropyLoss()
@@ -486,15 +526,17 @@ class PassiveParty_LLM(Party_LLM):
 
     @timer()
     def give_pred(self, use_cache=False):
-        self.local_data_input['use_cache'] = use_cache
-        self._tensor_to_device(self.local_data_input , self.models[0].device)
+        # self.local_data_input['use_cache'] = use_cache
+        # self._tensor_to_device(self.local_data_input , self.models[0].device)
 
+        # collect processed labels (only in some cases)
         intermediate = self.forward(model_index=0,**self.local_data_input)
-        # if not isinstance(intermediate, dict):
-        #     intermediate = intermediate.prepare_for_forward()
+
+        if 'processed_labels' in intermediate.keys():
+            self.processed_labels = intermediate['processed_labels']
+            del(intermediate['processed_labels'])
+
         
-        # self.local_pred = intermediate['inputs_embeds']
-       
         self.local_attention_mask = intermediate['attention_mask'] if ('attention_mask' in intermediate) else None
         self.local_pred_clone = self.output_tensors[0].detach().clone()
         if self.local_attention_mask != None:
@@ -506,7 +548,7 @@ class PassiveParty_LLM(Party_LLM):
             self.local_pred_clone = self.output_tensors[0].detach().clone()
         
         elif (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"])) \
-            and (self.args.defense_configs["position"]=='tail'):
+            and (self.args.defense_configs["position"]=='head'):
             self.origin_pred = self.output_tensors[0].clone()
             self.output_tensors[0] = self.adversarial_model(self.origin_pred)
             self.local_pred_clone = self.output_tensors[0].detach().clone()

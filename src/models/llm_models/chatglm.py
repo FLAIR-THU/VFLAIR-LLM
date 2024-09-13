@@ -109,8 +109,6 @@ class ChatGLMModelHead(ChatGLMModelSplitter):
                 }
 
 
-
-
 class ChatGLMModelBody(ChatGLMModelSplitter):
     def __init__(self, config: ChatGLMConfig):
         super().__init__(config)
@@ -187,9 +185,6 @@ class ChatGLMModelBody(ChatGLMModelSplitter):
                 'attention_mask': full_attention_mask,
                 'position_ids': position_ids
                 }
-
-
-
 
 
 class ChatGLMModelTail(ChatGLMModelSplitter):

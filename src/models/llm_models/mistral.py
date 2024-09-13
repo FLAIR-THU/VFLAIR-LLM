@@ -62,6 +62,7 @@ class MistralModelHead(MistralModelSplitter):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        **kwargs
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -203,6 +204,7 @@ class MistralModelBody(MistralModelSplitter):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        **kwargs
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -326,7 +328,6 @@ class MistralModelBody(MistralModelSplitter):
                 }
        
 
-
 class MistralModelTail(MistralModelSplitter):
     def __init__(self, config: MistralConfig):
         super().__init__(config)
@@ -346,6 +347,7 @@ class MistralModelTail(MistralModelSplitter):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        **kwargs
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -540,7 +542,7 @@ class ModelPartitionPipelineMistral(ModelPartitionPipeline):
             # print(list(split_range))
             # print(f'Model Head:{len(model_head.h)} {do_split}')
 
-        return model_head.to(self.device)
+        return model_head#.to(self.device)
 
     def _load_model_tail(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         if self.args.model_architect == 'CLM':
@@ -562,7 +564,7 @@ class ModelPartitionPipelineMistral(ModelPartitionPipeline):
             # print(f'Model Tail:{len(model_tail.model.h)} {do_split}')
 
 
-        return model_tail.to(self.device)
+        return model_tail#.to(self.device)
 
     def _load_model_body(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         model_body = MistralModelBody.from_pretrained(model_name_or_path, **kwargs)
@@ -574,4 +576,4 @@ class ModelPartitionPipelineMistral(ModelPartitionPipeline):
             # print(f'Model Body:{len(model_body.h)} {do_split}')
            
         
-        return model_body.to(self.device)
+        return model_body#.to(self.device)

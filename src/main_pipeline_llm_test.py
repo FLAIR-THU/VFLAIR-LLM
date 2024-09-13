@@ -18,7 +18,7 @@ from peft.peft_model import PeftModel
 from load.LoadConfigs import *  # load_configs load_basic_configs_llm
 from load.LoadParty import load_parties, load_parties_llm
 
-from evaluates.MainTaskVFL_LLM_test import *
+from evaluates.MainTaskVFL_LLM import *
 from utils.basic_functions import append_exp_res
 from utils import recorder
 
@@ -41,10 +41,10 @@ def evaluate_no_attack_pretrained(args):
     # No Attack
     set_seed(args.current_seed)
 
-    vfl = MainTaskVFL_LLM_test(args)
+    vfl = MainTaskVFL_LLM(args)
     vfl.init_communication()
 
-    exp_result, metric_val = vfl.inference()
+    exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
 
     # # Save record 
     exp_result = f"NoAttack|{args.pad_info}|seed={args.current_seed}|K={args.k}" + exp_result
@@ -58,7 +58,7 @@ def evaluate_no_attack_finetune(args):
     # No Attack
     set_seed(args.current_seed)
 
-    vfl = MainTaskVFL_LLM_test(args)
+    vfl = MainTaskVFL_LLM(args)
     vfl.init_communication()
 
     exp_result, metric_val, training_time = vfl.train_vfl()
@@ -91,13 +91,13 @@ def evaluate_inversion_attack(args):
         else:
             # args.need_auxiliary = 1
             args = load_parties_llm(args)
-            vfl = MainTaskVFL_LLM_test(args)
+            vfl = MainTaskVFL_LLM(args)
             vfl.init_communication()
 
             if args.pipeline == 'finetune':
                 _exp_result, metric_val, training_time = vfl.train_vfl()
             elif args.pipeline == 'pretrained':
-                _exp_result, metric_val = vfl.inference()
+                _exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
             main_tack_acc = metric_val
             print(_exp_result)
 
@@ -127,13 +127,13 @@ def evaluate_label_inference_attack(args):
         else:
             # args.need_auxiliary = 1
             args = load_parties_llm(args)
-            vfl = MainTaskVFL_LLM_test(args)
+            vfl = MainTaskVFL_LLM(args)
             vfl.init_communication()
 
             if args.pipeline == 'finetune':
                 _exp_result, metric_val, training_time = vfl.train_vfl()
             elif args.pipeline == 'pretrained':
-                _exp_result, metric_val = vfl.inference()
+                _exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
             main_tack_acc = metric_val
             print(_exp_result)
 
@@ -157,21 +157,37 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
         from models.llm_models import baichuan
         target_cls = getattr(baichuan, "BaiChuanForCausalLM")
     else:
-        from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, \
-            MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES, MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES
-        target_module = __import__('transformers')
-        aa = {"CLM": MODEL_FOR_CAUSAL_LM_MAPPING_NAMES,
-              "TQA": MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES,
-              "CLS": MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES}[architecture][model_type]
-        target_cls = getattr(target_module, aa)
+        if architecture == 'MM':
+            from src.models.llm_models.llama import LlamaTailForCausalLM_forMM
+            from src.models.llm_models.minicpmv import MiniCPMVModelTail
+            from src.models.llm_models.minigpt4.minigpt4 import MiniGPT4Tail
+
+            # from src.load.llm_model_loaders.minigpt4. import MiniGPTBaseTail #
+            MM_MODEL_MAPPING={
+                'llama':LlamaTailForCausalLM_forMM, #MiniGPT4Tail, #,
+                'minicpm': MiniCPMVModelTail,
+                'minicpmv': MiniCPMVModelTail
+
+            }
+            target_cls = MM_MODEL_MAPPING[model_type] 
+        else:
+            from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, \
+                MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES, MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES
+            target_module = __import__('transformers')
+            aa = {"CLM": MODEL_FOR_CAUSAL_LM_MAPPING_NAMES,
+                "MM": MODEL_FOR_CAUSAL_LM_MAPPING_NAMES,
+                "TQA": MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES,
+                "CLS": MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES}[architecture][model_type]
+            target_cls = getattr(target_module, aa)
+            
     return target_cls
 
 def create_exp_dir_and_file(dataset, Q, model_name, pipeline, defense_name='', defense_param=''):
-    exp_res_dir = f'exp_result/{dataset}_test/'
+    exp_res_dir = f'exp_result/{dataset}/'
     if not os.path.exists(exp_res_dir):
         os.makedirs(exp_res_dir)
 
-    exp_res_dir = f'exp_result/{dataset}_test/Q{str(Q)}/'
+    exp_res_dir = f'exp_result/{dataset}/Q{str(Q)}/'
     if not os.path.exists(exp_res_dir):
         os.makedirs(exp_res_dir)
     if pipeline == 'pretrained':
@@ -270,7 +286,7 @@ if __name__ == '__main__':
         #     # ancestor_cls = args.global_model_type
         #     # todo: infer from model_type might be enough, would also work under 3-slice
         #     ancestor_cls = get_cls_ancestor(args.config.model_type, args.model_architect)
-        #     MainTaskVFL_LLM_test = create_main_task(ancestor_cls)
+        #     MainTaskVFL_LLM = create_main_task(ancestor_cls)
 
         #     # vanilla
         #     if args.pipeline == 'pretrained':
@@ -303,7 +319,7 @@ if __name__ == '__main__':
         # ancestor_cls = args.global_model_type
         # todo: infer from model_type might be enough, would also work under 3-slice
         ancestor_cls = get_cls_ancestor(args.config.model_type, args.model_architect)
-        MainTaskVFL_LLM_test = create_main_task(ancestor_cls)
+        MainTaskVFL_LLM = create_main_task(ancestor_cls)
 
         # commuinfo='== metrics:'+args.metric_type
         # append_exp_res(args.exp_res_path, commuinfo)
@@ -321,5 +337,6 @@ if __name__ == '__main__':
         if args.label_inference_list != []:
             evaluate_label_inference_attack(args)
 
+        append_exp_res(args.exp_res_path, f'\n')
         
         logger.info(recorder)

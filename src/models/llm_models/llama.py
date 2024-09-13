@@ -14,6 +14,10 @@ import copy
 import os
 from peft.peft_model import PeftModel
 from .base import ModelPartitionPipeline, VFLModel
+from transformers import StoppingCriteria, StoppingCriteriaList
+
+from models.llm_models.minigpt4.minigpt4 import MiniGPT4Head, MiniGPT4Body, MiniGPT4Tail
+from models.llm_models.minigpt4.conversation import StoppingCriteriaSub # minigpt4.conversation.conversation
 
 class LlamaModelSplitter(LlamaModel, VFLModel):
     def vfl_split(self, idx_of_layers: Iterable[int]) -> bool:
@@ -29,7 +33,6 @@ class LlamaModelSplitter(LlamaModel, VFLModel):
         # update config
         self.config.num_hidden_layers = len(new_layers)
         # self.config.n_head = len(new_layers) # n_head = num of attention head
-        
         return True
 
     def _clear_past_key_values(self):
@@ -147,6 +150,9 @@ class LlamaModelHead(LlamaModelSplitter):
 
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
+
+            # print('1 inner llama model head output:',hidden_states[0,:4,:4])
+            # print(decoder_layer.mlp.gate_proj.weight)
 
         return {'inputs_embeds': hidden_states,'attention_mask': causal_mask}
 
@@ -333,7 +339,9 @@ class LlamaModelTail(LlamaModelSplitter):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
 
+        _i = 1
         for decoder_layer in self.layers:
+            _i = _i + 1
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
@@ -366,6 +374,11 @@ class LlamaModelTail(LlamaModelSplitter):
 
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
+            
+            # if _i == 2:
+            #     print(f'{_i} inner llama body output:',hidden_states[0,:4,:4])
+            #     print(decoder_layer.mlp.gate_proj.weight)
+            #     assert 1>2
 
         hidden_states = self.norm(hidden_states)
 
@@ -380,7 +393,7 @@ class LlamaModelTail(LlamaModelSplitter):
             )
         
         self.past_key_values = past_key_values
-
+        
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
         return BaseModelOutputWithPast(
@@ -455,15 +468,289 @@ class LlamaTailForSequenceClassification(LlamaForSequenceClassification, VFLMode
     def head_layer(self, score):
         self.score = score
 
+class LlamaTailForCausalLM_forMM(LlamaForCausalLM, VFLModel):
+    def __init__(self, config: LlamaConfig, **kwargs):
+        super().__init__(config)
+        self.model = LlamaModelTail(config)
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def vfl_split(self, idx_of_layers: Iterable[int]) -> bool:
+        return self.model.vfl_split(idx_of_layers)
+
+    def _clear_past_key_values(self):
+        self.model._clear_past_key_values()
+
+    @property
+    def head_layer(self):
+        return self.lm_head
+
+    @head_layer.setter
+    def head_layer(self, lm_head):
+        self.lm_head = lm_head
+    
+    def vit_to_cpu(self):
+        self.ln_vision.to("cpu")
+        self.ln_vision.float()
+        self.visual_encoder.to("cpu")
+        self.visual_encoder.float()
+
+    def get_context_emb(self, prompt, img_list):
+        device = img_list[0].device
+        prompt_segs = prompt.split('<ImageHere>')
+        assert len(prompt_segs) == len(img_list) + 1, "Unmatched numbers of image placeholders and images."
+        seg_tokens = [
+            self.llama_tokenizer(
+                seg, return_tensors="pt", add_special_tokens=i==0).to(device).input_ids # only add bos to the first seg
+            for i, seg in enumerate(prompt_segs)
+        ]
+        seg_embs = [self.embed_tokens(seg_t) for seg_t in seg_tokens]
+
+        mixed_embs = [emb for pair in zip(seg_embs[:-1], img_list) for emb in pair] + [seg_embs[-1]]
+        mixed_embs = torch.cat(mixed_embs, dim=1)
+        return mixed_embs
+
+    def prompt_wrap(self, img_embeds, atts_img, prompts, lengths=None):
+        if prompts is None or len(prompts) == 0:
+            # prompts is not provided, just return the original image embedding
+            return img_embeds, atts_img
+        elif img_embeds is None:
+            # prompt is provided but there is no image embedding. return the prompt embedding in right padding
+            self.llama_tokenizer.padding_side = "right"
+            prompt_tokens = self.llama_tokenizer(
+                prompts,
+                return_tensors="pt",
+                padding="longest",
+                add_special_tokens=False
+            ).to(self.device)
+            prompt_embeds = self.embed_tokens(prompt_tokens.input_ids)
+            atts_prompt = prompt_tokens.attention_mask
+            return prompt_embeds, atts_prompt
+        else:
+            # return the multi-modal embedding in right padding
+            emb_lists = []
+            if isinstance(prompts, str):
+                prompts = [prompts] * len(img_embeds)
+
+            for idx, (each_img_embed, each_prompt) in enumerate(zip(img_embeds, prompts)):
+                pn = each_img_embed.shape[-2]
+                if lengths is not None:
+                    each_img_embed = each_img_embed.reshape(-1, each_img_embed.shape[-1])
+                    each_img_embed = each_img_embed[:lengths[idx] * pn]
+                p_segs = each_prompt.split('<ImageHere>')
+                interleave_emb = []
+                for idx, seg in enumerate(p_segs[:-1]):
+                    p_tokens = self.llama_tokenizer(
+                        seg, return_tensors="pt", add_special_tokens=False).to(img_embeds.device)
+                    p_embed = self.embed_tokens(p_tokens.input_ids)
+                    interleave_emb.append(torch.cat([p_embed, each_img_embed[None][:, idx * pn:(idx + 1) * pn]], dim=1))
+                wrapped_emb = torch.cat(interleave_emb, dim=1)
+                p_tokens = self.llama_tokenizer(
+                    p_segs[-1], return_tensors="pt", add_special_tokens=False).to(img_embeds.device)
+                p_embed = self.embed_tokens(p_tokens.input_ids)
+                wrapped_emb = torch.cat([wrapped_emb, p_embed], dim=1)
+                emb_lists.append(wrapped_emb)
+
+            emb_lens = [emb.shape[1] for emb in emb_lists]
+            pad_emb = self.embed_tokens(torch.tensor(self.llama_tokenizer.pad_token_id, device=img_embeds.device))
+
+            max_length = max(emb_lens) if max(emb_lens) < self.max_context_len else self.max_context_len
+            wrapped_embs = pad_emb.expand(len(emb_lens), max_length, -1).clone()
+            wrapped_atts = torch.zeros([len(emb_lens), max_length], dtype=torch.int, device=img_embeds.device)
+            
+            for i, emb in enumerate(emb_lists):
+                length = emb_lens[i] if emb_lens[i] < self.max_context_len else self.max_context_len
+                wrapped_embs[i, :length] = emb[:, :length]
+                wrapped_atts[i, :length] = 1
+            return wrapped_embs, wrapped_atts
+
+    def concat_emb_input_output(self, input_embs, input_atts, output_embs, output_atts):
+        """
+        Concatenate the batched input embedding and batched output embedding together.
+        Both the input and the output embedding should be right padded.
+        """
+        input_lens = []
+        cat_embs = []
+        cat_atts = []
+        for i in range(input_embs.size(0)):
+            input_len = input_atts[i].sum()
+            input_lens.append(input_len)
+            cat_embs.append(
+                torch.cat([
+                    input_embs[i][:input_len],
+                    output_embs[i],
+                    input_embs[i][input_len:]
+                ])
+            )
+            cat_atts.append(
+                torch.cat([
+                    input_atts[i][:input_len],
+                    output_atts[i],
+                    input_atts[i][input_len:]
+                ])
+            )
+        cat_embs = torch.stack(cat_embs)
+        cat_atts = torch.stack(cat_atts)
+        return cat_embs, cat_atts, input_lens
+
+    def tokenize_conversation(self, conv_q, conv_a):
+        """concatenate conversation and make sure the model is only trained to regress the answer"""
+
+        to_regress_token_ids_list = []
+        targets_list = []
+
+        batch_size = len(conv_q)
+        for batch_idx in range(batch_size):
+            questions, answers = conv_q[batch_idx], conv_a[batch_idx]
+            questions = [self.llama_tokenizer(self.llama_tokenizer.bos_token + q,
+                                              return_tensors="pt",
+                                              add_special_tokens=False).to(self.device) for q in questions[1:]]  # the first question is handled in the prompt wrap function, skip it
+            answers = [self.llama_tokenizer(a + self.end_sym,
+                                            return_tensors="pt",
+                                            add_special_tokens=False).to(self.device) for a in answers]
+            cur_id = []
+            cur_target = []
+            for i in range(len(questions)):
+                cur_id.append(answers[i].input_ids)
+                cur_target.append(answers[i].input_ids)
+                cur_id.append(questions[i].input_ids)
+                cur_target.append(torch.ones_like(questions[i].input_ids) * -100)
+
+            cur_id.append(answers[-1].input_ids)
+            cur_target.append(answers[-1].input_ids)
+
+            cur_id = torch.cat(cur_id, dim=1)
+            cur_target = torch.cat(cur_target, dim=1)
+            to_regress_token_ids_list.append(cur_id)
+            targets_list.append(cur_target)
+
+        max_len = min(max([target.shape[1] for target in targets_list]), self.max_txt_len)
+        to_regress_token_ids = torch.ones([batch_size, max_len],
+                                          dtype=cur_id.dtype, device=self.device) * self.llama_tokenizer.pad_token_id
+        targets = torch.ones([batch_size, max_len],
+                                          dtype=cur_id.dtype, device=self.device) * -100
+        for batch_idx in range(batch_size):
+            cur_len = to_regress_token_ids_list[batch_idx].shape[1]
+            to_regress_token_ids[batch_idx, :cur_len] = to_regress_token_ids_list[batch_idx][0, :max_len]
+            targets[batch_idx, :cur_len] = targets_list[batch_idx][0, :max_len]
+
+        to_regress_token_attn = (to_regress_token_ids != self.llama_tokenizer.pad_token_id).to(torch.int)
+
+        return to_regress_token_ids, to_regress_token_attn, targets
+
+    def preparing_embedding(self, samples):
+        ### prepare input tokens
+        if 'image' in samples:
+            img_embeds, img_atts = self.encode_img(samples["image"])
+        else:
+            img_embeds = img_atts = None
+
+        if 'conv_q' in samples:
+            # handeling conversation datasets
+            conv_q, conv_a = samples['conv_q'], samples['conv_a']
+
+            connect_sym = samples['connect_sym'][0]
+            conv_q = [q.split(connect_sym)for q in conv_q]
+            conv_a = [a.split(connect_sym) for a in conv_a]
+
+            conv_q = [[self.prompt_template.format(item) for item in items] for items in conv_q]
+
+            cond_embeds, cond_atts = self.prompt_wrap(img_embeds, img_atts, [q[0] for q in conv_q])
+            regress_token_ids, regress_atts, part_targets = self.tokenize_conversation(conv_q, conv_a)
+
+        else:
+            if "instruction_input" in samples:
+                instruction = samples["instruction_input"]
+            elif self.prompt_list:
+                instruction = random.choice(self.prompt_list)
+            else:
+                instruction = None
+
+            if hasattr(self, 'chat_template') and self.chat_template:
+                instruction = [self.prompt_template.format(instruct) for instruct in instruction]
+
+            if 'length' in samples:
+                # the input is a image train (like videos)
+                bsz, pn, hs = img_embeds.shape
+                img_embeds = img_embeds.reshape(len(samples['image']), -1, pn, hs)
+                cond_embeds, cond_atts = self.prompt_wrap(img_embeds, img_atts, instruction, samples['length'])
+            else:
+                cond_embeds, cond_atts = self.prompt_wrap(img_embeds, img_atts, instruction)
+
+            ### prepare target tokens
+            self.llama_tokenizer.padding_side = "right"
+            text = [t + self.end_sym for t in samples["answer"]]
+
+            regress_tokens = self.llama_tokenizer(
+                text,
+                return_tensors="pt",
+                padding="longest",
+                truncation=True,
+                max_length=self.max_txt_len,
+                add_special_tokens=False
+            ).to(self.device)
+
+            regress_token_ids = regress_tokens.input_ids
+            regress_atts = regress_tokens.attention_mask
+            part_targets = regress_token_ids.masked_fill(
+                regress_token_ids == self.llama_tokenizer.pad_token_id, -100
+            )
+
+        regress_embeds = self.embed_tokens(regress_token_ids)
+
+        return cond_embeds, cond_atts, regress_embeds, regress_atts, part_targets
+
+    def maybe_autocast(self, dtype=torch.float16):
+        # if on cpu, don't use autocast
+        # if on gpu, use autocast with dtype if provided, otherwise use torch.float16
+        enable_autocast = self.device != torch.device("cpu")
+
+        if enable_autocast:
+            return torch.cuda.amp.autocast(dtype=dtype)
+        else:
+            return contextlib.nullcontext()
+
+    def embed_tokens(self, token_ids):
+        if hasattr(self.llama_model.base_model, 'model'): ## lora wrapped model
+            embeds = self.llama_model.base_model.model.model.embed_tokens(token_ids)
+        else:
+            embeds = self.llama_model.base_model.embed_tokens(token_ids)
+        return embeds
+
+    @torch.no_grad()
+    def multi_select(self, images, texts, answers, num_cand=None):
+        all_losses = []
+        for answer in answers:
+            choice_samples = {
+                'image': images,
+                'instruction_input': texts,
+                'answer': answer
+            }
+            loss = self.forward(choice_samples, reduction='none')['loss'].reshape(-1, 1)
+            all_losses.append(loss)
+            torch.cuda.empty_cache()
+        all_losses = torch.cat(all_losses, dim=-1)
+        if num_cand is not None:
+            for i in range(all_losses.shape[0]):
+                all_losses[i, num_cand[i]:] = 9999
+        output_class_ranks = torch.argsort(all_losses, dim=-1)
+        return output_class_ranks.tolist()
+    
+
+
 
 class ModelPartitionPipelineLlama(ModelPartitionPipeline):
 
     def _load_model_head(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
+        
         model_head = LlamaModelHead.from_pretrained(model_name_or_path, **kwargs)
         if do_split:
             self.all_layer_num = model_head.config.num_hidden_layers
             split_range = range(0, self.split_index[0])
             model_head.vfl_split(split_range)
+        
+        # if self.args.model_architect == 'MM':
+        #     model_head = MiniGPT4Head(model_head, self.args.tokenizer)
 
         return model_head#.to(self.device)
 
@@ -474,6 +761,10 @@ class ModelPartitionPipelineLlama(ModelPartitionPipeline):
             model_tail = LlamaTailForSequenceClassification.from_pretrained(model_name_or_path, **kwargs)
         elif self.args.model_architect == 'TQA':
             model_tail = LlamaTailForQuestionAnswering.from_pretrained(model_name_or_path, **kwargs)
+        elif self.args.model_architect == 'MM':
+            model_tail = LlamaTailForCausalLM_forMM.from_pretrained(model_name_or_path, **kwargs)
+            # model_tail = MiniGPT4Tail(model_tail, self.args.tokenizer)
+
         else:
             raise ValueError(f"model_architect {self.args.model_architect} not supported for {model_name_or_path}")
         
@@ -484,7 +775,6 @@ class ModelPartitionPipelineLlama(ModelPartitionPipeline):
                 split_range = range(model_tail.config.num_hidden_layers-self.split_index[1],model_tail.config.num_hidden_layers)
             model_tail.vfl_split(split_range)
 
-
         return model_tail#.to(self.device)
 
     def _load_model_body(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
@@ -493,5 +783,7 @@ class ModelPartitionPipelineLlama(ModelPartitionPipeline):
             split_range = range(self.split_index[0], model_body.config.num_hidden_layers-self.split_index[1])
             model_body.vfl_split(split_range)
            
-        
+        # if self.args.model_architect == 'MM':
+        #     model_body = MiniGPT4Body(model_body, self.args.tokenizer)
+
         return model_body#.to(self.device)

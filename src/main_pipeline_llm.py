@@ -67,7 +67,7 @@ def evaluate_no_attack_finetune(args):
     # attack_metric_name = 'acc_loss'
 
     # # Save record 
-    exp_result = f"NoAttack|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|" \
+    exp_result = f"NoAttack|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|" \
                  + exp_result
     print(exp_result)
 
@@ -107,7 +107,7 @@ def evaluate_inversion_attack(args):
         inference_party_time = vfl.inference_party_time
         precision, recall , attack_total_time= vfl.evaluate_attack()
 
-        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|main_task_acc={main_tack_acc}|precision={precision}|recall={recall}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
+        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|precision={precision}|recall={recall}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
         print(exp_result)
         append_exp_res(args.exp_res_path, exp_result)
     return precision, recall
@@ -143,10 +143,10 @@ def evaluate_label_inference_attack(args):
         inference_party_time = vfl.inference_party_time
         rec_rate , attack_total_time= vfl.evaluate_attack()
 
-        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
+        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
         print(exp_result)
         append_exp_res(args.exp_res_path, exp_result)
-    return rec_rate
+    # return rec_rate
 
 
 def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
@@ -166,8 +166,8 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
         target_cls = getattr(target_module, aa)
     return target_cls
 
-def create_exp_dir_and_file(dataset, Q, model_name, pipeline, defense_name='', defense_param=''):
-    exp_res_dir = f'exp_result/{dataset}/Q{str(Q)}/'
+def create_exp_dir_and_file(dataset, vfl_model_slice_num, split_info, model_name, pipeline, defense_name='', defense_param=''):
+    exp_res_dir = f'exp_result/{dataset}/{str(vfl_model_slice_num)}-slice/{split_info}/'
     if not os.path.exists(exp_res_dir):
         os.makedirs(exp_res_dir)
     if pipeline == 'pretrained':
@@ -220,7 +220,8 @@ if __name__ == '__main__':
 
         # Save record for different defense method
         model_name = args.model_list["name"]  
-        exp_res_dir, exp_res_path = create_exp_dir_and_file(args.dataset, args.Q, model_name, args.pipeline, args.defense_name,args.defense_param)
+        split_info = f'{str(args.local_encoders_num)}_{str(args.local_tail_encoders_num)}'
+        exp_res_dir, exp_res_path = create_exp_dir_and_file(args.dataset, args.vfl_model_slice_num, split_info, model_name, args.pipeline, args.defense_name,args.defense_param)
         args.exp_res_dir = exp_res_dir
         args.exp_res_path = exp_res_path
         print(args.exp_res_path)
@@ -317,5 +318,6 @@ if __name__ == '__main__':
         if args.label_inference_list != []:
             evaluate_label_inference_attack(args)
 
+        append_exp_res(args.exp_res_path, f'\n')
         
         logger.info(recorder)

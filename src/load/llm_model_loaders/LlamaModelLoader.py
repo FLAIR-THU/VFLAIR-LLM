@@ -3,11 +3,17 @@ from transformers import PreTrainedModel, AutoTokenizer, AutoConfig
 from models.llm_models.llama import ModelPartitionPipelineLlama
 from peft import LoraConfig, TaskType, get_peft_model, PeftModel, PeftModelForCausalLM
 
+from models.llm_models.minigpt4.minigpt4 import MiniGPT4Head, MiniGPT4Body, MiniGPT4Tail # ...models.llm_models
 
 class LlamaModelLoader(LLMModelLoader):
     _models = {}  # type:dict[int,PreTrainedModel]
 
     def load(self, args, model_path, is_active_party):
+        if is_active_party:
+            print(f'== Load Active Party Model From:{model_path}')
+        else:
+            print(f'== Load Passive Party Model From:{model_path}')
+
         if args.vfl_model_slice_num == 2:
             split_index = (args.local_encoders_num, )
         elif args.vfl_model_slice_num == 3:
@@ -16,19 +22,16 @@ class LlamaModelLoader(LLMModelLoader):
             raise ValueError(f"Not supported vfl_model_slice_num:{args.vfl_model_slice_num}") 
         
         model_config = AutoConfig.from_pretrained(model_path) # full model config
-        if hasattr(model_config, 'generation_config'):
-            generation_config = model_config.generation_config
-        else:
-            generation_config = None
+
         model_architectures = model_config.architectures
         model_embedded_dim = model_config.hidden_size # change with model type
         all_encoders_num = model_config.num_hidden_layers # change with model type
 
         p = ModelPartitionPipelineLlama(args=args, all_layer_num = all_encoders_num, 
                             split_index=split_index, is_server=is_active_party)
-        self._models=p.from_pretrained(model_path, **args.kwargs_model_loading)
-        print(f'===== is_active_party={is_active_party}---{self._models.keys()} ======')
+        self._models = p.from_pretrained(model_path, **args.kwargs_model_loading)
 
+        generation_config = None
 
         if args.finetune_name == "LoRA":
             print(f'LoRA Configs:{args.finetune_detail_configs}')
@@ -105,15 +108,39 @@ class LlamaModelLoader(LLMModelLoader):
 
         print('final trainable param:')
         for _key in self._models.keys():
-            print(_key)
             self._models[_key].print_trainable_parameters()
 
-        model_dtype = self._get_model_dtype(model_config)
-        print('_get_model_dtype:',model_dtype)
+        for _key in self._models.keys():
+            model_dtype = self._get_model_dtype(self._models[_key].config)
+            break
+        # print('_get_model_dtype:',model_dtype)
+
+        if args.model_architect == 'MM':
+            print('args.vit_encoder_config:',args.vit_encoder_config)
+            if args.vfl_model_slice_num == 3:
+                for _key in self._models.keys():
+                    if _key == 0:
+                        self._models[_key] = MiniGPT4Head(self._models[_key], args.tokenizer,**args.vit_encoder_config)
+                    elif _key == 1:
+                        self._models[_key] = MiniGPT4Body(self._models[_key], args.tokenizer)
+                    elif _key == 2:
+                        self._models[_key] = MiniGPT4Tail(self._models[_key], args.tokenizer)
+            else:
+                for _key in self._models.keys():
+                    if _key == 0:
+                        self._models[_key] = MiniGPT4Head(self._models[_key], args.tokenizer,**args.vit_encoder_config)
+                    elif _key == 1:
+                        self._models[_key] = MiniGPT4Tail(self._models[_key], args.tokenizer)
+
+        for _key in self._models.keys():
+            self._models[_key].to(args.device)
+            print(f'final load -- model {_key}:{type(self._models[_key])}')
+            # print('Device:',next(self._models[_key].parameters()).device)
+
         return {
             "models": self._models,
             "config": model_config,
-            "generation_config": generation_config,
+            # "generation_config": generation_config,
             "model_architectures": model_architectures,
             "model_embedded_dim": model_embedded_dim,
             "all_encoders_num": all_encoders_num,

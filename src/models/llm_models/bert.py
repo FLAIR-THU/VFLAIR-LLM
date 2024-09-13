@@ -538,8 +538,8 @@ class ModelPartitionPipelineBert(ModelPartitionPipeline):
             # print(list(split_range))
             # print(f'Model Tail:{len(model_tail.transformer.h)} {do_split}')
 
+        return model_tail.to(self.device)#.to(self.device)
 
-        return model_tail.to(self.device)
 
     def _load_model_body(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         model_body = BertModelBody.from_pretrained(model_name_or_path, **kwargs)

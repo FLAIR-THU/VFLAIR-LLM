@@ -67,7 +67,7 @@
             "party": [0],
             "mid_model_name":"MIDModel_Linear_for2slice",
             "lr": 0.0001,
-            "lambda": 0.01,
+            "lambda": 0.5,
             "mid_position": "tail",
             "current_bottleneck_scale": 1,
             "seq_length": 70,

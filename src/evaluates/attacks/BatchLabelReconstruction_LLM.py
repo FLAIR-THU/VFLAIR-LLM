@@ -123,7 +123,9 @@ class BatchLabelReconstruction_LLM(Attacker):
 
             # gradient received by active party
             original_dy_dx = self.vfl_info['global_model_body_gradient']  # gradient calculated for local model update
-            print(f'original_dy_dx:{type(original_dy_dx)} {len(original_dy_dx)}')
+            print(f'original_dy_dx:{type(original_dy_dx)}')
+            print(f'{len(original_dy_dx)}')
+            
             # for _dy_dx in original_dy_dx:
             #     if _dy_dx != None:
             #         print(_dy_dx.shape)
@@ -137,7 +139,7 @@ class BatchLabelReconstruction_LLM(Attacker):
 
             if self.args.vfl_model_slice_num == 3:
                 passive_model_tail = self.vfl_info['local_model_tail'].to(self.device)
-                passive_model_tail.eval()
+                # passive_model_tail.eval()
 
             # target
             true_label = self.vfl_info['label'].to(self.device)  # CLM: bs, seq_len
@@ -179,9 +181,13 @@ class BatchLabelReconstruction_LLM(Attacker):
             dummy_label.requires_grad = True
             print(f'dummy_label={dummy_label.shape} true_label={true_label.shape}')
             
-            # set optimizer
+            # # set optimizer
             optimizer = torch.optim.Adam([dummy_label],
                         lr=self.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)  #
+            # optimizer = torch.optim.Adam(
+            #             itertools.chain([dummy_label], list(passive_model_tail.parameters())),
+            #             lr=self.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)  #
+            
             scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95, last_epoch=-1, verbose=False)
             
             start_time = time.time()
@@ -206,6 +212,9 @@ class BatchLabelReconstruction_LLM(Attacker):
                     if gx != None:
                         grad_diff += ((gx - gy) ** 2).sum()
                 grad_diff.backward(retain_graph=True)
+
+                if iters == 1:
+                    print('origin grad_diff:',grad_diff.item())
 
                 if grad_diff.item() > min_loss:
                     early_stop += 1

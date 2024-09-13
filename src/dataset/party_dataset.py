@@ -8,7 +8,9 @@ from utils.squad_utils import normalize_answer
 from random import randrange
 from typing import List, Dict, Optional, Sequence, Union
 import copy
+from PIL import Image
 
+# from minigpt4.caption_datasets import CaptionDataset
 
 class SimpleDataset(Dataset):
     """An abstract Dataset class wrapped around Pytorch Dataset class.
@@ -160,6 +162,459 @@ class PassiveDataset_LLM(Dataset):
                 input_dict[key_name] = torch.tensor(input_dict[key_name]).squeeze().to(self.args.device)
 
         label = torch.tensor(self.labels[item_idx]).squeeze().to(self.args.device)
+        return input_dict, label
+
+class TextVQADataset_test(Dataset):
+    def __init__(self, args, data , labels, transform, split_name='test'
+    ):
+        '''
+        data_dict = {
+                'question':data[idx]['question'],
+                'img_path':os.path.join(image_dir, f"{data[idx]['image_id']}.jpg")
+            }
+        '''
+        self.args = args
+        self.data = data
+        self.labels = labels
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        data_input = self.data[idx]
+        answer = self.labels[idx]
+
+        input_dict = {
+            'question':data_input['question'],
+            'image':Image.open(data_input['img_path']).convert('RGB')#.to(self.args.device),
+        }
+        
+        print('-- get item input_dict question:',input_dict['question'])
+        print('-- get item input_dict image:',type(input_dict['image']))
+        print('-- get item answer:',answer)
+
+        return input_dict, answer
+    
+class TextVQADataset_train(Dataset):
+    def __init__(self, args, data , labels, transform, split_name='test'
+        ):
+        '''
+        data_dict = {
+                'question':data[idx]['question'],
+                'img_path':os.path.join(image_dir, f"{data[idx]['image_id']}.jpg")
+            }
+        '''
+        self.args = args
+        self.data = data
+        self.labels = labels
+        self.tokenizer = args.tokenizer
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        data_input = self.data[idx]
+        answer = self.labels[idx]
+        try:
+            # if isinstance(self.data[idx]["img_path"], str):
+            images_dict = { "<image>" : Image.open(data_input['img_path']).convert('RGB') }
+            # elif isinstance(self.raw_data[i]["image"], Dict):
+            #     ### for multi-images input, the template for every image is <image_xx>, such as <image_00>, <image_01>
+            #     images_dict = {img_name : Image.open(img_path).convert("RGB") for img_name, img_path in self.raw_data[i]["image"].items()}
+            conversation = [{'role': 'user', 'content': data_input['question']},
+                   {'role': 'assistant', 'content': answer}]
+            print('get-item conversation:',conversation)
+
+            ret = preprocess(
+                images_dict,
+                conversation,
+                self.tokenizer,
+                self.transform,
+                # query_nums=self.query_nums,
+                # slice_config=self.slice_config,
+                # llm_type=self.llm_type,
+                # patch_size=self.patch_size,
+                # batch_vision=self.batch_vision,
+                max_length=self.args.max_length
+            )
+            print('get item input_ids:',ret["input_ids"].shape)
+            print('get item labels:',ret["target"])
+            print('get item tgt_sizes:',ret["tgt_sizes"])
+
+            ret = dict(
+                input_ids=ret["input_ids"],
+                position_ids=ret["position_ids"],
+                labels=ret["target"],
+                attention_mask=torch.ones_like(ret["input_ids"], dtype=torch.bool),
+                pixel_values=ret["pixel_values"],
+                tgt_sizes=ret["tgt_sizes"],
+                image_bound=ret["image_bound"],
+            )
+        except:
+            logger.error(f"data fetch error")
+            return self.__getitem__(random.randint(0, len(self)))
+        return ret
+
+
+def preprocess(
+    images_dict,
+    conversations,
+    tokenizer,
+    transform,
+    query_nums=64,
+    slice_config=None,
+    llm_type=None,
+    patch_size=14,
+    batch_vision=False,
+    max_length=2048,
+):
+    """
+    single(multi) image(s) preprocess, the image(s) will be placed at the top of the conversation
+    """
+    conversations = copy.deepcopy(conversations)
+    assert len(conversations) > 1, "conversations length must large than 2"
+    assert conversations[0]["role"] == "user", "the first role must be user"
+
+    if slice_config is not None:
+        assert isinstance(slice_config, Dict)
+        assert "patch_size" in slice_config
+        assert "max_slice_nums" in slice_config
+        assert "scale_resolution" in slice_config
+    default_image_placeholder = (
+        tokenizer.im_start + tokenizer.unk_token * query_nums + tokenizer.im_end
+    )
+    new_schema = False
+    use_image_id = False
+    if llm_type=='qwen2':
+        new_schema = True
+        use_image_id = True
+    image_placeholder_dict = {}
+    images = []
+    image_id_cnt = 0 
+    for img_name, image in images_dict.items():
+        if slice_config:
+            source_image, patches, best_grid = slice_image(
+                image,
+                slice_config["max_slice_nums"],
+                slice_config["scale_resolution"],
+                slice_config["patch_size"],
+            )
+            images.append(source_image)
+            image_placeholder = default_image_placeholder
+            if len(patches) > 0:
+                for i in range(len(patches)):
+                    for j in range(len(patches[0])):
+                        images.append(patches[i][j])
+                if use_image_id:
+                    image_placeholder = f'{tokenizer.im_id_start}{image_id_cnt}{tokenizer.im_id_end}' + image_placeholder
+                    image_id_cnt += 1
+                image_placeholder += get_grid_placeholder(
+                    tokenizer, best_grid, query_nums, new_schema = new_schema)
+            image_placeholder_dict[img_name] = image_placeholder
+        else:
+            images.append(image)
+            if use_image_id:
+                image_placeholder = f'{tokenizer.im_id_start}{image_id_cnt}{tokenizer.im_id_end}' + image_placeholder
+                image_id_cnt += 1
+            else:
+                image_placeholder = default_image_placeholder
+            image_placeholder_dict[img_name] = image_placeholder
+    
+    images = [transform(i) for i in images]
+    
+    if len(images_dict) == 1 and "<image>" in images_dict:       
+        if "<image>" in conversations[0]["content"]:
+            conversations[0]["content"] = conversations[0]["content"].replace(
+                "<image>", image_placeholder
+            )
+        else:
+            conversations[0]["content"] = (
+                image_placeholder + "\n" + conversation[0]["content"]
+            )
+        input_dict = conversation_to_ids(conversations, tokenizer, llm_type, new_schema, max_length)
+    else:
+        pattern = r'<image_\d+>'
+        new_conversations = []
+        for conversation in conversations:
+            content = conversation['content']
+            parts = re.split(f'({pattern})', content)
+            for i, part in enumerate(parts):
+                if not part.strip():
+                    continue
+                if re.match(pattern, part):  
+                    if part in image_placeholder_dict:
+                        parts[i] = image_placeholder_dict[part] 
+                    else:
+                        raise Exception(f"not found {part} in image dict")
+            conversation['content'] = '\n'.join(parts)
+            new_conversations.append(conversation)
+        conversations = new_conversations
+        
+        input_dict = conversation_to_ids(conversations, tokenizer, llm_type, new_schema, max_length)
+
+    if batch_vision:
+        tgt_sizes = []
+        reshape_images = []
+        for image in images:
+            H, W = image.shape[1:]
+            reshape_image = reshape_by_patch(image, patch_size)
+            reshape_images.append(reshape_image)
+            tgt_sizes.append([H // patch_size, W // patch_size])
+        if tgt_sizes:
+            tgt_sizes = torch.Tensor(tgt_sizes).type(torch.int32)
+
+        input_dict["pixel_values"] = reshape_images
+        input_dict["tgt_sizes"] = tgt_sizes
+
+    else:
+        input_dict["pixel_values"] = images
+        input_dict["tgt_sizes"] = []
+
+    return input_dict
+
+
+def conversation_to_ids(conversation, tokenizer, llm_type=None, new_schema=False, max_length=2048):
+    """
+    for single image multi-turn conversation
+    conversation: [{'role': 'user', 'content': 'Describe this image'},
+                   {'role': 'assistant', 'content': 'This is a cat.'}]
+    """
+    if llm_type == "llama3":
+        input_ids, context, raw_msg = conversation_to_ids_llama3(
+            conversation, tokenizer
+        )
+    elif llm_type == "qwen2":
+        input_ids, context, raw_msg = conversation_to_ids_qwen2(
+            conversation, tokenizer
+        )
+    else:
+        input_ids, context, raw_msg = conversation_to_ids_minicpm(
+            conversation, tokenizer
+        )
+
+    ids = torch.from_numpy(np.hstack(input_ids, dtype=np.int32))
+    context = torch.from_numpy(np.hstack(context, dtype=np.int8))
+    if input_ids.shape[-1] > max_length:
+        ids =ids[:max_length]
+        context = context[:max_length]
+        logger.warning(f"The input length ({input_ids.shape[-1]}) exceeds the model's maximum length ({max_length}), so it has been truncated")
+    
+    if torch.all(context):
+        logger.error("No tokens available to compute loss.")
+        raise Exception("No tokens available to compute loss.")
+
+    # build target
+    target = torch.full_like(ids, -100, dtype=torch.int32)
+    
+    for i in range(1, len(ids)):
+        if context[i] == 0:
+            target[i - 1] = ids[i]
+        if context[i] == 1 and context[i - 1] == 0:
+            if hasattr(tokenizer, "eot_id"):
+                target[i - 1] = tokenizer.eot_id
+            else:
+                target[i - 1] = tokenizer.eos_id
+    
+    # build image bound
+    if new_schema:
+        start_cond = (ids == tokenizer.im_start_id) | (ids == tokenizer.slice_start_id)
+        end_cond = (ids == tokenizer.im_end_id) | (ids == tokenizer.slice_end_id)
+        image_start_tokens = torch.where(start_cond)[0]
+        image_start_tokens += 1
+        image_end_tokens = torch.where(end_cond)[0]
+    else:
+        image_start_tokens = torch.where(ids == tokenizer.im_start_id)[0]
+        image_start_tokens += 1
+        image_end_tokens = torch.where(ids == tokenizer.im_end_id)[0]
+    if len(image_start_tokens) != len(image_end_tokens):
+        logger.error("image start token != image end tokens")
+        raise Exception("image start token != image end tokens")
+    
+    if len(image_start_tokens) > 0:
+        image_bound = torch.hstack(
+            [image_start_tokens.unsqueeze(-1), image_end_tokens.unsqueeze(-1)]
+        )
+    else:
+        image_bound = []
+
+    position_ids = torch.arange(ids.size(0)).long()
+    return {
+        "input_ids": ids,
+        "target": target,
+        "image_bound": image_bound,
+        "raw_msg": raw_msg,
+        "position_ids": position_ids
+    }
+
+def conversation_to_ids_minicpm(conversation, tokenizer):
+    raw_msg = ""
+    input_ids = []
+    context = []
+    for idx, msg in enumerate(conversation):
+        role = msg["role"]
+        message = msg["content"]
+        assert role in ["user", "assistant"]
+        if role == "user":
+            prefix = "<用户>"
+        else:
+            prefix = "<AI>"
+        # append eos
+        if idx == len(conversation) - 1:
+            message = message + tokenizer.eos_token
+        prefix_ids = tokenizer.encode(prefix)[1:]  # remove bos
+        message_ids = tokenizer.encode(message)[1:]
+
+        input_ids.append(prefix_ids)
+        input_ids.append(message_ids)
+
+        context.append(np.ones((len(prefix_ids),), dtype=np.int8))
+        if role == "assistant":
+            context.append(np.zeros((len(message_ids),), dtype=np.int8))
+        else:
+            context.append(np.ones((len(message_ids),), dtype=np.int8))
+
+        raw_msg += prefix + message
+
+    return input_ids, context, raw_msg
+
+def conversation_to_ids_llama3(conversation, tokenizer):
+    raw_msg = ""
+    input_ids = []
+    context = []
+    raw_msg = tokenizer.apply_chat_template(
+        conversation, tokenize=False, add_generation_prompt=False, chat_template=llama3_chat_template,
+    )
+    input_ids = tokenizer.apply_chat_template(
+        conversation, tokenize=True, add_generation_prompt=False, chat_template=llama3_chat_template,
+    )
+    input_ids = np.array(input_ids)
+
+    start_header_idxs = np.where(
+        input_ids == tokenizer.convert_tokens_to_ids("<|start_header_id|>")
+    )[0]
+    assistant_idxs = np.where(
+        input_ids == tokenizer.convert_tokens_to_ids("assistant")
+    )[0]
+    end_header_idxs = np.where(
+        input_ids == tokenizer.convert_tokens_to_ids("<|end_header_id|>")
+    )[0]
+    eot_idxs = np.where(
+        input_ids == tokenizer.convert_tokens_to_ids("<|eot_id|>"))[0]
+
+    context = np.ones_like(input_ids, dtype=np.int8)
+
+    for assistant_idx in assistant_idxs:
+        if assistant_idx in set((start_header_idxs + end_header_idxs) / 2):
+            st = assistant_idx + 3  # assistant<|end_header_id|>\n\n
+            for eot_idx in eot_idxs:
+                if eot_idx > st:
+                    context[st: eot_idx + 1] = 0
+                    break
+
+    input_ids = np.hstack(input_ids)
+    context = np.hstack(context)
+
+    return input_ids, context, raw_msg
+
+def conversation_to_ids_qwen2(conversation, tokenizer):
+    raw_msg = ""
+    chat = []
+    context = []
+    for idx, msg in enumerate(conversation):
+        role = msg["role"]
+        message = msg["content"]
+        assert role in ["user", "assistant"]
+        if role == "user":
+            prefix = "user"
+        else:
+            prefix = "assistant"
+        chat.append({"role":prefix, "content":message})
+        raw_msg += prefix + message
+    assert set([i['role'] for i in chat]) & set(['assistant'])
+
+    ret = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=False)
+    input_ids = tokenizer.apply_chat_template(chat, tokenize=True, add_generation_prompt=False)
+    input_ids = np.array(input_ids)
+
+    start_idxs = np.where(input_ids == tokenizer.convert_tokens_to_ids('<|im_start|>'))[0]
+    assistant_idxs = np.where(input_ids == tokenizer.convert_tokens_to_ids('assistant'))[0]
+    end_idxs = np.where(input_ids == tokenizer.convert_tokens_to_ids('<|im_end|>'))[0]
+
+    context = np.ones_like(input_ids, dtype=np.int8)
+
+    for assistant_idx in assistant_idxs:
+        if assistant_idx-1 in set(start_idxs):
+            st = assistant_idx + 1
+            for end_idx in end_idxs:
+                if end_idx > st:
+                    context[st: end_idx + 1] = 0
+                    break
+                    
+    input_ids = np.hstack(input_ids)
+    context = np.hstack(context)
+    return input_ids, context, raw_msg
+
+
+class CCSBUAlignDataset(Dataset): # CaptionDataset
+    def __init__(self, args, images ,labels, vis_processor,split_name='test'):
+        '''
+        texts: np.array
+        '''
+        self.args = args
+        self.vis_processor = vis_processor
+        self.images = []
+        self.labels = []
+        # self.instruction= '[INST] <Img><ImageHere></Img> Describe this image in detail. [/INST]'
+        
+        self.instruction = '[INST] <Img><ImageHere></Img> Please provide a detailed description of the picture. [/INST] '
+
+        print(f'===== Dataset {split_name} =====')
+        print('self.vis_processor:',self.vis_processor)
+        print('self.instruction:',self.instruction)
+
+        for i in range(len(images)):
+            self.images.append( self.vis_processor(images[i]) )
+            self.labels.append( labels[i]['caption']  )
+            # ids = args.tokenizer(texts[i],return_tensors='pt')
+            # self.input_dicts.append(ids)
+        
+            # print('get item image:',self.images[0].shape)
+            # print(labels[0]['caption'])
+
+            # print('get item caption:',self.labels[0])
+            # print('======')
+            # assert 1>2
+
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, index):
+
+        # TODO this assumes image input, not general enough
+        label = self.labels[index] #torch.tensor(self.labels[index]).squeeze().to(self.args.device)
+        image = self.images[index]
+        text_input = self.instruction
+        input_dict = {
+            'prompt':text_input,
+            'image':image.to(self.args.device),
+            # 'answer': label
+        }
+
+        ### prepare target tokens
+        self.args.tokenizer.padding_side = "right"
+        text = label+'\n' # self.end_sym = '\n
+        # regress_tokens = self.args.tokenizer(
+        #     text,
+        #     return_tensors="pt",
+        #     padding="longest",
+        #     truncation=True,
+        #     max_length=self.args.max_length,
+        #     add_special_tokens=False
+        # ).to(self.args.device)
+        label = text
+
         return input_dict, label
 
 
@@ -348,6 +803,7 @@ class AlpacaDataset_LLM(Dataset):
 
         label = torch.tensor(self.labels[item_idx]).squeeze().to(self.args.device)
         return input_dict, label
+
 
 class GSMDataset_LLM(Dataset):
     def __init__(self, args, qns, ans, split_name='train', loss_on_prefix=True):

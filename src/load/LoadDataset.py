@@ -33,6 +33,7 @@ from utils.squad_utils import *
 from utils.mmlu_utils import *
 
 from config import SEED
+from PIL import Image
 
 tp = transforms.ToTensor()
 transform = transforms.Compose(
@@ -2307,25 +2308,55 @@ def load_dataset_per_party_llm(args, index):
         train_examples = get_examples(data_path, 'train') # list of [  {'quesion':... , 'answer':...} ...]
         X_train = np.array([ problem_prompt.format(instruction=_ex['question']+ "<|endoftext|>") for _ex in train_examples])
         y_train = np.array([ _ex['answer'] for _ex in train_examples])
-        # print('TRAIN IN:')
-        # print(X_train[0])
-        # print('-'*100)
-        # print('TRAIN ANS:')
-        # print(y_train[0])
 
         ##### Test #####
         test_examples = get_examples(data_path, 'test') # list of [  {'quesion':... , 'answer':...} ...]
         X_test = np.array([ problem_prompt.format(instruction=_ex['question']) for _ex in test_examples])
         y_test = np.array([ get_final_ans(_ex['answer']) for _ex in test_examples])
-        # print('TEST IN:')
-        # print(X_test[0])
-        # print('-'*100)
-        # print('TEST ANS:')
-        # print(y_test[0])
-        # print('-'*100)
 
         train_dst = (X_train, y_train)
         test_dst = (X_test, y_test)
+
+        print('X:',type(X_train), len(X_train), len(X_test))  #
+        print('y',type(y_train), len(y_train), len(y_test))  #
+
+    elif args.dataset == 'GMS8K-test':
+        data_path = DATA_PATH + '/GMS8K/'
+        problem_prompt = ("Below is an instruction that describes a task. "
+        "Write a response that appropriately completes the request.\n\n"
+        "### Instruction:\n{instruction}\n\n### Response: Let's think step by step.")
+        def read_jsonl(path: str):
+            with open(path) as fh:
+                return [json.loads(line) for line in fh.readlines() if line]
+
+        def get_final_ans(ans):
+            temp_ans = ans.split('#### ')[1]
+            temp_ans = int(temp_ans.replace(',', ''))
+            return str(temp_ans)
+
+        def get_examples(data_path, split):
+            path = os.path.join(data_path, f"{split}.jsonl")
+            examples = read_jsonl(path)
+
+            for ex in examples:
+                ex.update(question=ex["question"] + "\n")
+                ex.update(answer=ex["answer"])
+
+            print(f"{len(examples)} {split} examples")
+            return examples
+
+        ##### Train #####
+        train_examples = get_examples(data_path, 'train') # list of [  {'quesion':... , 'answer':...} ...]
+        X_train = np.array([ problem_prompt.format(instruction=_ex['question']+ "<|endoftext|>") for _ex in train_examples])
+        y_train = np.array([ _ex['answer'] for _ex in train_examples])
+
+        ##### Test #####
+        test_examples = get_examples(data_path, 'test') # list of [  {'quesion':... , 'answer':...} ...]
+        X_test = np.array([ problem_prompt.format(instruction=_ex['question']) for _ex in test_examples])
+        y_test = np.array([ get_final_ans(_ex['answer']) for _ex in test_examples])
+
+        train_dst = (X_train[:10], y_train[:10])
+        test_dst = (X_test[:10], y_test[:10])
 
         print('X:',type(X_train), len(X_train), len(X_test))  #
         print('y',type(y_train), len(y_train), len(y_test))  #
@@ -2437,7 +2468,107 @@ def load_dataset_per_party_llm(args, index):
 
         print('X:',type(X_train), len(X_train), len(X_test))  #
         print('y',type(y_train), len(y_train), len(y_test))  #
+    
+    elif args.dataset == 'TextVQA':
+        prompt = "Answer the question directly with single word." + '\n'#+ questions[0]
+        image_dir = DATA_PATH+"/TextVQA/train_images"
+        ann_path = DATA_PATH+"/TextVQA/TextVQA_0.5.1_train.json"
 
+        # image_dir = DATA_PATH+"/TextVQA/test_images"
+        # ann_path = DATA_PATH+"/TextVQA/TextVQA_0.5.1_test.json"
+        raw_data = json.load(open(ann_path, "r"))["data"]
+
+        data = []
+        answers = []
+        for idx in range(20): #range(len(raw_data)):
+            # question = data[:]['question']
+            # img_id = data[:]['image_id']
+            # qid = data[:]['question_id']
+            # img_path = [os.path.join(image_dir, f"{img_id}.jpg") for img_id in img_ids]
+            data_dict = {
+                'question':raw_data[idx]['question'],
+                'img_path':os.path.join(image_dir, f"{raw_data[idx]['image_id']}.jpg")
+            }
+            data.append(data_dict)
+            answers.append(raw_data[idx]['answers'])
+        
+
+        X = np.array(data)
+        Y = np.array(answers)
+        
+        X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.1, random_state=args.current_seed)
+        train_dst = (X_train, y_train)
+        test_dst = (X_test, y_test)
+        print('X:',type(X_train), len(X_train), len(X_test))  #
+        print('y:',type(y_train), len(y_train), len(y_test))  #
+    
+    elif args.dataset == 'CC_SBU':
+        # vis_root = DATA_PATH + '/cc_sbu_align/image/'
+        # ann_path = DATA_PATH + '/cc_sbu_align/filter_cap.json'
+
+        vis_root = DATA_PATH + '/test_cc_sbu/image/'
+        ann_path = DATA_PATH + '/test_cc_sbu/filter_cap.json'
+        
+        annotation = []
+        ann = json.load(open(ann_path, "r"))
+        if isinstance(ann, dict):
+            annotation.extend(json.load(open(ann_path, "r"))['annotations'])
+            # self.annotation.extend(json.load(open(ann_path, "r")))
+        else:
+            annotation.extend(json.load(open(ann_path, "r")))
+
+        images = []
+        captions = []
+        for index in range(len(annotation)):
+            ann = annotation[index]
+
+            img_file = '{}.jpg'.format(ann["image_id"])
+            image_path = os.path.join(vis_root, img_file)
+            image = Image.open(image_path).convert("RGB")
+            # image = vis_processor(image)
+            caption = ann["caption"]
+
+            images.append(image)
+            captions.append(caption)
+            print('image_id:',ann["image_id"])
+
+        print('len images:',len(images), len(annotation))
+        
+        X_train = np.array(images)
+        y_train = np.array(annotation)
+
+        annotation = []
+        ann = json.load(open(ann_path, "r"))
+        if isinstance(ann, dict):
+            annotation.extend(json.load(open(ann_path, "r"))['annotations'])
+        else:
+            annotation.extend(json.load(open(ann_path, "r")))
+
+        images = []
+        captions = []
+        for index in range(len(annotation)):
+            ann = annotation[index]
+
+            img_file = '{}.jpg'.format(ann["image_id"])
+            image_path = os.path.join(vis_root, img_file)
+            image = Image.open(image_path).convert("RGB")
+            # image = vis_processor(image)
+            caption = ann["caption"]
+
+            images.append(image)
+            captions.append(caption)
+
+
+        X_test = np.array(images)
+        y_test = np.array(annotation)
+       
+        train_dst = (X_train, y_train)
+        test_dst = (X_test, y_test)
+
+        print('X:',type(X_train), len(X_train), len(X_test))  #
+        print('y',type(y_train), len(y_train), len(y_test))  #
+    
+    
 
     elif not args.dataset:
         return None

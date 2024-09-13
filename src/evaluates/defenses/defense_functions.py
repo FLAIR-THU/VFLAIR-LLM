@@ -575,6 +575,7 @@ def LaplaceDP_for_llm_grad(args, original_object):
 
     epsilon = args.defense_configs['epsilon']
     dp_strength = delta_f / epsilon
+    # print(f'== LaplaceDP_for_llm_grad dp_strength={dp_strength}')
 
     if dp_strength > 0.0:
         location = 0.0
@@ -590,6 +591,9 @@ def LaplaceDP_for_llm_grad(args, original_object):
             new_object = torch.div(original_object, norm_factor_a) + \
                                 dist_a.sample(original_object.shape).to(args.device)
             # print("norm of gradients after laplace:", torch.norm(original_object, dim=1), torch.max(torch.norm(original_object, dim=1)))
+        
+        # print(new_object)
+        # assert 1>2
         return new_object
     else:
         return original_object

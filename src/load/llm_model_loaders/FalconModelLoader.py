@@ -109,7 +109,9 @@ class FalconModelLoader(LLMModelLoader):
 
 
         
-        model_dtype = self._get_model_dtype(model_config)
+        for _key in self._models.keys():
+            model_dtype = self._get_model_dtype(self._models[_key].config)
+            break
 
 
         return {

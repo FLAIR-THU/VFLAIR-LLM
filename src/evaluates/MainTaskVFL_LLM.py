@@ -28,7 +28,7 @@ import inspect
 from typing import List, Optional, Tuple, Union, Dict, Any
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
-
+from collections import namedtuple
 import warnings
 from typing import List, Optional, Tuple, Union
 
@@ -75,13 +75,13 @@ from config import vfl_basic_config, is_test
 from party.LocalCommunication import LocalCommunication
 from framework.client.DistributedCommunication import convert_msg_to_pred, convert_msg_to_tensor
 import warnings
-
 warnings.filterwarnings("ignore")
 
-# os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+from models.llm_models.minigpt4.minigpt4 import MiniGPT4Tail
+from evaluates.vqa_evaluator import VQAEval
+
 torch.backends.cudnn.enable = True
 torch.backends.cudnn.benchmark = True
-
 STOPPING_ACC = {'mnist': 0.977, 'cifar10': 0.80, 'cifar100': 0.40, 'diabetes': 0.69, \
                 'nuswide': 0.88, 'breast_cancer_diagnose': 0.88, 'adult_income': 0.84, 'cora': 0.72, \
                 'avazu': 0.83, 'criteo': 0.74, 'nursery': 0.99, 'credit': 0.82, 'news20': 0.8, \
@@ -92,9 +92,13 @@ STOPPING_ACC = {'mnist': 0.977, 'cifar10': 0.80, 'cifar100': 0.40, 'diabetes': 0
 def create_main_task(global_model_type: GenerationMixin):
     print('inherited:', global_model_type)
 
-    class MainTaskVFL_LLM(global_model_type, nn.Module):  # GenerationMixin object,
+    class MainTaskVFL_LLM_test(global_model_type, nn.Module):  # GenerationMixin object,
         def __init__(self, args, job_id=None):
+            # if args.model_architect == 'MM':
+            #     super(global_model_type, self).__init__(llm_tokenizer = args.tokenizer)
+            # else:
             super(global_model_type, self).__init__(args.config)
+
             self.job_id = job_id
             self.args = args
             self.config = args.config  # origin model config
@@ -123,8 +127,13 @@ def create_main_task(global_model_type: GenerationMixin):
 
             ## Model Configs ##
             self.models_dict = args.model_list
-            self.generation_config = args.generation_config # generation related
             
+            ## Generation Configs ##
+            self.generation_config = args.generation_config # generation related
+            print('default generation_config:',args.generation_config)
+            self.generation_config.update(**args.generation_config_dict)
+            print('--> final generation_config:',args.generation_config)
+
             self.exp_res_path = args.exp_res_path
 
             ###### init Parties ######
@@ -201,6 +210,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 onehot_target.scatter_(1, target, 1)
             return onehot_target
 
+        
         def init_communication(self, communication=None):
             if communication is None:
                 communication = LocalCommunication(self.args.parties[self.args.k - 1])
@@ -277,7 +287,6 @@ def create_main_task(global_model_type: GenerationMixin):
             self.all_pred_list = all_pred_list
             return all_pred_list
 
-        
         @timer()
         def global_pred_transmit(self, pred_list, use_cache=None, count_time=False):
             start_time = time.time()
@@ -365,219 +374,7 @@ def create_main_task(global_model_type: GenerationMixin):
             self.communication_cost += get_size_of(global_gradient)
             return global_loss
 
-
-        def generate_result(self, model_output, gt_one_hot_label, feature_list=None):
-            # raw_model_output --> standard prediction result
-            test_preds = []
-            test_targets = []
-            test_predict_labels = []
-            test_actual_labels = []
-            target_word_list = []
-            predict_word_list = []
-            suc_cnt = 0
-            sample_cnt = 0
-
-            if self.args.model_architect == 'CLS':  # task_type == "SequenceClassification":
-                if self.args.num_classes == 1:  # regression
-                    predict_label = model_output.logits.detach().cpu()
-                    actual_label = gt_one_hot_label.detach().cpu()
-
-                    predict_label = torch.tensor([_.item() for _ in predict_label])
-                    actual_label = torch.tensor([_.item() for _ in actual_label])
-
-                    sample_cnt = predict_label.shape[0]
-
-                    return list(predict_label), list(actual_label), sample_cnt
-                else:  # Classification
-                    predict_label = torch.argmax(model_output.logits, dim=-1).detach().cpu()
-                    actual_label = torch.argmax(gt_one_hot_label, dim=-1).detach().cpu()
-
-                    sample_cnt = predict_label.shape[0]
-                    suc_cnt += torch.sum(predict_label == actual_label).item()
-                    return list(predict_label), list(actual_label), sample_cnt
-
-            elif self.args.model_architect == 'CLM':  # .task_type == "CausalLM":
-                if self.args.task_type == "CausalLM":  # dataset == "Lambada":
-                    if isinstance(model_output, torch.Tensor):  # generation -- generated token ids
-                        # model_output: torch.tensor : bs, seq_len+generated_len
-                        predict_label_list = model_output[:,self.seq_length:] # [bs, max_new_tokens]
-                        # print('model_output:',model_output.shape, predict_label_list.shape)
-                        
-                        target_label_list = list(gt_one_hot_label)
-
-                    else:  # forward -- raw model output next token logits
-                        # print('model_output:',type(model_output),model_output.keys())
-                        generated_token_logits = model_output.logits[:,-1,:]
-                        predict_label_list = torch.argmax(generated_token_logits, dim=-1) 
-                        target_label_list = list(gt_one_hot_label)
-                        
-
-                    return target_label_list, predict_label_list, len(predict_label_list) 
-
-                elif self.args.task_type == "SequenceClassification":
-                    # print('gt_one_hot_label:',gt_one_hot_label)
-                    # print(self.args.tokenizer.decode(gt_one_hot_label))
-
-                    # choice_dict = {self.args.tokenizer("A").input_ids[0]:0,
-                    #     self.args.tokenizer("B").input_ids[0]:1, 
-                    #     self.args.tokenizer("C").input_ids[0]:2, 
-                    #     self.args.tokenizer("D").input_ids[0]:3}
-                    
-                    choice_dict = {self.args.tokenizer.convert_tokens_to_ids("A"):0,
-                        self.args.tokenizer.convert_tokens_to_ids("B"):1, 
-                        self.args.tokenizer.convert_tokens_to_ids("C"):2, 
-                        self.args.tokenizer.convert_tokens_to_ids("D"):3}
-
-                    target_label_list = []
-                    for row in gt_one_hot_label:
-                        tokens = choice_dict[row.item()]
-                        target_label_list.append(tokens)
-                    
-                    # print('target_label_list:',target_label_list)
-
-                    logits = model_output.logits[:,-1,:]
-                    probs = (
-                            torch.stack(
-                                [
-                                    logits[:,self.args.tokenizer("A").input_ids[0]],
-                                    logits[:,self.args.tokenizer("B").input_ids[0]],
-                                    logits[:,self.args.tokenizer("C").input_ids[0]],
-                                    logits[:,self.args.tokenizer("D").input_ids[0]],
-                                ]
-                            ,dim=1)
-                        .detach()
-                        .cpu()
-                    )
-                    # # forward -- raw model output
-                    # generated_token_logits = model_output.logits[:,-1,:]
-                    # probs = []
-                    # for choice_class in range(self.args.num_classes):
-                    #     choice_id = self.args.tokenizer.convert_tokens_to_ids(self.args.label_dict[choice_class])
-                    #     probs.append( generated_token_logits[:, choice_id] ) # [bs, 1]
-                    # probs = torch.stack(probs,dim = -1) # [bs, num_choice]
-
-
-
-                    predict_label_list = torch.argmax(probs, dim=-1)  # [bs]
-
-                    # predict_label_list = [self.args.label_dict[pred_class.item()] for pred_class in predict_label_list]
-                    # predict_label_list = [self.args.tokenizer.convert_tokens_to_ids(pred_token)\
-                    #          for pred_token in predict_label_list]
-                    # print('predict_label_list:',predict_label_list)
-
-                    return target_label_list, predict_label_list, len(predict_label_list) 
-
-
-            elif self.args.model_architect=='TQA': #.task_type == "QuestionAnswering":
-                # print('feature_list:',type(feature_list),len(feature_list),type(feature_list[0]))
-                start_logits = model_output.start_logits # bs, 512
-                end_logits = model_output.end_logits # bs, 512
-                sample_cnt = start_logits.shape[0] # bs
-
-                n_best_size = self.args.n_best_size
-                start_indexes = [_get_best_indexes(_logits, n_best_size) for _logits in start_logits]
-                end_indexes = [_get_best_indexes(_logits, n_best_size) for _logits in end_logits]
-                # start_indexes: list bs * n_nest_size [nbest start index]
-
-                exact_score_list = []
-                f1_list = []
-                batch_nbest_list = []
-                batch_gold_ans_list = []
-                # print('feature_list:',type(feature_list),len(feature_list))
-                for i in range(start_logits.shape[0]):  # for each sample in this batch
-                    ############ Gold ################
-                    # feature = parties_data[0][0][i]['feature']  # print('parties_data[0][4]:',type(parties_data[0][4]),'feature:',type(feature))
-                    # feature_tokens = [_token for _token in feature["tokens"]]  # [_token[0] for _token in feature["tokens"]]
-                    feature = feature_list[i]
-
-                    gold_start_indexs, gold_end_indexs = gt_one_hot_label[i]  # the i'th sample in a batch
-                    if len(gold_start_indexs.shape) == 0:
-                        gold_start_indexs = gold_start_indexs.unsqueeze(0)
-                    if len(gold_end_indexs.shape) == 0:
-                        gold_end_indexs = gold_end_indexs.unsqueeze(0)
-
-                    gold_ans = []  # gold answers for this sample
-                    for _i in range(len(gold_start_indexs)):
-                        gold_start_index = int(gold_start_indexs[_i])
-                        gold_end_index = int(gold_end_indexs[_i])
-
-                        gold_ans_text = list(range(gold_start_index, gold_end_index + 1))
-                        gold_ans.append(gold_ans_text)
-
-                    batch_gold_ans_list.append(gold_ans)
-
-                    ############ Pred ################
-                    _start_logits = start_logits[i]
-                    _end_logits = end_logits[i]
-                    _start_indexes = start_indexes[i]  # [nbest start index] list  n_best_size
-                    _end_indexes = end_indexes[i]  # [nbest end index] list  n_best_size
-
-                    _PrelimPrediction = collections.namedtuple(  # pylint: disable=invalid-name
-                        "PrelimPrediction",
-                        ["start_index", "end_index", "start_logit", "end_logit"])
-                    _NbestPrediction = collections.namedtuple(  # pylint: disable=invalid-name
-                        "NbestPrediction", ["text", "start_logit", "end_logit"])
-                    # throw out all invalid predictions.
-                    prelim_predictions = []
-                    for start_index in _start_indexes:
-                        for end_index in _end_indexes:
-                            # We could hypothetically create invalid predictions, e.g., predict
-                            # that the start of the span is in the question. We throw out all
-                            # invalid predictions.
-                            if start_index >= feature['len_tokens']:  # len(feature["tokens"]):
-                                continue
-                            if end_index >= feature['len_tokens']:  # len(feature["tokens"]):
-                                continue
-                            if start_index not in feature["token_to_orig_map"]:
-                                continue
-                            if end_index not in feature["token_to_orig_map"]:
-                                continue
-                            if not feature["token_is_max_context"].get(start_index, False):
-                                continue
-                            if end_index < start_index:
-                                continue
-                            length = end_index - start_index + 1
-                            if length > self.args.max_answer_length:
-                                continue
-
-                            prelim_predictions.append(
-                                _PrelimPrediction(
-                                    start_index=start_index,
-                                    end_index=end_index,
-                                    start_logit=_start_logits[start_index],
-                                    end_logit=_end_logits[end_index]))
-
-                    # Iterate through Sorted Predictions
-                    prelim_predictions = sorted(
-                        prelim_predictions,
-                        key=lambda x: (x.start_logit + x.end_logit),
-                        reverse=True)  # length=2
-                    # print('prelim_predictions:',len(prelim_predictions))
-
-                    exact_score = 0
-                    f1 = 0
-                    nbest = []  # Get n best prediction text
-                    n_best_size = min(n_best_size, len(prelim_predictions))
-                    for _id in range(n_best_size):
-                        start_index = prelim_predictions[_id].start_index
-                        end_index = prelim_predictions[_id].end_index
-
-                        # pred_ans_text = " ".join(feature_tokens[start_index:(end_index + 1)])
-                        # pred_ans_text = normalize_answer(pred_ans_text)
-
-                        pred_ans_text = list(range(start_index, end_index + 1))
-                        nbest.append(
-                            _NbestPrediction(
-                                text=pred_ans_text,
-                                start_logit=prelim_predictions[_id].start_logit,
-                                end_logit=prelim_predictions[_id].end_logit))
-
-                    batch_nbest_list.append(nbest)
-                return batch_nbest_list, batch_gold_ans_list, sample_cnt
-
-            else:
-                assert 1 > 2, "task_type not supported"
-
+        
         def predict(self):
             # passive party dataloader list
             data_loader_list = [self.parties[ik].test_loader for ik in range(self.args.k - 1)]
@@ -624,7 +421,10 @@ def create_main_task(global_model_type: GenerationMixin):
                             data_inputs[key_name] = torch.stack( [parties_data[0][0][i][key_name] for i in range(len(parties_data[0][0]))] )
                         else:
                             data_inputs[key_name] =  [parties_data[0][0][i][key_name] for i in range(len(parties_data[0][0]))]
-                    self.seq_length = data_inputs['input_ids'].shape[-1]
+                    if hasattr(data_inputs,'input_ids'):
+                        self.seq_length = data_inputs['input_ids'].shape[-1]
+                    else:
+                        self.seq_length = 0
 
                     # test_logit -> standard output for each task
                     if self.args.model_architect == 'CLS':  # task_type == "SequenceClassification":  # and self.args.num_classes > 1: # classification
@@ -635,6 +435,7 @@ def create_main_task(global_model_type: GenerationMixin):
                         actual_label_list.extend(batch_actual_label)
                         if sample_cnt is not None:
                             total_sample_cnt += sample_cnt
+                    
                     elif self.args.model_architect == 'TQA':  # task_type == "QuestionAnswering":
                         global_output = self.forward(**data_inputs)
                         feature_list = data_inputs['feature']
@@ -643,9 +444,9 @@ def create_main_task(global_model_type: GenerationMixin):
                         gold_ans_list.extend(batch_gold_ans)
                         if sample_cnt is not None:
                             total_sample_cnt += sample_cnt
+                    
                     elif self.args.model_architect=='CLM': #task_type == "CausalLM":
                         if self.args.task_type == "CausalLM":
-                            # print('self.args.max_new_tokens:',self.args.max_new_tokens)
                             if not (self.args.max_new_tokens==1):
                                 generation_output = self.generate(**data_inputs, \
                                         generation_config = self.generation_config,\
@@ -674,12 +475,39 @@ def create_main_task(global_model_type: GenerationMixin):
                             actual_label_list.extend(batch_actual_label)
                             if sample_cnt is not None:
                                 total_sample_cnt += sample_cnt
+                    
+                    elif self.args.model_architect=='MM': #task_type == "CausalLM":
+                        # print('self.args.max_new_tokens:',self.args.max_new_tokens,' data_inputs:',data_inputs.keys()) # prompt  image 
+                        
+                        if not (self.args.max_new_tokens==1):
+                            # print('self.generation_config:',self.generation_config)
+                            # print('self.args.generation_config_dict:',self.args.generation_config_dict)
+                            generation_output = self.mm_generate(samples = data_inputs, # 
+                                                                generation_config = self.generation_config,
+                                                                **self.args.generation_config_dict
+                                                                )
+                        else:  # next token prediction
+                            generation_output = self.forward(samples = data_inputs, labels = gt_one_hot_label)
+                        
+                        self._clear_past_key_values()
+                        # print('generation_output:',type(generation_output))
+                        # print('gt_one_hot_label:',type(gt_one_hot_label),gt_one_hot_label) # gt_one_hot_label: list of strs
+
+
+                        batch_target_word, batch_predict_word, sample_cnt = self.generate_result(generation_output, gt_one_hot_label)
+                        target_word_list.extend(batch_target_word)
+                        predict_word_list.extend(batch_predict_word)
+                        if sample_cnt is not None:
+                            total_sample_cnt += sample_cnt
+                        
                     else:
                         assert 1 > 2, 'Task type not supported'
 
                     del parties_data
+            
             if self._loss:
                 self._loss = self._loss / _batch_cnt
+            
             if self.args.model_architect == 'CLS':  # and self.args.num_classes > 1: # classification
                 return predict_label_list, actual_label_list, total_sample_cnt
             elif self.args.model_architect == 'TQA':
@@ -689,6 +517,8 @@ def create_main_task(global_model_type: GenerationMixin):
                     return predict_word_list, target_word_list, total_sample_cnt
                 else:
                     return predict_label_list, actual_label_list, total_sample_cnt
+            elif self.args.model_architect=='MM':
+                return predict_word_list, target_word_list, total_sample_cnt
             else:
                 assert 1 > 2, 'Task type not supported'
 
@@ -966,6 +796,35 @@ def create_main_task(global_model_type: GenerationMixin):
 
                     return {'acc':acc, 'mcc':mcc}
 
+            elif self.args.model_architect == 'MM':
+                predict_word_list = predict_list # bs, seq_len, vocab_size
+                target_word_list = label_list # bs, seq_len
+                print('--- generate_assessment ---')
+                # print('predict_word_list:',type(predict_word_list),len(predict_word_list),predict_word_list[0])
+                # print('target_word_list:',type(target_word_list),len(target_word_list),target_word_list[0])
+               
+                total_accuracy = 0
+                num = 0
+                # Entry = collections.namedtuple('Entry', ['text', 'bbox'])
+                for idx in range(len(predict_word_list)):
+                    answer = predict_word_list[idx] #item['gt_answers']
+                    gt_answers = target_word_list[idx] #item['answer']
+                    print(f'{idx} gt_answers:',gt_answers)
+                    print(f'{idx} answer:',answer)
+
+                    self.evaluator = VQAEval()
+                    accuracy = self.evaluator.evaluate_vqa_human(answer, gt_answers)
+                   
+                    # item['accuracy'] = accuracy
+
+                    total_accuracy += accuracy
+                    num += 1
+                    print('accuracy:',accuracy)
+
+                average_accuracy = total_accuracy / num
+                print('-- average_accuracy:',average_accuracy)
+                return {'acc':average_accuracy}
+               
             elif self.args.model_architect == 'CLS':
                 predict_labels = predict_list
                 actual_labels = label_list
@@ -982,6 +841,240 @@ def create_main_task(global_model_type: GenerationMixin):
                     mcc = matthews_corrcoef(np.array(predict_labels), np.array(actual_labels))  # MCC
 
                     return {'acc': acc, 'mcc': mcc}
+
+        def generate_result(self, model_output, gt_one_hot_label, feature_list=None):
+            # raw_model_output --> standard prediction result
+            test_preds = []
+            test_targets = []
+            test_predict_labels = []
+            test_actual_labels = []
+            target_word_list = []
+            predict_word_list = []
+            suc_cnt = 0
+            sample_cnt = 0
+
+            if self.args.model_architect == 'CLS':  # task_type == "SequenceClassification":
+                if self.args.num_classes == 1:  # regression
+                    predict_label = model_output.logits.detach().cpu()
+                    actual_label = gt_one_hot_label.detach().cpu()
+
+                    predict_label = torch.tensor([_.item() for _ in predict_label])
+                    actual_label = torch.tensor([_.item() for _ in actual_label])
+
+                    sample_cnt = predict_label.shape[0]
+
+                    return list(predict_label), list(actual_label), sample_cnt
+                else:  # Classification
+                    predict_label = torch.argmax(model_output.logits, dim=-1).detach().cpu()
+                    actual_label = torch.argmax(gt_one_hot_label, dim=-1).detach().cpu()
+
+                    sample_cnt = predict_label.shape[0]
+                    suc_cnt += torch.sum(predict_label == actual_label).item()
+                    return list(predict_label), list(actual_label), sample_cnt
+
+            elif self.args.model_architect == 'MM':  # .task_type == "CausalLM":
+                if self.args.task_type == "MultiModality": 
+                    if isinstance(model_output, torch.Tensor):  # generation -- generated token ids
+                        # model_output: torch.tensor : bs, seq_len+generated_len
+                        print('generate_result model_output:',type(model_output),model_output.shape)
+
+                        predict_label_list = self.args.tokenizer.batch_decode(model_output[:,self.seq_length:], skip_special_tokens=True)
+                        print('predict_label_list:',len(predict_label_list),predict_label_list[0])
+                        
+                        target_label_list = list(gt_one_hot_label)
+                        print('target_label_list:',len(target_label_list),target_label_list[0])
+
+                    else:  # forward -- raw model output next token logits
+                        
+                        generated_token_logits = model_output.logits[:,-1,:]
+                        predict_label_list = torch.argmax(generated_token_logits, dim=-1) 
+                        target_label_list = list(gt_one_hot_label)
+                        
+
+                    return target_label_list, predict_label_list, len(predict_label_list) 
+
+
+            elif self.args.model_architect == 'CLM':  # .task_type == "CausalLM":
+                if self.args.task_type == "CausalLM":  # dataset == "Lambada":
+                    if isinstance(model_output, torch.Tensor):  # generation -- generated token ids
+                        # model_output: torch.tensor : bs, seq_len+generated_len
+                        predict_label_list = model_output[:,self.seq_length:] # [bs, max_new_tokens]
+                        # print('model_output:',model_output.shape, predict_label_list.shape)
+                        
+                        target_label_list = list(gt_one_hot_label)
+
+                    else:  # forward -- raw model output next token logits
+                        # print('model_output:',type(model_output),model_output.keys())
+                        generated_token_logits = model_output.logits[:,-1,:]
+                        predict_label_list = torch.argmax(generated_token_logits, dim=-1) 
+                        target_label_list = list(gt_one_hot_label)
+                        
+
+                    return target_label_list, predict_label_list, len(predict_label_list) 
+
+                elif self.args.task_type == "SequenceClassification":
+                    # print('gt_one_hot_label:',gt_one_hot_label)
+                    # print(self.args.tokenizer.decode(gt_one_hot_label))
+
+                    # choice_dict = {self.args.tokenizer("A").input_ids[0]:0,
+                    #     self.args.tokenizer("B").input_ids[0]:1, 
+                    #     self.args.tokenizer("C").input_ids[0]:2, 
+                    #     self.args.tokenizer("D").input_ids[0]:3}
+                    
+                    choice_dict = {self.args.tokenizer.convert_tokens_to_ids("A"):0,
+                        self.args.tokenizer.convert_tokens_to_ids("B"):1, 
+                        self.args.tokenizer.convert_tokens_to_ids("C"):2, 
+                        self.args.tokenizer.convert_tokens_to_ids("D"):3}
+
+                    target_label_list = []
+                    for row in gt_one_hot_label:
+                        tokens = choice_dict[row.item()]
+                        target_label_list.append(tokens)
+                    
+                    # print('target_label_list:',target_label_list)
+
+                    logits = model_output.logits[:,-1,:]
+                    probs = (
+                            torch.stack(
+                                [
+                                    logits[:,self.args.tokenizer("A").input_ids[0]],
+                                    logits[:,self.args.tokenizer("B").input_ids[0]],
+                                    logits[:,self.args.tokenizer("C").input_ids[0]],
+                                    logits[:,self.args.tokenizer("D").input_ids[0]],
+                                ]
+                            ,dim=1)
+                        .detach()
+                        .cpu()
+                    )
+                    # # forward -- raw model output
+                    # generated_token_logits = model_output.logits[:,-1,:]
+                    # probs = []
+                    # for choice_class in range(self.args.num_classes):
+                    #     choice_id = self.args.tokenizer.convert_tokens_to_ids(self.args.label_dict[choice_class])
+                    #     probs.append( generated_token_logits[:, choice_id] ) # [bs, 1]
+                    # probs = torch.stack(probs,dim = -1) # [bs, num_choice]
+
+
+
+                    predict_label_list = torch.argmax(probs, dim=-1)  # [bs]
+
+                    # predict_label_list = [self.args.label_dict[pred_class.item()] for pred_class in predict_label_list]
+                    # predict_label_list = [self.args.tokenizer.convert_tokens_to_ids(pred_token)\
+                    #          for pred_token in predict_label_list]
+                    # print('predict_label_list:',predict_label_list)
+
+                    return target_label_list, predict_label_list, len(predict_label_list) 
+
+
+            elif self.args.model_architect=='TQA': #.task_type == "QuestionAnswering":
+                # print('feature_list:',type(feature_list),len(feature_list),type(feature_list[0]))
+                start_logits = model_output.start_logits # bs, 512
+                end_logits = model_output.end_logits # bs, 512
+                sample_cnt = start_logits.shape[0] # bs
+
+                n_best_size = self.args.n_best_size
+                start_indexes = [_get_best_indexes(_logits, n_best_size) for _logits in start_logits]
+                end_indexes = [_get_best_indexes(_logits, n_best_size) for _logits in end_logits]
+                # start_indexes: list bs * n_nest_size [nbest start index]
+
+                exact_score_list = []
+                f1_list = []
+                batch_nbest_list = []
+                batch_gold_ans_list = []
+                # print('feature_list:',type(feature_list),len(feature_list))
+                for i in range(start_logits.shape[0]):  # for each sample in this batch
+                    ############ Gold ################
+                    # feature = parties_data[0][0][i]['feature']  # print('parties_data[0][4]:',type(parties_data[0][4]),'feature:',type(feature))
+                    # feature_tokens = [_token for _token in feature["tokens"]]  # [_token[0] for _token in feature["tokens"]]
+                    feature = feature_list[i]
+
+                    gold_start_indexs, gold_end_indexs = gt_one_hot_label[i]  # the i'th sample in a batch
+                    if len(gold_start_indexs.shape) == 0:
+                        gold_start_indexs = gold_start_indexs.unsqueeze(0)
+                    if len(gold_end_indexs.shape) == 0:
+                        gold_end_indexs = gold_end_indexs.unsqueeze(0)
+
+                    gold_ans = []  # gold answers for this sample
+                    for _i in range(len(gold_start_indexs)):
+                        gold_start_index = int(gold_start_indexs[_i])
+                        gold_end_index = int(gold_end_indexs[_i])
+
+                        gold_ans_text = list(range(gold_start_index, gold_end_index + 1))
+                        gold_ans.append(gold_ans_text)
+
+                    batch_gold_ans_list.append(gold_ans)
+
+                    ############ Pred ################
+                    _start_logits = start_logits[i]
+                    _end_logits = end_logits[i]
+                    _start_indexes = start_indexes[i]  # [nbest start index] list  n_best_size
+                    _end_indexes = end_indexes[i]  # [nbest end index] list  n_best_size
+
+                    _PrelimPrediction = collections.namedtuple(  # pylint: disable=invalid-name
+                        "PrelimPrediction",
+                        ["start_index", "end_index", "start_logit", "end_logit"])
+                    _NbestPrediction = collections.namedtuple(  # pylint: disable=invalid-name
+                        "NbestPrediction", ["text", "start_logit", "end_logit"])
+                    # throw out all invalid predictions.
+                    prelim_predictions = []
+                    for start_index in _start_indexes:
+                        for end_index in _end_indexes:
+                            # We could hypothetically create invalid predictions, e.g., predict
+                            # that the start of the span is in the question. We throw out all
+                            # invalid predictions.
+                            if start_index >= feature['len_tokens']:  # len(feature["tokens"]):
+                                continue
+                            if end_index >= feature['len_tokens']:  # len(feature["tokens"]):
+                                continue
+                            if start_index not in feature["token_to_orig_map"]:
+                                continue
+                            if end_index not in feature["token_to_orig_map"]:
+                                continue
+                            if not feature["token_is_max_context"].get(start_index, False):
+                                continue
+                            if end_index < start_index:
+                                continue
+                            length = end_index - start_index + 1
+                            if length > self.args.max_answer_length:
+                                continue
+
+                            prelim_predictions.append(
+                                _PrelimPrediction(
+                                    start_index=start_index,
+                                    end_index=end_index,
+                                    start_logit=_start_logits[start_index],
+                                    end_logit=_end_logits[end_index]))
+
+                    # Iterate through Sorted Predictions
+                    prelim_predictions = sorted(
+                        prelim_predictions,
+                        key=lambda x: (x.start_logit + x.end_logit),
+                        reverse=True)  # length=2
+                    # print('prelim_predictions:',len(prelim_predictions))
+
+                    exact_score = 0
+                    f1 = 0
+                    nbest = []  # Get n best prediction text
+                    n_best_size = min(n_best_size, len(prelim_predictions))
+                    for _id in range(n_best_size):
+                        start_index = prelim_predictions[_id].start_index
+                        end_index = prelim_predictions[_id].end_index
+
+                        # pred_ans_text = " ".join(feature_tokens[start_index:(end_index + 1)])
+                        # pred_ans_text = normalize_answer(pred_ans_text)
+
+                        pred_ans_text = list(range(start_index, end_index + 1))
+                        nbest.append(
+                            _NbestPrediction(
+                                text=pred_ans_text,
+                                start_logit=prelim_predictions[_id].start_logit,
+                                end_logit=prelim_predictions[_id].end_logit))
+
+                    batch_nbest_list.append(nbest)
+                return batch_nbest_list, batch_gold_ans_list, sample_cnt
+
+            else:
+                assert 1 > 2, "task_type not supported"
 
         @timer()
         def _llm_inference(self, **kwargs):
@@ -1031,6 +1124,18 @@ def create_main_task(global_model_type: GenerationMixin):
                 if k in kwargs:
                     base_dict.update({k: kwargs.get(k)})
             return base_dict
+
+        def mm_inference(self):
+            self.eval()
+            predict_word_list, target_word_list, total_sample_cnt = self.predict()
+
+            result_dict = self.generate_assessment(predict_word_list, target_word_list)
+            self.test_acc = result_dict['acc']
+            exp_result = f'|test_acc={self.test_acc}'
+            # print(exp_result)
+            return exp_result, self.test_acc
+            # except:
+            #     return '',0
 
         def seq_inference(self):
             # SequenceClassification / Regression
@@ -1114,6 +1219,19 @@ def create_main_task(global_model_type: GenerationMixin):
 
             return final_output
 
+        def mm_generate(self, samples=None, **kwargs):
+            print('=== My MM generate')
+            print('samples:',samples.keys()) # question  image
+            print('kwargs:',type(kwargs), kwargs.keys())
+
+            if samples:
+                aligned_input = self.parties[0].local_model.pre_generation(samples, tokenizer = self.args.tokenizer, **kwargs)
+            else:
+                aligned_input = kwargs
+            # print('aligned_input:',type(aligned_input), aligned_input.keys()) # inputs_embeds, kwargs
+
+            return self.generate(tokenizer = self.args.tokenizer, **aligned_input)
+
         def transmit_relevant_gradient(self, final_pred):
             '''
             calculate and transmit relevant gradient
@@ -1126,7 +1244,8 @@ def create_main_task(global_model_type: GenerationMixin):
 
         @timer()
         def inference(self, **kwargs):
-
+            need_save_state = kwargs.get('need_save_state')
+            # print('inference need_save_state:',need_save_state)
             if self.args.task_type == "DevLLMInference":
                 # LLM推理入口，兼容forward格式入参
                 for i in range(20):
@@ -1142,9 +1261,18 @@ def create_main_task(global_model_type: GenerationMixin):
                 self.parties[ik].eval()
             self.parties[self.k - 1].eval()
 
+            if self.args.model_architect == 'MM':  # task_type == "MultiModality":
+                exp_result, main_task_result = self.mm_inference()
+                if need_save_state:
+                    self.final_state = self.save_state()
+                    self.final_state.update(self.save_party_data())
+                exp_result = f'|inference_party_time={self.inference_party_time}' + exp_result
+                return exp_result, main_task_result
+
+
             if self.args.model_architect == 'TQA':  # task_type == "QuestionAnswering":
                 exp_result, main_task_result = self.qa_inference()
-                if self.args.need_save_state:
+                if need_save_state:
                     self.final_state = self.save_state()
                     # self.final_state.update(self.save_state(False))
                     self.final_state.update(self.save_party_data())
@@ -1154,7 +1282,7 @@ def create_main_task(global_model_type: GenerationMixin):
             if self.args.model_architect == 'CLS':  # task_type == "SequenceClassification":
                 # exp_result, self.test_acc =
                 exp_result, main_task_result = self.seq_inference()
-                if self.args.need_save_state:
+                if need_save_state:
                     self.final_state = self.save_state()
                     self.final_state.update(self.save_party_data())
                 exp_result = f'|inference_party_time={self.inference_party_time}' + exp_result
@@ -1163,7 +1291,7 @@ def create_main_task(global_model_type: GenerationMixin):
             if self.args.model_architect == 'CLM':  # task_type == "CausalLM":
                 exp_result, main_task_result = self.causal_lm_inference()
                 
-                if self.args.need_save_state:
+                if need_save_state:
                     self.final_state = self.save_state()
                     # self.final_state.update(self.save_state(False))
                     self.final_state.update(self.save_party_data())
@@ -1177,21 +1305,26 @@ def create_main_task(global_model_type: GenerationMixin):
             for ik in range(self.k - 1):
                 # # allocate data (data/label/attention_mask/token_type_ids)
                 data_inputs = {}
-                for key_name in parties_data[ik][0][0].keys():
-                    if isinstance(parties_data[ik][0][0][key_name], torch.Tensor):
-                        data_inputs[key_name] = torch.stack(
-                            [parties_data[ik][0][i][key_name] for i in range(len(parties_data[ik][0]))])
+                for key_name in parties_data[0][0][0].keys():
+                    if isinstance(parties_data[0][0][0][key_name], torch.Tensor):
+                        data_inputs[key_name] = torch.stack( [parties_data[0][0][i][key_name] for i in range(len(parties_data[0][0]))] )
                     else:
-                        data_inputs[key_name] = [parties_data[ik][0][i][key_name] for i in
-                                                 range(len(parties_data[ik][0]))]
+                        data_inputs[key_name] =  [parties_data[0][0][i][key_name] for i in range(len(parties_data[0][0]))]
+
                 self.parties[ik].obtain_local_data(data_inputs)
                 self.parties[ik].gt_one_hot_label = gt_one_hot_label
-                self.seq_length = data_inputs['input_ids'].shape[-1]
+                if hasattr(data_inputs,'input_ids'):
+                    self.seq_length = data_inputs['input_ids'].shape[-1]
+                else:
+                    self.seq_length = 0
 
             ################ normal vertical federated learning ################
             # torch.autograd.set_detect_anomaly(True)
             # =================== Commu ===================
-            final_pred = self.forward(**data_inputs)
+            if self.args.model_architect == 'MM':
+                final_pred = self.forward(samples = data_inputs, labels = gt_one_hot_label)
+            else:     
+                final_pred = self.forward(**data_inputs)
             self._clear_past_key_values()
 
             self.transmit_relevant_gradient(final_pred)
@@ -1256,6 +1389,14 @@ def create_main_task(global_model_type: GenerationMixin):
                 batch_train_acc = 0
 
                 return loss.item(), batch_train_acc
+            
+            elif self.args.model_architect=='MM':  #self.args.task_type == 'CausalLM':
+                pred = final_pred
+                loss = self.parties[0].global_loss
+
+                batch_train_acc = 0
+
+                return loss.item(), batch_train_acc
         
         def train(self,*args,**kwargs):
             for p in self.parties:
@@ -1264,7 +1405,6 @@ def create_main_task(global_model_type: GenerationMixin):
         def eval(self):
             for p in self.parties:
                 p.eval()
-
 
         def get_base_model(self):
             model_folder = get_model_folder()
@@ -1326,6 +1466,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 i = -1
                 print_every = 1
                 total_time = 0
+
                 data_loader_list = [self.parties[ik].train_loader for ik in range(self.k - 1)]
                 for parties_data in tqdm(zip(*data_loader_list), desc=f'Epoch {i_epoch}/{self.epochs - 1}'):
                     ############ Allocate Data #################
@@ -1343,56 +1484,31 @@ def create_main_task(global_model_type: GenerationMixin):
                                 batch_label.append(parties_data[party_id][bs_id][1])
                         _parties_data.append([batch_input_dicts, batch_label])
                     self.parties_data = _parties_data
-
-                    if self.args.model_architect == 'CLS' and self.num_classes > 1:  # self.args.task_type == "SequenceClassification"
-                        gt_one_hot_label = self.label_to_one_hot(self.parties_data[0][1], self.num_classes)
+                    
+                    if self.args.model_architect == 'CLS' and self.args.num_classes > 1:  # classification
+                        self.gt_one_hot_label = self.label_to_one_hot(self.parties_data[0][1], self.args.num_classes)
+                    elif self.args.model_architect == 'TQA':
+                        self.gt_one_hot_label = list(self.parties_data[0][1])
                     else:
-                        gt_one_hot_label = torch.tensor(self.parties_data[0][1]).to(self.current_device)
-                    self.gt_one_hot_label = gt_one_hot_label
+                        self.gt_one_hot_label = self.parties_data[0][1]
+
                     i += 1
 
                     # passive party call active party global model to a training mode
                     self._communication.send_global_model_train_message()
 
                     # ====== train batch (start) ======
-                    if self.args.need_save_state and i == 0 and i_epoch == 0:
+                    if self.args.need_first_epoch_state and i == 0 and i_epoch == 0:
                         self.first_epoch_state = self.save_state(True)
 
                     enter_time = time.time()
                     self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
                     exit_time = time.time()
 
-                    if self.args.need_save_state and i == 0 and i_epoch == 0:
+                    if self.args.need_first_epoch_state and i == 0 and i_epoch == 0:
                         self.first_epoch_state.update(self.save_state(False))
-                        # assert 1>2
-
-                    # if self.args.model_type.lower() == 'qwen2':
-                    #     tensorboard_writer.add_scalar('train/loss', self.loss, optimize_step)
-                    #     # todo： 添加逻辑，通过判断训练的层来获取lr
-                    #     try:
-                    #         tensorboard_writer.add_scalar('train/lr_local',
-                    #                                       self.parties[0].local_model_optimizer.param_groups[0]['lr'],
-                    #                                       optimize_step)
-                    #     except Exception as e:
-                    #         logger.debug(repr(e))
-                    #         pass
-                    #     try:
-                    #         tensorboard_writer.add_scalar('train/lr_global',
-                    #                                       self.parties[1].global_model_optimizer.param_groups[0]['lr'],
-                    #                                       optimize_step)
-                    #     except Exception as e:
-                    #         logger.debug(repr(e))
-                    #         pass
-                    #     try:
-                    #         tensorboard_writer.add_scalar('train/lr_model_2',
-                    #                                       self.parties[0].optimizers[2].param_groups[0]['lr'],
-                    #                                       optimize_step)
-                    #     except Exception as e:
-                    #         logger.debug(repr(e))
-                    #         pass
-
-                    #     gc.collect()
                     # ====== train batch (end) ======
+                    
                     total_time += (exit_time - enter_time)
                     optimize_step += 1
                     self.num_total_comms = self.num_total_comms + 1
@@ -1404,44 +1520,13 @@ def create_main_task(global_model_type: GenerationMixin):
 
                 # LR decay
                 self.LR_Decay(i_epoch)
-                # if self.args.vfl_model_slice_num == 3:
-                #     self.parties[0].lr_schedulers[2].step()
 
                 if self.args.apply_adversarial:
                     print(f'global_loss={self.parties[0].global_loss} adversarial_model_loss:{self.parties[0].adversarial_model_loss.item()} adversary_attack_loss:{self.parties[0].adversary_attack_loss.item()}')
                 if self.args.apply_mid:
                     print(f'global_loss={self.parties[0].global_loss},mid_loss={self.parties[0].mid_loss}')
 
-                # validation
-                if (i + 1) % print_every == 0:
-                    print("validate and test")
-                    self.parties[self.k - 1].eval()
-                    self.eval()
-
-                    with torch.no_grad():
-
-                        _exp_result, self.test_acc = self.inference()
-
-                        postfix['train_loss'] = self.loss
-                        # postfix['train_acc'] = '{:.2f}%'.format(self.train_acc * 100)
-                        # postfix['test_acc'] = '{:.2f}%'.format(self.test_acc * 100)
-                        # postfix['test_auc'] = '{:.2f}%'.format(self.test_auc * 100)
-                        # postfix['test_mcc'] = '{:.2f}%'.format(self.test_mcc * 100)
-
-                        if self.args.task_type == 'SequenceClassification' and self.args.num_classes == 1:
-                            exp_result = 'Epoch {}% \t train_loss:{:.2f} train_mse:{:.2f} test_mse:{:.2f}'.format(
-                                i_epoch, self.loss, self.train_acc[0], self.test_acc[0])
-                        else:
-                            exp_result = 'Epoch {}% \t train_loss:{:.2f} train_acc:{:.2f} test_acc:{:.2f}'.format(
-                                i_epoch, self.loss, self.train_acc, self.test_acc)
-                        print(exp_result)
-
-                        self.final_epoch = i_epoch + 1
-
-                    if self.args.model_type.lower() == 'qwen2':
-                        tensorboard_writer.add_scalar('train/eval_loss', self._loss, optimize_step)
-
-                data_record.loc[len(data_record)] = [i_epoch, self.loss, self.train_acc, self.test_acc]
+                self.final_epoch = i_epoch + 1
 
                 # Early Stop
                 if self.loss >= last_loss:
@@ -1450,11 +1535,59 @@ def create_main_task(global_model_type: GenerationMixin):
                     self.final_epoch = i_epoch + 1
                     break
                 last_loss = min(last_loss, self.loss)
+
+                if self.args.task_type == 'SequenceClassification' and self.args.num_classes == 1:
+                    exp_result = 'Epoch {}% \t train_loss:{:.2f} train_mse:{:.2f}'.format(
+                        i_epoch, self.loss, self.train_acc[0])
+                else:
+                    exp_result = 'Epoch {}% \t train_loss:{:.2f} train_acc:{:.2f}'.format(
+                        i_epoch, self.loss, self.train_acc)
+                print(exp_result)
+            
+            ################### Evaluation on Test Data ###################
+            print("----- Evaluation ------")
+            self.test_acc = 0
+            # if (i + 1) % print_every == 0:
+            self.parties[self.k - 1].eval()
+            self.eval()
+            with torch.no_grad():
+
+                _exp_result, self.test_acc = self.inference(need_save_state = False)
+
+                postfix['train_loss'] = self.loss
+                # postfix['train_acc'] = '{:.2f}%'.format(self.train_acc * 100)
+                # postfix['test_acc'] = '{:.2f}%'.format(self.test_acc * 100)
+                # postfix['test_auc'] = '{:.2f}%'.format(self.test_auc * 100)
+                # postfix['test_mcc'] = '{:.2f}%'.format(self.test_mcc * 100)
+
+                if self.args.task_type == 'SequenceClassification' and self.args.num_classes == 1:
+                    exp_result = 'Epoch {}% \t train_loss:{:.2f} train_mse:{:.2f} test_mse:{:.2f}'.format(
+                        i_epoch, self.loss, self.train_acc[0], self.test_acc[0])
+                else:
+                    exp_result = 'Epoch {}% \t train_loss:{:.2f} train_acc:{:.2f} test_acc:{:.2f}'.format(
+                        i_epoch, self.loss, self.train_acc, self.test_acc)
+                print(exp_result)
+
+
+            if self.args.need_final_epoch_state:
+                self.final_state = self.save_state()
+                self.final_state.update(self.save_state(False))
+                self.final_state.update(self.save_party_data())
+
+            # if self.args.model_type.lower() == 'qwen2':
+            #     tensorboard_writer.add_scalar('train/eval_loss', self._loss, optimize_step)
+
+            # data_record.loc[len(data_record)] = [i_epoch, self.loss, self.train_acc, self.test_acc]
+
+            
+            
             try:
                 self.save_pretrained(model_index=[1,2], model_id=model_id)
             except Exception as e:
                 logger.warning(repr(e))
+            
             self.training_time = total_time
+            
             if self.args.task_type == 'SequenceClassification' and self.args.num_classes == 1:
                 exp_result = f'|train_party_time={self.train_party_time}|training_time={total_time}|train_loss:{self.loss}|\
             train_mse={self.train_acc[0]}|train_pearson_corr={self.train_acc[1]}|train_spearmanr_corr={self.train_acc[2]}|\
@@ -1464,10 +1597,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 exp_result = f'|train_party_time={self.train_party_time}|training_time={total_time}|train_loss={self.loss}|train_acc={self.train_acc}|\
             test_acc={self.test_acc}|final_epoch={self.final_epoch}'
 
-            # self.final_state = self.save_state()
-            # self.final_state.update(self.save_state(False))
-            # self.final_state.update(self.save_party_data())
-
+            
             result_path = f'exp_result/{self.args.dataset}/Q{str(self.args.Q)}/'
             model_name = self.args.model_list["name"].replace('/', '-')
             if self.args.pipeline == 'pretrained':
@@ -1640,70 +1770,96 @@ def create_main_task(global_model_type: GenerationMixin):
                 return gradients_list
 
         def _validate_model_kwargs(self, model_kwargs: Dict[str, Any]):
-            if self.args.vfl_model_slice_num == 3:
-                # todo: bug caused from def of self.forward
-                #   better align with transformers
-                return
-                # return super()._validate_model_kwargs(model_kwargs)
-            """Validates model kwargs for generation. Generate argument typos will also be caught here."""
-            # If a `Cache` instance is passed, checks whether the model is compatible with it
-            if isinstance(model_kwargs.get("past_key_values", None), Cache) and not self._supports_cache_class:
-                raise ValueError(
-                    f"{self.__class__.__name__} does not support an instance of `Cache` as `past_key_values`. Please "
-                    "check the model documentation for supported cache formats."
-                )
+            if self.args.vfl_model_slice_num == 2:
+                if self.args.finetune_name == 'LoRA':
+                    return self.parties[-1].global_model.model._validate_model_kwargs(model_kwargs)
+                else:
+                    return self.parties[-1].global_model._validate_model_kwargs(model_kwargs)
+            else:
+                if self.args.finetune_name == 'LoRA':
+                    return self.parties[0].local_model_tail.model._validate_model_kwargs(model_kwargs)
+                else:
+                    return self.parties[0].local_model_tail._validate_model_kwargs(model_kwargs)
 
-            # Excludes arguments that are handled before calling any model function
-            if self.config.is_encoder_decoder:
-                for key in ["decoder_input_ids"]:
-                    model_kwargs.pop(key, None)
+                
+            # """Validates model kwargs for generation. Generate argument typos will also be caught here."""
+            # # If a `Cache` instance is passed, checks whether the model is compatible with it
+            # if isinstance(model_kwargs.get("past_key_values", None), Cache) and not self._supports_cache_class:
+            #     raise ValueError(
+            #         f"{self.__class__.__name__} does not support an instance of `Cache` as `past_key_values`. Please "
+            #         "check the model documentation for supported cache formats."
+            #     )
 
-            unused_model_args = []
-            model_args = set(inspect.signature(self.prepare_inputs_for_generation).parameters)
+            # # Excludes arguments that are handled before calling any model function
+            # if self.config.is_encoder_decoder:
+            #     for key in ["decoder_input_ids"]:
+            #         model_kwargs.pop(key, None)
 
-            # `kwargs`/`model_kwargs` is often used to handle optional forward pass inputs like `attention_mask`. If
-            # `prepare_inputs_for_generation` doesn't accept them, then a stricter check can be made ;)
-            if "kwargs" in model_args or "model_kwargs" in model_args:
-                model_args |= set(inspect.signature(self.parties[-1].global_model.forward).parameters)
+            # unused_model_args = []
+            # model_args = set(inspect.signature(self.prepare_inputs_for_generation).parameters)
+            # print('self.prepare_inputs_for_generation:',model_args)
 
-            # Encoder-Decoder models may also need Encoder arguments from `model_kwargs`
-            if self.config.is_encoder_decoder:
-                base_model = getattr(self, self.base_model_prefix, None)
+            # # `kwargs`/`model_kwargs` is often used to handle optional forward pass inputs like `attention_mask`. If
+            # # `prepare_inputs_for_generation` doesn't accept them, then a stricter check can be made ;)
+            
+            # if "kwargs" in model_args or "model_kwargs" in model_args:
+            #     if self.args.finetune_name == 'LoRA':
+            #         model_args |= set(inspect.signature(self.parties[-1].global_model.model.forward).parameters)
+            #     else:
+            #         model_args |= set(inspect.signature(self.parties[-1].global_model.forward).parameters)
+                
+            #     print('self.parties[-1].global_model:',type(self.parties[-1].global_model),type(self.parties[-1].global_model.model))
+            #     print('self.parties[-1].global_model+args:',set(inspect.signature(self.parties[-1].global_model.forward).parameters))
+            #     print('self.parties[-1].global_model.model+args:',set(inspect.signature(self.parties[-1].global_model.model.forward).parameters))
 
-                # allow encoder kwargs
-                encoder = getattr(self, "encoder", None)
-                # `MusicgenForConditionalGeneration` has `text_encoder` and `audio_encoder`.
-                # Also, it has `base_model_prefix = "encoder_decoder"` but there is no `self.encoder_decoder`
-                # TODO: A better way to handle this.
-                if encoder is None and base_model is not None:
-                    encoder = getattr(base_model, "encoder", None)
 
-                if encoder is not None:
-                    encoder_model_args = set(inspect.signature(encoder.forward).parameters)
-                    model_args |= encoder_model_args
+            # # Encoder-Decoder models may also need Encoder arguments from `model_kwargs`
+            # if self.config.is_encoder_decoder:
+            #     base_model = getattr(self, self.base_model_prefix, None)
 
-                # allow decoder kwargs
-                decoder = getattr(self, "decoder", None)
-                if decoder is None and base_model is not None:
-                    decoder = getattr(base_model, "decoder", None)
+            #     # allow encoder kwargs
+            #     encoder = getattr(self, "encoder", None)
+            #     # `MusicgenForConditionalGeneration` has `text_encoder` and `audio_encoder`.
+            #     # Also, it has `base_model_prefix = "encoder_decoder"` but there is no `self.encoder_decoder`
+            #     # TODO: A better way to handle this.
+            #     if encoder is None and base_model is not None:
+            #         encoder = getattr(base_model, "encoder", None)
 
-                if decoder is not None:
-                    decoder_model_args = set(inspect.signature(decoder.forward).parameters)
-                    model_args |= {f"decoder_{x}" for x in decoder_model_args}
+            #     if encoder is not None:
+            #         encoder_model_args = set(inspect.signature(encoder.forward).parameters)
+            #         print('encoder:',type(encoder))
+            #         print('encoder_model_args:',encoder_model_args)
 
-                # allow assistant_encoder_outputs to be passed if we're doing assisted generating
-                if "assistant_encoder_outputs" in model_kwargs:
-                    model_args |= {"assistant_encoder_outputs"}
+            #         model_args |= encoder_model_args
 
-            for key, value in model_kwargs.items():
-                if value is not None and key not in model_args:
-                    unused_model_args.append(key)
+            #     # allow decoder kwargs
+            #     decoder = getattr(self, "decoder", None)
+            #     if decoder is None and base_model is not None:
+            #         decoder = getattr(base_model, "decoder", None)
 
-            if unused_model_args:
-                raise ValueError(
-                    f"The following `model_kwargs` are not used by the model: {unused_model_args} (note: typos in the"
-                    " generate arguments will also show up in this list)"
-                )
+            #     if decoder is not None:
+            #         decoder_model_args = set(inspect.signature(decoder.forward).parameters)
+            #         model_args |= {f"decoder_{x}" for x in decoder_model_args}
+            #         print('decoder:',type(decoder))
+            #         print('decoder_model_args:',decoder_model_args)
+
+            #     # allow assistant_encoder_outputs to be passed if we're doing assisted generating
+            #     if "assistant_encoder_outputs" in model_kwargs:
+            #         model_args |= {"assistant_encoder_outputs"}
+
+            # for key, value in model_kwargs.items():
+            #     if value is not None and key not in model_args:
+            #         unused_model_args.append(key)
+
+            # print('model_args:',model_args)
+            # print('model_kwargs:',model_kwargs.keys())
+            # print('unused_model_args:',unused_model_args)
+
+            # if unused_model_args:
+            #     raise ValueError(
+            #         f"The following `model_kwargs` are not used by the model: {unused_model_args} (note: typos in the"
+            #         " generate arguments will also show up in this list)"
+            #     )
 
         def _validate_model_class(self):
             pass
@@ -1729,12 +1885,8 @@ def create_main_task(global_model_type: GenerationMixin):
             #         exception_message += f" Please use one of the following classes instead: {generate_compatible_classes}"
             #     raise TypeError(exception_message)
 
-        def prepare_inputs_for_generation(self, input_ids, **model_kwargs):
-            if self.args.vfl_model_slice_num == 3:
-                return super().prepare_inputs_for_generation(input_ids, **model_kwargs)
-            else:
-                # return self.parties[-1].global_model.prepare_inputs_for_generation(input_ids=input_ids, **model_kwargs)
-                return self.parties[0].local_model.prepare_inputs_for_generation(input_ids=input_ids, **model_kwargs)
+        def prepare_inputs_for_generation(self, *args, **model_kwargs):
+            return super().prepare_inputs_for_generation(*args, **model_kwargs)
 
         def _prepare_encoder_decoder_kwargs_for_generation(self, inputs_tensor: torch.Tensor, model_kwargs,
                                                            model_input_name: Optional[str] = None):
@@ -1754,32 +1906,6 @@ def create_main_task(global_model_type: GenerationMixin):
                 self.parties[i].local_model._clear_past_key_values()
             # todo: clear global model's past_key_values
             # self.parties[-1].global_model._clear_past_key_values()
-
-        # def _init_e2e_model(self):
-        #     return
-        #     model_config = None
-        #     if not self.args.task_type == 'DevLLMInference':
-        #         return
-        #     for party in self.parties:
-        #         try:
-        #             for model in party.models.values():
-        #                 model_config = model.config
-        #                 break
-        #             break
-        #         except Exception as e:
-        #             continue
-        #         # if party.models:
-        #         #     model_config = party.local_model.config
-        #         #     break
-        #         # elif party.models:
-        #         #     model_config = party.global_model.config
-        #         #     break
-        #     if not model_config:
-        #         logger.error(f"No model config for E2E_model")
-        #     with init_empty_weights():
-        #         self.e2e_model = E2EModel(model_config,
-        #                                   {**self.parties[0].proxy_models, **self.parties[1].proxy_models})
-        #     # self.e2e_model.to(self.e2e_model.local_model.device)
 
         @property
         def passive_party(self):
@@ -1830,4 +1956,4 @@ def create_main_task(global_model_type: GenerationMixin):
                 loss = loss_fct(shift_logits, shift_labels)
             return loss
 
-    return MainTaskVFL_LLM
+    return MainTaskVFL_LLM_test

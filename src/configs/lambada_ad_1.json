@@ -1,5 +1,5 @@
 {
-  "epochs": 30,
+  "epochs": 50,
   "lr": 0.001,
   "k": 2,
   "batch_size": 32,
@@ -17,7 +17,7 @@
       }
   },
   "dataset":{
-      "dataset_name": "Lambada_test",
+      "dataset_name": "Lambada",
       "num_classes": 1,
       "use_prompt": 1
   },
@@ -69,6 +69,7 @@
         "name": "AdversarialTraining",
         "parameters": {
         "party": [0],
+        "position": "head",
         "adversarial_model": "Mapping_MLP3_noflatten",
         "adversarial_model_lr": 0.001,
         "imagined_adversary": "ImaginedAdversary_MLP3_noflatten",

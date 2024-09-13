@@ -27,12 +27,19 @@ import collections
 from transformers import PreTrainedModel, AutoTokenizer
 from peft import get_peft_model,PeftModel
 from config import vfl_basic_config
-# from models.llm_models.qwen2 import ModelPartitionPipelineQwen
-# from models.llm_models.base import ModelPartitionPipeline
-# from load.QwenModelLoader import QwenModelLoader
-# from load.GPT2ModelLoader import GPT2ModelLoader
 np_str_obj_array_pattern = re.compile(r'[SaUO]')
 
+# sys.path.append('..')
+from models.llm_models.processors.blip_processors import *
+
+PROCESSOR_DICT = {
+    'Blip2ImageTrainProcessor':Blip2ImageTrainProcessor,
+    'Blip2ImageEvalProcessor':Blip2ImageEvalProcessor,
+    'BlipCaptionProcessor': BlipCaptionProcessor,
+
+    'MiniCPM_Transform': MiniCPM_Transform,
+
+}
 
 class Party(object):
     def __init__(self, args, index, need_data=True, need_model=True):
@@ -89,12 +96,15 @@ class Party(object):
         # global_model
         self.global_model = None
         self.global_model_optimizer = None
-        if need_model:
-            self.prepare_model(args, index)
         
         # tokenizer
         self.tokenizer = None
+        self.vis_processors = {}
+        self.text_processors = {}
 
+        if need_model:
+            self.prepare_model(args, index)
+        
         # attack and defense
         # self.attacker = None
         self.defender = None
@@ -143,16 +153,6 @@ class Party(object):
             if m:
                 m.train(*args,**kwargs)
 
-    # def update_model_data(self, model_data):
-    #     self.args.tokenizer = model_data['tokenizer']
-    #     self.models = model_data['models']
-    #     self.args.config = model_data['config']
-    #     self.args.model_architectures = self.args.config.architectures
-    #     self.args.model_embedded_dim = self.args.config.hidden_size
-    #     if model_data['generation_config']:
-    #         self.args.generation_config = model_data['generation_config']
-    #     self._set_peft()
-
     def prepare_data(self, args, index):
         (
             args,
@@ -182,16 +182,19 @@ class Party(object):
 
     def prepare_tokenizer(self, args, model_path):
         # Load Tokenizer
-        print('==== Tokenizer =====')
+        print('--- Load Tokenizer')
 
         self.args.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
         self.args.tokenizer.padding_side = args.padding_side if (args.padding_side in ["left", "right"]) else "left"
         
         if self.args.pad_token == "default":
+            print('default tokenizer.pad_token:',self.args.tokenizer.pad_token)
             if self.args.tokenizer.pad_token is None:
                 self.args.tokenizer.pad_token = args.tokenizer.eos_token  # ({'pad_token': '[PAD]'}) # args.tokenizer.eos_token #
                 self.args.pad_id = args.tokenizer.convert_tokens_to_ids(args.tokenizer.eos_token)  #
-            self.args.pad_token = "default_" + args.tokenizer.pad_token
+            else:
+                self.args.pad_token = args.tokenizer.pad_token
+                self.args.pad_id = args.tokenizer.convert_tokens_to_ids(self.args.pad_token)  #
         else:
             self.args.pad_id = args.tokenizer.convert_tokens_to_ids(self.args.pad_token)  #
             if self.args.pad_id != None: 
@@ -205,7 +208,43 @@ class Party(object):
 
         self.tokenizer = args.tokenizer
 
+    def prepare_processor(self, args):
+        print('---- Load processor')
+        vis_proc_cfg = args.vis_processor_config
+        txt_proc_cfg = args.text_processor_config 
+
+        if vis_proc_cfg is not None:
+            vis_train_cfg = vis_proc_cfg.get("train")
+            vis_eval_cfg = vis_proc_cfg.get("eval")
+
+            self.vis_processors["train"] = self._build_proc_from_cfg(vis_train_cfg)
+            self.vis_processors["eval"] = self._build_proc_from_cfg(vis_eval_cfg)
+
+        if txt_proc_cfg is not None:
+            txt_train_cfg = txt_proc_cfg.get("train")
+            txt_eval_cfg = txt_proc_cfg.get("eval")
+
+            self.text_processors["train"] = self._build_proc_from_cfg(txt_train_cfg)
+            self.text_processors["eval"] = self._build_proc_from_cfg(txt_eval_cfg)
+
+        print('vis_processors:',self.vis_processors.keys())
+        print('text_processors:',self.text_processors.keys())
+
+        return
+    
+    @staticmethod
+    def _build_proc_from_cfg(cfg):
+        # print('cfg:',cfg)
+        return (
+            # registry.get_processor_class(cfg.name).from_config(cfg)
+            PROCESSOR_DICT[cfg['name']].from_config(cfg)
+            if cfg is not None
+            else None
+        )
+
+        
     def prepare_optimizer(self,args):
+        print('---- Load optimizer')
         # Optimizer
         self.optimizers = {}
         for i in self.models.keys():
@@ -220,43 +259,44 @@ class Party(object):
         # self.lr_schedulers.update({i: scheduler})
 
     def prepare_model(self, args, index):
-        # if args.model_type.lower() == 'qwen2':
-        #     model_path = args.model_list[str(index)]['path']
-        #     loader = QwenModelLoader()
-        #     result = loader.load(model_path, self.is_active_party)
-
-        #     args.tokenizer = result['tokenizer']
-        #     self.models.update(result['models'])
-        #     args.config = result['config']
-        #     args.model_architectures = args.config.architectures
-        #     args.model_embedded_dim = args.config.hidden_size
-        #     args.generation_config = result['generation_config']
-        #     self._set_peft()
-
+        print(f'=== prepare_model for Party {index} ===')
         # Load Tokenizer
         model_path = args.model_path[index]
         self.prepare_tokenizer(args, model_path)
+
+        # Load Preprocessor [for multimodaolity tasks]
+        if self.index != self.args.k -1 and self.args.task_type == 'MultiModality':
+            self.prepare_processor(args)
         
         # Load Model
         result = load_models_per_party_llm(args, index)
         self.models=result['models'] #.update(result['models'])
-        for _key in self.models.keys(): # update pad token configs
+        
+
+        model_tail_key = args.vfl_model_slice_num - 1
+        for _key in self.models.keys(): 
+            # update pad token configs
             self.models[_key].config.pad_token_id = args.pad_id
+            
+            # update generation_config
+            if int(_key) == int(model_tail_key):
+                self.args.generation_config = self.models[_key].generation_config
+
+        # self.args.generation_config = result['generation_config'] 
 
         self.args.model_config = result['config']
         self.args.model_dtype = result['model_dtype']
         self.args.config = result['config'] # model config
         self.args.config.pad_token_id = args.pad_id
-        self.args.generation_config = result['generation_config'] 
         self.args.model_architectures = result['model_architectures'] 
         self.args.model_embedded_dim = result['model_embedded_dim'] 
         self.args.all_encoders_num = result['all_encoders_num'] 
         self.args.global_encoders_num = self.args.all_encoders_num - args.local_encoders_num - args.local_tail_encoders_num
-        print(f'Party {self.index} Model:',self.models.keys())
+        print(f'model slices:',self.models.keys())
         if args.vfl_model_slice_num==3:
-            print(f'Model Partition: 0head-{args.local_encoders_num}/1body-{args.global_encoders_num}/2tail-{args.local_tail_encoders_num}')
+            print(f'model partition: 0head-{args.local_encoders_num}/1body-{args.global_encoders_num}/2tail-{args.local_tail_encoders_num}')
         else:
-            print(f'Model Partition: 0head-{args.local_encoders_num}/1tail-{args.global_encoders_num}')
+            print(f'model partition: 0head-{args.local_encoders_num}/1tail-{args.global_encoders_num}')
 
         # Load Optimizer
         self.prepare_optimizer(args)
@@ -307,69 +347,20 @@ class Party(object):
             if isinstance(v,torch.Tensor):
                 dict_like[k] = v.to(device)
 
-    # @timer()
-    # def give_pred(self, use_cache=False):
-    #     self.local_data_input['use_cache'] = use_cache
-    #     self._tensor_to_device(self.local_data_input , self.models[0].device)
-
-    #     intermediate = self.forward(model_index=0,**self.local_data_input)
-    #     # if not isinstance(intermediate, dict):
-    #     #     intermediate = intermediate.prepare_for_forward()
-        
-    #     # self.local_pred = intermediate['inputs_embeds']
-    #     ####
-    #     # print('=== DEbug ===')
-    #     # local_model_params = []
-    #     # for param in self.models[0].parameters():
-    #     #     if param.requires_grad:
-    #     #         local_model_params.append(param)
-    #     # if len(local_model_params) > 0:
-    #     #     self.weights_grad_a = torch.autograd.grad(
-    #     #         self.local_pred,
-    #     #         local_model_params,  # self.local_model.parameters()
-    #     #         grad_outputs=self.local_gradient,
-    #     #         retain_graph=True,
-    #     #         # allow_unused=True,
-    #     #     )
-    #     #     print('passive self.weights_grad_a:',self.weights_grad_a)
-            
-    #     ####
-    #     self.local_attention_mask = intermediate['attention_mask'] if ('attention_mask' in intermediate) else None
-    #     self.local_pred_clone = self.local_pred.detach().clone()
-    #     if self.local_attention_mask != None:
-    #         self.local_attention_mask = self.local_attention_mask.detach().clone()
-
-    #     ######### Defense Applied on Local Model Prediction Process ###########
-    #     if self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "out"):
-    #         self.local_pred, self.mid_loss = self.mid_model(self.local_pred)  # , self.local_attention_mask
-    #         self.local_pred_clone = self.local_pred.detach().clone()
-
-    #     elif self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (
-    #             self.mid_position == "inner"):
-    #         # print('inner mid: self.mid_position=',self.mid_position)
-    #         self.mid_loss = self.local_model.mid_loss
-    #         # print(' self.local_model.mid_loss:', self.local_model.mid_loss)
-
-    #     elif (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"])):
-    #         self.origin_pred = self.local_pred.clone()
-    #         self.local_pred = self.adversarial_model(self.origin_pred)
-    #         self.local_pred_clone = self.local_pred.detach().clone()
-    #     ######### Defense Applied on Local Model Prediction Process ###########
-
-    #     self.output_tensors[0] = self.local_pred
-    #     self.output_attention_mask[0] = self.local_attention_mask
-
-    #     intermediate['inputs_embeds'] = self.local_pred_clone
-    #     if self.local_attention_mask != None:
-    #         intermediate['attention_mask'] = self.local_attention_mask
-
-    #     return intermediate
-
     @timer()
     def forward(self, model_index, **kwargs):
         logger.debug(f"model_{model_index} forward")
+
         self.input_tensors[model_index] = kwargs.get('inputs_embeds')
         
+        self._tensor_to_device(kwargs , self.models[model_index].device)
+        # print('self.models[model_index].device:',self.models[model_index].device)
+        # for _key in kwargs.keys():
+        #     try:
+        #         print(_key,' device :',kwargs[_key].device)
+        #     except:
+        #         print(_key)
+
         resp = self.models[model_index](**kwargs)
 
         if model_index == self.args.vfl_model_slice_num - 1:
@@ -395,11 +386,6 @@ class Party(object):
                 param_group['lr'] = eta_t
 
     def obtain_local_data(self, data_input_dict, **kwargs):
-        # self.local_batch_data = kwargs['input_ids'] # input_ids
-        # self.local_batch_attention_mask = kwargs['attention_mask']
-        # self.local_batch_token_type_ids = kwargs['token_type_ids'] if 'token_type_ids' in kwargs else None
-        # self.past_key_values = past_key_values
-        # print('obtain_local_data_dev:',kwargs.keys())
         if data_input_dict:
             self._tensor_to_device(data_input_dict,self.models[0].device)
             self.local_data_input = data_input_dict

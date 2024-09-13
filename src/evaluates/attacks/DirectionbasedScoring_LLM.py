@@ -55,6 +55,9 @@ def update_all_cosine_leak_auc(cosine_leak_auc_dict, grad_list, pos_grad_list, y
         pred = (predicted_value - val_min + 1e-16) / (val_max - val_min + 1e-16)
         auc = roc_auc_score(y_true=y.numpy(), y_score=pred.numpy())
 
+        print('true:',y.numpy())
+        print('pred:',pred.numpy())
+
         return acc, auc
 
 

@@ -183,7 +183,6 @@ class ActiveParty_LLM(Party_LLM):
                                                         grad_outputs=self.global_gradient, 
                                                         allow_unused=True,
                                                         retain_graph=True)
-                # print('active weights_grad_a:',self.weights_grad_a)
                 # except Exception as e:
                 #     logger.debug(f"active party step optimizer 1")
                 #     self.global_model_optimizer.zero_grad()

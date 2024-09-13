@@ -107,7 +107,11 @@ class MambaModelLoader(LLMModelLoader):
             print(_key)
             self._models[_key].print_trainable_parameters()
 
-        model_dtype = self._get_model_dtype(model_config)
+        
+        for _key in self._models.keys():
+            model_dtype = self._get_model_dtype(self._models[_key].config)
+            break
+
 
         return {
             "models": self._models,

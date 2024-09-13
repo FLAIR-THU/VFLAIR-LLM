@@ -336,12 +336,8 @@ class MIDModel_Linear(nn.Module):
         epsilon = torch.empty((x.size()[0], x.size()[1], x.size()[2] * self.bottleneck_scale))
         torch.nn.init.normal(epsilon, mean=0, std=1)  # epsilon is initialized
         epsilon = epsilon.to(x.device)
-        # print('epsilon:',epsilon.shape) # bs, 30, 768
 
-        # print(f"[debug] in mid model, x.shape={x.shape}")
-        # # x.size() = (batch_size, class_num)
         x_double = self.enlarge_layer(x)
-        # print('x_double:',x_double.shape) # bs, 30, 2*768
 
         mu, std = x_double[:, :, :self.input_dim * self.bottleneck_scale], x_double[:, :,
                                                                            self.input_dim * self.bottleneck_scale:]
@@ -367,26 +363,6 @@ class MIDModel_Linear(nn.Module):
         mid_loss = self.mid_lambda * torch.mean(
             torch.sum((-0.5) * (1 + 2 * torch.log(std) - mu ** 2 - std ** 2), 1)) / (input_shape[1] * input_shape[2])
         # print('mid_loss:',mid_loss)
-
-
-        # print('== In mid model ==')
-        # mark = 0
-        # for name, param in self.enlarge_layer.named_parameters():
-        #     if mark == 0:
-        #         print(name, param.grad)
-        #         mark = mark + 1
-
-        # mid_loss.backward()
-
-        # print('-'*25)
-        # mark = 0
-        # for name, param in self.enlarge_layer.named_parameters():
-        #     if mark == 0:
-        #         print(name, param.grad)
-        #         mark = mark + 1
-        # print('== In mid model ==')
-
-        # assert 1>2
 
         return z, mid_loss
 

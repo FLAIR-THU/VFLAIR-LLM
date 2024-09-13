@@ -71,13 +71,13 @@ class Mapping_MLP3_noflatten(nn.Module):
         )
 
     def forward(self, x):
-        print('=== ad model ===')
-        print('self.seq_length:',self.seq_length,'  self.embed_dim:',self.embed_dim)
+        # print('=== ad model ===')
+        # print('self.seq_length:',self.seq_length,'  self.embed_dim:',self.embed_dim)
 
         origin_shape = x.shape 
         origin_dtype = x.dtype
         # print('x raw:',x.shape,x.dtype)
-        print('origin_shape:',origin_shape)
+        # print('origin_shape:',origin_shape)
 
         # if not self.batch_first:
         if origin_shape[1] != self.seq_length:
@@ -97,8 +97,8 @@ class Mapping_MLP3_noflatten(nn.Module):
         # print('x3:',x3.shape)
 
         x3 = x3.reshape(origin_shape)
-        print('x3:',x3.shape,x3.dtype)
-        print('=== ad model ===')
+        # print('x3:',x3.shape,x3.dtype)
+        # print('=== ad model ===')
 
         return x3
 
@@ -134,12 +134,12 @@ class Mapping_MLP3(nn.Module):
 
     def forward(self, x):
         # print('=== ad model ===')
-        print('self.seq_length:',self.seq_length,'  self.embed_dim:',self.embed_dim)
+        # print('self.seq_length:',self.seq_length,'  self.embed_dim:',self.embed_dim)
 
         origin_shape = x.shape 
         origin_dtype = x.dtype
         # print('x raw:',x.shape,x.dtype)
-        print('origin_shape:',origin_shape)
+        # print('origin_shape:',origin_shape)
 
         # if not self.batch_first:
         if origin_shape[1] != self.seq_length:

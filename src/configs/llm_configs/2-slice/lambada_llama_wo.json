@@ -1,11 +1,11 @@
 {
-  "epochs": 30,
+  "epochs": 1,
   "lr": 0.001,
   "k": 2,
   "batch_size": 32,
   "test_batch_size": 1,
   "early_stop_threshold": 1,
-  "pipeline": "finetune",
+  "pipeline": "pretrained",
   "model_architect":"CLM",
   "communication":{
       "communication_protocol": "FedSGD",
@@ -17,7 +17,7 @@
       }
   },
   "dataset":{
-      "dataset_name": "Lambada",
+      "dataset_name": "Lambada-test",
       "num_classes": 1,
       "use_prompt": 1
   },
@@ -40,6 +40,8 @@
         "device_map": "auto"
       },
       "0": {
+        "path": "/home/DAIR/guzx/Git_FedProject/Models/llama-2-7b",
+
           "head":{
               "embedding_trainable": 0,
               "encoder_trainable": 0,
@@ -47,8 +49,10 @@
           }
       },
       "1": {
+        "path": "/home/DAIR/guzx/Git_FedProject/Models/llama-2-7b",
+
           "tail":{
-              "head_layer_trainable": 1,
+              "head_layer_trainable": 0,
               "encoder_trainable": 0,
               "encoder_trainable_ids":[]
           }

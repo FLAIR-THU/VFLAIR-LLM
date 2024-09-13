@@ -29,6 +29,9 @@ class MistralModelLoader(LLMModelLoader):
         self._models=p.from_pretrained(model_path, **args.kwargs_model_loading)
         print(f'===== is_active_party={is_active_party}---{self._models.keys()} ======')
 
+        # self.model_class = {}
+        # for _key in self._models.keys():
+        #     self.model_class[_key] == type(self._models[_key])
 
         if args.finetune_name == "LoRA":
             print(f'LoRA Configs:{args.finetune_detail_configs}')
@@ -56,62 +59,107 @@ class MistralModelLoader(LLMModelLoader):
                 print(f'passive_model_head: encoder_trainable_ids={model_head_encoder_trainable_ids}; embedding_trainable={model_head_embedding_trainable}')
             else:
                 print(f'passive_model_head: all trainable')
+            self._models[0].print_trainable_parameters()
+            
 
             if args.vfl_model_slice_num == 3:
                 if not args.model_slice_trainable[2]:
-                    model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
-                    for encoder_id in range(len(self._models[2].model.layers)):
-                        if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
-                            for param in self._models[2].model.layers[encoder_id].parameters():
+                    try:
+                        model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
+                        for encoder_id in range(len(self._models[2].model.layers)):
+                            if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
+                                for param in self._models[2].model.layers[encoder_id].parameters():
+                                    param.requires_grad = False
+                        model_tail_head_layer_trainable = args.head_layer_trainable
+                        if not model_tail_head_layer_trainable: # freeze embeddings that's not needed
+                            for param in self._models[2].head_layer.parameters():
                                 param.requires_grad = False
-                    model_tail_head_layer_trainable = args.head_layer_trainable
-                    if not model_tail_head_layer_trainable: # freeze embeddings that's not needed
-                        for param in self._models[2].head_layer.parameters():
-                            param.requires_grad = False
-                        for param in self._models[2].model.norm.parameters():
-                            param.requires_grad = False
+                            for param in self._models[2].model.norm.parameters():
+                                param.requires_grad = False
+                    except:
+                        model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
+                        for encoder_id in range(len(self._models[2].model.model.layers)):
+                            if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
+                                for param in self._models[2].model.model.layers[encoder_id].parameters():
+                                    param.requires_grad = False
+                        model_tail_head_layer_trainable = args.head_layer_trainable
+                        if not model_tail_head_layer_trainable: # freeze embeddings that's not needed
+                            for param in self._models[2].model.head_layer.parameters():
+                                param.requires_grad = False
+                            for param in self._models[2].model.model.norm.parameters():
+                                param.requires_grad = False
                     print(f'passive_model_tail: encoder_trainable_ids={model_tail_encoder_trainable_ids}; head_layer_trainable={model_tail_head_layer_trainable}', )
                 else:
                     print(f'passive_model_tail: all trainable')
+                self._models[2].print_trainable_parameters()
+            
         else:
             if args.vfl_model_slice_num == 3:
                 if not args.model_slice_trainable[1]:
-                    model_body_encoder_trainable_ids = args.encoder_trainable_ids['body']
-                    for encoder_id in range(len(self._models[1].layers)):
-                        if encoder_id not in model_body_encoder_trainable_ids: # freeze encoders that's not needed
-                            for param in self._models[1].layers[encoder_id].parameters():
-                                param.requires_grad = False
+
+                    try:
+                        model_body_encoder_trainable_ids = args.encoder_trainable_ids['body']
+                        for encoder_id in range(len(self._models[1].model.layers)):
+                            if encoder_id not in model_body_encoder_trainable_ids: # freeze encoders that's not needed
+                                for param in self._models[1].model.layers[encoder_id].parameters():
+                                    param.requires_grad = False
+                    except:
+                        model_body_encoder_trainable_ids = args.encoder_trainable_ids['body']
+                        for encoder_id in range(len(self._models[1].model.layers)):
+                            if encoder_id not in model_body_encoder_trainable_ids: # freeze encoders that's not needed
+                                for param in self._models[1].model.layers[encoder_id].parameters():
+                                    param.requires_grad = False
+                
+                    
                     print(f'active_model_body: encoder_trainable_ids={model_body_encoder_trainable_ids}')
                 else:
                     print(f'active_model_body: all trainable')
+                
             else:
                 if not args.model_slice_trainable[1]:
-                    model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
-                    for encoder_id in range(len(self._models[1].model.layers)):
-                        if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
-                            for param in self._models[1].model.layers[encoder_id].parameters():
+                    # print('self._models[1]:',type(self._models[1]))
+                    # print('self._models[1].model:',type(self._models[1].model))
+                    # print('self._models[1].model.model:',type(self._models[1].model.model))
+
+                    try:
+                        model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
+                        for encoder_id in range(len(self._models[1].model.layers)):
+                            if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
+                                for param in self._models[1].model.layers[encoder_id].parameters():
+                                    param.requires_grad = False
+                        model_tail_head_layer_trainable = args.head_layer_trainable
+                        if not model_tail_head_layer_trainable: # freeze embeddings that's not needed
+                            for param in self._models[1].head_layer.parameters():
                                 param.requires_grad = False
-                    model_tail_head_layer_trainable = args.head_layer_trainable
-                    if not model_tail_head_layer_trainable: # freeze embeddings that's not needed
-                        for param in self._models[1].head_layer.parameters():
-                            param.requires_grad = False
-                        for param in self._models[1].model.norm.parameters():
-                            param.requires_grad = False
+                            for param in self._models[1].model.norm.parameters():
+                                param.requires_grad = False
+                    except:
+                        model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
+                        for encoder_id in range(len(self._models[1].model.model.layers)):
+                            if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
+                                for param in self._models[1].model.model.layers[encoder_id].parameters():
+                                    param.requires_grad = False
+                        model_tail_head_layer_trainable = args.head_layer_trainable
+                        if not model_tail_head_layer_trainable: # freeze embeddings that's not needed
+                            for param in self._models[1].model.head_layer.parameters():
+                                param.requires_grad = False
+                            for param in self._models[1].model.model.norm.parameters():
+                                param.requires_grad = False
                     print(f'active_model_tail: encoder_trainable_ids={model_tail_encoder_trainable_ids}; head_layer_trainable={model_tail_head_layer_trainable}')
                 else:
                     print(f'active_model_tail: all trainable')
+                self._models[1].print_trainable_parameters()
 
-        print('final trainable param:')
+        # print('final trainable param:')
         for _key in self._models.keys():
-            print(_key)
-            self._models[_key].print_trainable_parameters()
+            model_dtype = self._get_model_dtype(self._models[_key].config)
+            break
 
-        model_dtype = self._get_model_dtype(model_config)
 
         return {
             "models": self._models,
             "config": model_config,
-            "generation_config": generation_config,
+            # "generation_config": generation_config,
             "model_architectures": model_architectures,
             "model_embedded_dim": model_embedded_dim,
             "all_encoders_num": all_encoders_num,

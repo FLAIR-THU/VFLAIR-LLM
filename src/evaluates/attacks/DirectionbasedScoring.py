@@ -105,8 +105,8 @@ class DirectionbasedScoring(Attacker):
             # collect necessary information
 
             true_label = self.vfl_info['label'].to(self.device)  # copy.deepcopy(self.gt_one_hot_label)
-
             print('true_label:', true_label.size())
+            
             ################ scoring attack ################
             start_time = time.time()
             ################ find a positive gradient ################

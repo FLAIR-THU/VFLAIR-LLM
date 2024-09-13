@@ -1,34 +1,40 @@
-for seed in {61,62,63,64,65}
+# 95
+sed -i 's/"gradient_sparse_rate": 100.0/"gradient_sparse_rate": 95/g' ./configs/3-slice/sst2_bli_gs_4.json
+python main_pipeline_llm_LIA.py --seed 61 --configs 3-slice/sst2_bli_gs_4
+
+sed -i 's/"gradient_sparse_rate": 95/"gradient_sparse_rate": 100.0/g' ./configs/3-slice/sst2_bli_gs_4.json
+
+for seed in {62,63,64,65}
     do
 
     # 100
-    python main_pipeline_llm_4.py --seed $seed --configs sst2_bli_gs_4
+    python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_bli_gs_4
 
-    # # 99.5
-    # sed -i 's/"gradient_sparse_rate": 100.0/"gradient_sparse_rate": 99.5/g' ./configs/sst2_bli_gs_4.json
-    # python main_pipeline_llm_4.py --seed $seed --configs sst2_bli_gs_4
+    # 99.5
+    sed -i 's/"gradient_sparse_rate": 100.0/"gradient_sparse_rate": 99.5/g' ./configs/3-slice/sst2_bli_gs_4.json
+    python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_bli_gs_4
 
-    # # 99
-    # sed -i 's/"gradient_sparse_rate": 99.5/"gradient_sparse_rate": 99/g' ./configs/sst2_bli_gs_4.json
-    # python main_pipeline_llm_4.py --seed $seed --configs sst2_bli_gs_4
+    # 99
+    sed -i 's/"gradient_sparse_rate": 99.5/"gradient_sparse_rate": 99/g' ./configs/3-slice/sst2_bli_gs_4.json
+    python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_bli_gs_4
 
-    # # 98
-    # sed -i 's/"gradient_sparse_rate": 99/"gradient_sparse_rate": 98/g' ./configs/sst2_bli_gs_4.json
-    # python main_pipeline_llm_4.py --seed $seed --configs sst2_bli_gs_4
+    # 98
+    sed -i 's/"gradient_sparse_rate": 99/"gradient_sparse_rate": 98/g' ./configs/3-slice/sst2_bli_gs_4.json
+    python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_bli_gs_4
 
-    # # 97
-    # sed -i 's/"gradient_sparse_rate": 98/"gradient_sparse_rate": 97/g' ./configs/sst2_bli_gs_4.json
-    # python main_pipeline_llm_4.py --seed $seed --configs sst2_bli_gs_4
+    # 97
+    sed -i 's/"gradient_sparse_rate": 98/"gradient_sparse_rate": 97/g' ./configs/3-slice/sst2_bli_gs_4.json
+    python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_bli_gs_4
 
-    # # 96
-    # sed -i 's/"gradient_sparse_rate": 97/"gradient_sparse_rate": 96/g' ./configs/sst2_bli_gs_4.json
-    # python main_pipeline_llm_4.py --seed $seed --configs sst2_bli_gs_4
+    # 96
+    sed -i 's/"gradient_sparse_rate": 97/"gradient_sparse_rate": 96/g' ./configs/3-slice/sst2_bli_gs_4.json
+    python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_bli_gs_4
 
-    # # 95
-    # sed -i 's/"gradient_sparse_rate": 96/"gradient_sparse_rate": 95/g' ./configs/sst2_bli_gs_4.json
-    # python main_pipeline_llm_4.py --seed $seed --configs sst2_bli_gs_4
+    # 95
+    sed -i 's/"gradient_sparse_rate": 96/"gradient_sparse_rate": 95/g' ./configs/3-slice/sst2_bli_gs_4.json
+    python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_bli_gs_4
 
 
-    # sed -i 's/"gradient_sparse_rate": 95/"gradient_sparse_rate": 100.0/g' ./configs/sst2_bli_gs_4.json
+    sed -i 's/"gradient_sparse_rate": 95/"gradient_sparse_rate": 100.0/g' ./configs/3-slice/sst2_bli_gs_4.json
 
 done
