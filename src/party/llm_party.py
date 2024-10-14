@@ -29,7 +29,6 @@ from peft import get_peft_model,PeftModel
 from config import vfl_basic_config
 np_str_obj_array_pattern = re.compile(r'[SaUO]')
 
-# sys.path.append('..')
 from models.llm_models.processors.blip_processors import *
 
 PROCESSOR_DICT = {
@@ -87,6 +86,8 @@ class Party(object):
         self.optimizers = {}  # type:dict[int,torch.optim.Optimizer]
         self.lr_schedulers = {}  # type:dict[int,torch.optim.lr_scheduler.LinearLR]
 
+        self.is_first_forward_iter = 1
+
         # local model
         self.local_model = None
         self.local_model_optimizer = None
@@ -138,6 +139,9 @@ class Party(object):
         # for adversarial training
         self.adversary_loss = None
         self.mapping_distance = None
+
+    def set_is_first_forward_iter(self, value):
+        self.is_first_forward_iter = value
 
     @property
     def is_active_party(self):
@@ -354,12 +358,6 @@ class Party(object):
         self.input_tensors[model_index] = kwargs.get('inputs_embeds')
         
         self._tensor_to_device(kwargs , self.models[model_index].device)
-        # print('self.models[model_index].device:',self.models[model_index].device)
-        # for _key in kwargs.keys():
-        #     try:
-        #         print(_key,' device :',kwargs[_key].device)
-        #     except:
-        #         print(_key)
 
         resp = self.models[model_index](**kwargs)
 

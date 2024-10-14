@@ -1,7 +1,15 @@
 
-for seed in {60,61,62,63,64,65}
+for seed in {1,2,3,4,5}
     do
-    # python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_bli_wo_4
+    python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_bli_wo_1
+    python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_bli_wo_2
+    python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_bli_wo_3
+    python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_bli_wo_4
+done
+
+
+for seed in {61,62,63,64,65}
+    do
 
     # 50
     python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_bli_dp_4

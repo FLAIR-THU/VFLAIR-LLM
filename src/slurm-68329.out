@@ -1,0 +1,2461 @@
+/bin/bash: /home/DAIR/guzx/.conda/envs/py38/lib/libtinfo.so.6: no version information available (required by /bin/bash)
+2024-10-12 15:04:01.813 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 15:04:09.116 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 15:11:34.555 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  62  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.01, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.01,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 62 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 15:12:49.592 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 15:12:58.283 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 15:20:28.214 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  62  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.001, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.001,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 62 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 15:21:35.399 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 15:21:42.333 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 15:29:52.782 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  62  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.0001, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.0001,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 62 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 15:31:11.315 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 15:31:19.103 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 15:38:58.675 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  62  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 1e-05, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_1e-05,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 62 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 15:40:06.381 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 15:40:14.816 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 15:48:07.039 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  62  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.05, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.05,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 62 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 15:49:23.110 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 15:49:32.044 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 15:57:14.574 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  62  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.005, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.005,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 62 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 15:58:20.917 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 15:58:28.593 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 16:06:21.750 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  63  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.5, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.5,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 63 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 16:07:37.686 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 16:07:45.916 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 16:15:32.645 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  63  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.1, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.1,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 63 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 16:16:41.618 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 16:16:49.645 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 16:24:49.434 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  63  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.01, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.01,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 63 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 16:26:08.613 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 16:26:16.361 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 16:34:03.900 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  63  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.001, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.001,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 63 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 16:35:12.808 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 16:35:20.778 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 16:43:17.717 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  63  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.0001, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.0001,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 63 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 16:44:35.110 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 16:44:43.627 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 16:52:42.754 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  63  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 1e-05, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_1e-05,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 63 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 16:53:57.447 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 16:54:08.942 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 17:02:06.916 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  63  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.05, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.05,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 63 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 17:03:25.108 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 17:03:32.915 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 17:11:21.144 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  63  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.005, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.005,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 63 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 17:12:29.201 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 17:12:37.590 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 17:20:39.572 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  64  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.5, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.5,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 64 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 17:22:00.353 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 17:22:14.993 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 17:30:07.678 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  64  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.1, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.1,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 64 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 17:31:14.617 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 17:31:26.729 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 17:38:57.230 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  64  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.01, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.01,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 64 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 17:40:10.347 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 17:40:19.580 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 17:47:31.823 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  64  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.001, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.001,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 64 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 17:48:42.386 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 17:48:52.591 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 17:56:12.623 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  64  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.0001, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.0001,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 64 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 17:57:13.484 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 17:57:24.460 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 18:04:48.780 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  64  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 1e-05, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_1e-05,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 64 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 18:05:54.040 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 18:06:10.295 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 18:13:33.121 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  64  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.05, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.05,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 64 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 18:14:46.026 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 18:14:58.096 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 18:22:26.884 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  64  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.005, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.005,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 64 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 18:23:37.046 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 18:23:49.393 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 18:31:38.859 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  65  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.5, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.5,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 65 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 18:33:00.516 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 18:33:12.411 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 18:41:00.708 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  65  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.1, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.1,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 65 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 18:42:13.524 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 18:42:29.890 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 18:50:27.727 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  65  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.01, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.01,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 65 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 18:51:48.876 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 18:52:03.446 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 19:00:01.755 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  65  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.001, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.001,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 65 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 19:01:18.731 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 19:01:35.655 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 19:09:24.204 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  65  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.0001, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.0001,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 65 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 19:10:40.362 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 19:10:52.275 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 19:18:55.228 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  65  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 1e-05, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_1e-05,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 65 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 19:20:20.882 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 19:20:36.853 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 19:28:18.307 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  65  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.05, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.05,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 65 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'
+2024-10-12 19:29:38.141 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-12 19:29:54.921 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+2024-10-12 19:37:42.247 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(2,)
+================= iter seed  65  =================
+communication_protocol: FedSGD
+load model_architect: CLS
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 1
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: MID_Passive
+Defense_Config: {'party': [0], 'mid_model_name': 'MIDModel_Linear', 'lr': 0.0001, 'lambda': 0.005, 'mid_position': 'head', 'current_bottleneck_scale': 1, 'seq_length': 384, 'embed_dim': 768}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/yelp-polarity/2-slice/2_0/MID_Passive_MIDModel_Linear_head_0.005,finetuned_model=Shunianyelp_review_classification.txt
+=================================
+
+===== iter 65 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=False---dict_keys([0]) ======
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+model slice 0 final trainable param:
+trainable params: 396288 || all params: 36840960 || trainable%: 1.0756722951844904
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+X: <class 'numpy.ndarray'> (650000,) (50000,)
+y: <class 'numpy.ndarray'> (650000,) (50000,)
+<class 'numpy.ndarray'> [4 1]
+<class 'numpy.ndarray'> [0 0]
+Passive Party 0: init MID Defense
+self.args.model_dtype: torch.float32
+init defense: mid on model head
+MIDModel_Linear
+self.mid_model_name:MIDModel_Linear
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 0
+===== is_active_party=True---dict_keys([1]) ======
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=1
+model slice 1 final trainable param:
+trainable params: 23259653 || all params: 94138373 || trainable%: 24.707940299754277
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-10
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.bert.modeling_bert.BertForSequenceClassification'>
+Epoch 0/49: 0it [00:00, ?it/s]Epoch 0/49: 0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 312, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
+  File "main_pipeline_llm_MIA.py", line 64, in evaluate_no_attack_finetune
+    exp_result, metric_val, training_time = vfl.train_vfl()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1551, in train_vfl
+    self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1368, in train_batch
+    self.transmit_relevant_gradient(final_pred)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1274, in transmit_relevant_gradient
+    loss = self.global_gradient_transmit(final_pred, count_time='train')
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 377, in global_gradient_transmit
+    self.communication_cost += get_size_of(global_gradient)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/communication_protocol_funcs.py", line 24, in get_size_of
+    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+AttributeError: 'NoneType' object has no attribute 'nelement'

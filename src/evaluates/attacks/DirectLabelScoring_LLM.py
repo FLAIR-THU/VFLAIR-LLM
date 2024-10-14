@@ -74,14 +74,16 @@ class DirectLabelScoring_LLM(Attacker):
 
             true_label = self.vfl_info['label'].to(self.device)  # copy.deepcopy(self.gt_one_hot_label)
             print('true_label:',true_label.shape)
+
             global_gradient = self.vfl_info['global_gradient']
-            print('global_gradient:',global_gradient.shape)
+            print('global_gradient:',global_gradient.shape) # bs seq_len embed_dim
 
             del self.vfl_info
             start_time = time.time()
 
             pred_label = []
-            for _gradient in global_gradient:
+            for _gradient in global_gradient: # 1 seq_len embed_dim
+                print('--_gradient:',_gradient.shape)
                 pred_idx = -1
                 for idx in range(len(_gradient)):
                     if _gradient[idx] < 0.0:
@@ -90,6 +92,9 @@ class DirectLabelScoring_LLM(Attacker):
                 if pred_idx == -1:
                     pred_idx = randint(0, self.num_classes - 1)
                 pred_label.append(pred_idx)
+
+            print('pred_label:',pred_label)
+            print('true_label:',true_label)
 
             one_hot_pred_label = label_to_one_hot(torch.tensor(pred_label), self.num_classes).to(self.device)
             rec_rate = self.calc_label_recovery_rate(one_hot_pred_label, true_label)

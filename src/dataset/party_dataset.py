@@ -9,6 +9,9 @@ from random import randrange
 from typing import List, Dict, Optional, Sequence, Union
 import copy
 from PIL import Image
+from torchvision import transforms
+# import logging
+# logger = logging.getLogger(__name__)
 
 # from minigpt4.caption_datasets import CaptionDataset
 
@@ -182,17 +185,20 @@ class TextVQADataset_test(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
+        prompt = "Answer the question directly with single word." + '\n'
+        # prompt = "Answer the question directly." + '\n'
+        
         data_input = self.data[idx]
         answer = self.labels[idx]
 
         input_dict = {
-            'question':data_input['question'],
-            'image':Image.open(data_input['img_path']).convert('RGB')#.to(self.args.device),
+                'question':prompt + data_input['question'],
+                'image':Image.open(data_input['img_path']).convert('RGB')
         }
         
-        print('-- get item input_dict question:',input_dict['question'])
-        print('-- get item input_dict image:',type(input_dict['image']))
-        print('-- get item answer:',answer)
+        # print('-- get item input_dict question:',input_dict['question'])
+        # print('-- get item input_dict image:',type(input_dict['image']))
+        # print('-- get item answer:',answer)
 
         return input_dict, answer
     
@@ -216,46 +222,62 @@ class TextVQADataset_train(Dataset):
     
     def __getitem__(self, idx):
         data_input = self.data[idx]
-        answer = self.labels[idx]
-        try:
-            # if isinstance(self.data[idx]["img_path"], str):
-            images_dict = { "<image>" : Image.open(data_input['img_path']).convert('RGB') }
-            # elif isinstance(self.raw_data[i]["image"], Dict):
-            #     ### for multi-images input, the template for every image is <image_xx>, such as <image_00>, <image_01>
-            #     images_dict = {img_name : Image.open(img_path).convert("RGB") for img_name, img_path in self.raw_data[i]["image"].items()}
-            conversation = [{'role': 'user', 'content': data_input['question']},
-                   {'role': 'assistant', 'content': answer}]
-            print('get-item conversation:',conversation)
+        answer = self.labels[idx][0]
 
-            ret = preprocess(
-                images_dict,
-                conversation,
-                self.tokenizer,
-                self.transform,
-                # query_nums=self.query_nums,
-                # slice_config=self.slice_config,
-                # llm_type=self.llm_type,
-                # patch_size=self.patch_size,
-                # batch_vision=self.batch_vision,
-                max_length=self.args.max_length
-            )
-            print('get item input_ids:',ret["input_ids"].shape)
-            print('get item labels:',ret["target"])
-            print('get item tgt_sizes:',ret["tgt_sizes"])
+        images_dict = { "<image>" : Image.open(data_input['img_path']).convert('RGB') }
 
-            ret = dict(
-                input_ids=ret["input_ids"],
-                position_ids=ret["position_ids"],
-                labels=ret["target"],
-                attention_mask=torch.ones_like(ret["input_ids"], dtype=torch.bool),
-                pixel_values=ret["pixel_values"],
-                tgt_sizes=ret["tgt_sizes"],
-                image_bound=ret["image_bound"],
-            )
-        except:
-            logger.error(f"data fetch error")
-            return self.__getitem__(random.randint(0, len(self)))
-        return ret
+        conversation = [{'role': 'user', 'content': data_input['question']},
+                {'role': 'assistant', 'content': answer}]
+
+        ret = preprocess(
+            images_dict,
+            conversation,
+            self.tokenizer,
+            self.transform,
+            # query_nums=self.query_nums,
+            # slice_config=self.slice_config,
+            # llm_type=self.llm_type,
+            # patch_size=self.patch_size,
+            # batch_vision=self.batch_vision,
+            max_length=self.args.max_length
+        )
+
+        # print(f'ret-input_ids:{ret["input_ids"].shape}') #[81]
+        # print(f'ret-position_ids:{ret["position_ids"].shape}') #[81]
+        # print(f'ret-attention_mask:{ret["attention_mask"].shape}')
+
+
+        padded_input_ids = torch.cat((ret["input_ids"], torch.full((self.args.max_length - len(ret["input_ids"]),), 
+            fill_value=self.tokenizer.pad_token_id)))
+
+        attention_mask = torch.cat((ret["input_ids"], torch.full((self.args.max_length - len(ret["input_ids"]),), 
+            fill_value=0)))
+        # torch.tensor([1 if token != self.tokenizer.pad_token_id else 0 for token in padded_input_ids])
+
+        position_ids = torch.cat((ret["position_ids"], torch.full((self.args.max_length - len(ret["input_ids"]),), 
+            fill_value=0)))
+
+        input_dict = dict(
+            input_ids= padded_input_ids.to(self.args.device),
+            position_ids= position_ids.to(self.args.device),
+            attention_mask= attention_mask.to(self.args.device),
+            pixel_values=[pixel_value.to(self.args.device) for pixel_value in ret["pixel_values"]],
+            tgt_sizes=ret["tgt_sizes"],
+            image_bound=ret["image_bound"],
+        )
+        
+        label = torch.cat((ret["target"], torch.full((self.args.max_length - len(ret["target"]),),
+         fill_value=-100)))
+        
+
+        # print('--- get item input_dict:',input_dict.keys())
+        # print('--- get item image_bound:',input_dict['image_bound'].shape) # size(1,2) [[4,68]]
+
+        # print('--- get item input_ids:',input_dict['input_ids'].shape)
+        # print(self.tokenizer.decode(input_dict['input_ids']))
+        # print('--- get item label:',label.shape)
+
+        return input_dict, label
 
 
 def preprocess(
@@ -331,7 +353,7 @@ def preprocess(
             )
         else:
             conversations[0]["content"] = (
-                image_placeholder + "\n" + conversation[0]["content"]
+                image_placeholder + "\n" + conversations[0]["content"]
             )
         input_dict = conversation_to_ids(conversations, tokenizer, llm_type, new_schema, max_length)
     else:
@@ -353,11 +375,11 @@ def preprocess(
         conversations = new_conversations
         
         input_dict = conversation_to_ids(conversations, tokenizer, llm_type, new_schema, max_length)
-
     if batch_vision:
         tgt_sizes = []
         reshape_images = []
         for image in images:
+            print('images:',len(images),' image:',image.shape,'-->reshape_image:',reshape_image.shape)
             H, W = image.shape[1:]
             reshape_image = reshape_by_patch(image, patch_size)
             reshape_images.append(reshape_image)
@@ -394,8 +416,9 @@ def conversation_to_ids(conversation, tokenizer, llm_type=None, new_schema=False
             conversation, tokenizer
         )
 
-    ids = torch.from_numpy(np.hstack(input_ids, dtype=np.int32))
-    context = torch.from_numpy(np.hstack(context, dtype=np.int8))
+    ids = torch.from_numpy(input_ids)
+    context = torch.from_numpy(np.hstack(context))#, dtype=np.int8))
+
     if input_ids.shape[-1] > max_length:
         ids =ids[:max_length]
         context = context[:max_length]
@@ -449,6 +472,7 @@ def conversation_to_ids(conversation, tokenizer, llm_type=None, new_schema=False
     }
 
 def conversation_to_ids_minicpm(conversation, tokenizer):
+    # print('conversation_to_ids_minicpm-conversations:',conversation)
     raw_msg = ""
     input_ids = []
     context = []
@@ -477,6 +501,8 @@ def conversation_to_ids_minicpm(conversation, tokenizer):
 
         raw_msg += prefix + message
 
+    input_ids = np.hstack(input_ids)
+    context = np.hstack(context)
     return input_ids, context, raw_msg
 
 def conversation_to_ids_llama3(conversation, tokenizer):
@@ -558,12 +584,13 @@ def conversation_to_ids_qwen2(conversation, tokenizer):
 
 
 class CCSBUAlignDataset(Dataset): # CaptionDataset
-    def __init__(self, args, images ,labels, vis_processor,split_name='test'):
+    def __init__(self, args, images ,labels, vis_processor, text_processor, split_name='test'):
         '''
         texts: np.array
         '''
         self.args = args
         self.vis_processor = vis_processor
+        self.text_processor = text_processor
         self.images = []
         self.labels = []
         # self.instruction= '[INST] <Img><ImageHere></Img> Describe this image in detail. [/INST]'
@@ -572,48 +599,39 @@ class CCSBUAlignDataset(Dataset): # CaptionDataset
 
         print(f'===== Dataset {split_name} =====')
         print('self.vis_processor:',self.vis_processor)
+        print('self.text_processor:',self.text_processor)
+
         print('self.instruction:',self.instruction)
 
-        for i in range(len(images)):
-            self.images.append( self.vis_processor(images[i]) )
-            self.labels.append( labels[i]['caption']  )
-            # ids = args.tokenizer(texts[i],return_tensors='pt')
-            # self.input_dicts.append(ids)
-        
-            # print('get item image:',self.images[0].shape)
-            # print(labels[0]['caption'])
+        # for i in range(len(images)):
+        #     self.images.append( self.vis_processor(images[i]) )
 
-            # print('get item caption:',self.labels[0])
-            # print('======')
-            # assert 1>2
+        #     if self.text_processor != None:
+        #         self.labels.append( self.text_processor(labels[i])  )
+        #     else:
+        #         self.labels.append( labels[i] )
+        
+        for i in range(len(images)):
+            self.images.append( images[i] )
+            self.labels.append( labels[i] )
+
 
     def __len__(self):
         return len(self.labels)
 
     def __getitem__(self, index):
-
-        # TODO this assumes image input, not general enough
         label = self.labels[index] #torch.tensor(self.labels[index]).squeeze().to(self.args.device)
         image = self.images[index]
         text_input = self.instruction
         input_dict = {
-            'prompt':text_input,
-            'image':image.to(self.args.device),
-            # 'answer': label
+            # 'prompt':text_input,
+            'question':text_input,
+            'image':image,#.to(self.args.device),
         }
 
         ### prepare target tokens
         self.args.tokenizer.padding_side = "right"
-        text = label+'\n' # self.end_sym = '\n
-        # regress_tokens = self.args.tokenizer(
-        #     text,
-        #     return_tensors="pt",
-        #     padding="longest",
-        #     truncation=True,
-        #     max_length=self.args.max_length,
-        #     add_special_tokens=False
-        # ).to(self.args.device)
-        label = text
+        label = label+'\n' 
 
         return input_dict, label
 
@@ -847,13 +865,13 @@ class GSMDataset_LLM(Dataset):
             # print(self.input_dicts[0])
             # print(self.labels[0])
 
-        print(f'=== Dataset Split = {split_name} ===')
-        print('text:',self.input_dicts[0]['input_ids'].shape)
-        print(self.args.tokenizer.decode( self.input_dicts[0]['input_ids'].squeeze()))
-        print('-'*25)
-        print('label:',self.labels[0].shape)
-        print(self.args.tokenizer.decode(self.labels[0].squeeze()))
-        print('='*50)
+        # print(f'=== Dataset Split = {split_name} ===')
+        # print('text:',self.input_dicts[0]['input_ids'].shape)
+        # print(self.args.tokenizer.decode( self.input_dicts[0]['input_ids'].squeeze()))
+        # print('-'*25)
+        # print('label:',self.labels[0].shape)
+        # print(self.args.tokenizer.decode(self.labels[0].squeeze()))
+        # print('='*50)
 
 
     def __len__(self):
@@ -868,6 +886,7 @@ class GSMDataset_LLM(Dataset):
                 input_dict[key_name] = torch.tensor(input_dict[key_name]).squeeze().to(self.args.device)
 
         label = torch.tensor(self.labels[item_idx]).squeeze().to(self.args.device)
+        # print('--get item:',label.shape)
         return input_dict, label
 
     # def __getitem__(self, idx):

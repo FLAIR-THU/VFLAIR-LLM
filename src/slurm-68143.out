@@ -1,0 +1,1505 @@
+/bin/bash: /home/DAIR/guzx/.conda/envs/py38/lib/libtinfo.so.6: no version information available (required by /bin/bash)
+2024-10-02 22:18:41.605 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-02 22:18:50.867 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-02 22:19:11.638 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  62  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'type': 'pred', 'epsilon': 70}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_70,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 62 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:10<00:50, 10.00s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [00:19<00:37,  9.42s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:27<00:26,  8.96s/it]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:37<00:18,  9.21s/it]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:46<00:09,  9.17s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:50<00:00,  7.48s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:50<00:00,  8.39s/it]
+===== is_active_party=True---dict_keys([1]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+1
+trainable params: 1,597,440 || all params: 6,807,113,728 || trainable%: 0.02346721479662048
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=0
+trainable params: 0 || all params: 6,807,113,728 || trainable%: 0.0
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.mistral.modeling_mistral.MistralForCausalLM'>
+--> final self.generation_config: GenerationConfig {
+  "bos_token_id": 1,
+  "eos_token_id": 2
+}
+
+--> final self.generation_config_dict: {'temperature': 1.0, 'top_k': -1, 'top_p': 1.0, 'max_new_tokens': 256}
+inference process: 0it [00:00, ?it/s]inference process: 1it [03:14, 194.39s/it]inference process: 2it [06:28, 194.48s/it]inference process: 3it [09:15, 181.52s/it]inference process: 4it [11:45, 169.28s/it]inference process: 5it [14:59, 178.34s/it]inference process: 6it [17:17, 164.43s/it]inference process: 7it [19:14, 149.10s/it]inference process: 8it [22:29, 163.52s/it]inference process: 9it [25:43, 173.14s/it]inference process: 10it [28:58, 179.72s/it]inference process: 11it [32:12, 184.25s/it]inference process: 12it [35:26, 187.31s/it]inference process: 13it [37:59, 176.75s/it]inference process: 14it [41:13, 182.07s/it]inference process: 15it [44:03, 178.50s/it]inference process: 16it [46:58, 177.29s/it]inference process: 17it [50:12, 182.42s/it]inference process: 18it [53:19, 183.66s/it]inference process: 19it [56:31, 186.23s/it]inference process: 20it [59:45, 188.68s/it]inference process: 21it [1:02:42, 185.06s/it]inference process: 22it [1:05:56, 187.86s/it]inference process: 23it [1:09:11, 189.84s/it]inference process: 24it [1:12:23, 190.51s/it]inference process: 25it [1:15:37, 191.68s/it]inference process: 26it [1:18:10, 179.93s/it]inference process: 27it [1:21:24, 184.29s/it]inference process: 28it [1:24:39, 187.33s/it]inference process: 29it [1:26:56, 172.35s/it]inference process: 30it [1:29:52, 173.32s/it]inference process: 31it [1:33:06, 179.65s/it]inference process: 32it [1:34:55, 158.54s/it]inference process: 33it [1:38:10, 169.27s/it]inference process: 34it [1:41:16, 174.45s/it]inference process: 35it [1:44:31, 180.41s/it]inference process: 36it [1:46:51, 168.39s/it]inference process: 37it [1:50:05, 176.22s/it]inference process: 38it [1:53:08, 177.98s/it]inference process: 39it [1:56:22, 182.89s/it]inference process: 40it [1:58:27, 165.48s/it]inference process: 41it [2:01:41, 174.15s/it]inference process: 42it [2:04:56, 180.22s/it]inference process: 43it [2:08:10, 184.45s/it]inference process: 44it [2:11:24, 187.45s/it]inference process: 45it [2:14:39, 189.53s/it]inference process: 46it [2:17:53, 191.01s/it]inference process: 47it [2:21:08, 192.03s/it]inference process: 48it [2:24:22, 192.69s/it]inference process: 49it [2:27:36, 193.21s/it]inference process: 50it [2:30:51, 193.58s/it]inference process: 51it [2:34:05, 193.85s/it]inference process: 52it [2:37:20, 194.04s/it]inference process: 53it [2:40:34, 194.16s/it]inference process: 54it [2:43:48, 194.23s/it]inference process: 55it [2:45:57, 174.58s/it]inference process: 56it [2:49:12, 180.53s/it]inference process: 57it [2:51:28, 167.31s/it]inference process: 58it [2:54:25, 170.13s/it]inference process: 59it [2:56:50, 162.72s/it]inference process: 60it [3:00:05, 172.26s/it]inference process: 61it [3:03:19, 178.92s/it]inference process: 62it [3:06:33, 183.26s/it]inference process: 63it [3:09:47, 186.68s/it]inference process: 64it [3:13:02, 189.04s/it]inference process: 65it [3:15:36, 178.70s/it]inference process: 66it [3:18:17, 173.30s/it]inference process: 67it [3:20:40, 164.33s/it]inference process: 68it [3:23:55, 173.36s/it]inference process: 69it [3:27:09, 179.71s/it]inference process: 70it [3:30:24, 184.10s/it]inference process: 71it [3:33:38, 187.20s/it]inference process: 72it [3:36:49, 188.34s/it]inference process: 73it [3:40:04, 190.16s/it]inference process: 74it [3:43:18, 191.46s/it]inference process: 75it [3:46:32, 192.34s/it]inference process: 76it [3:49:47, 192.95s/it]inference process: 77it [3:53:01, 193.38s/it]inference process: 78it [3:56:03, 189.99s/it]inference process: 79it [3:59:13, 189.98s/it]inference process: 80it [4:02:28, 191.32s/it]inference process: 81it [4:05:11, 183.07s/it]inference process: 82it [4:08:26, 186.47s/it]inference process: 83it [4:09:54, 156.90s/it]inference process: 83it [4:09:54, 180.65s/it]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 310, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_pretrained(args)
+  File "main_pipeline_llm_MIA.py", line 47, in evaluate_no_attack_pretrained
+    exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/timer.py", line 66, in wrapper
+    result = func(*args, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1328, in inference
+    self.final_state = self.save_state()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1676, in save_state
+    "active_model_body": copy.deepcopy(self.parties[1].global_model).to("cpu") if self.parties[1].global_model != None else None,
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 153, in deepcopy
+    y = copier(memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/torch/nn/parameter.py", line 32, in __deepcopy__
+    result = type(self)(self.data.clone(memory_format=torch.preserve_format), self.requires_grad)
+RuntimeError: CUDA out of memory. Tried to allocate 224.00 MiB (GPU 0; 39.41 GiB total capacity; 37.23 GiB already allocated; 182.50 MiB free; 37.37 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+2024-10-03 02:59:35.015 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-03 02:59:43.615 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-03 03:00:04.075 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  62  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'type': 'pred', 'epsilon': 80}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_80,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 62 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:08<00:43,  8.66s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [00:16<00:32,  8.12s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:24<00:24,  8.02s/it]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:32<00:16,  8.23s/it]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:40<00:08,  8.09s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:44<00:00,  6.61s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:44<00:00,  7.40s/it]
+===== is_active_party=True---dict_keys([1]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+1
+trainable params: 1,597,440 || all params: 6,807,113,728 || trainable%: 0.02346721479662048
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=0
+trainable params: 0 || all params: 6,807,113,728 || trainable%: 0.0
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.mistral.modeling_mistral.MistralForCausalLM'>
+--> final self.generation_config: GenerationConfig {
+  "bos_token_id": 1,
+  "eos_token_id": 2
+}
+
+--> final self.generation_config_dict: {'temperature': 1.0, 'top_k': -1, 'top_p': 1.0, 'max_new_tokens': 256}
+inference process: 0it [00:00, ?it/s]inference process: 1it [03:14, 194.05s/it]inference process: 2it [06:28, 194.16s/it]inference process: 3it [09:14, 181.24s/it]inference process: 4it [12:01, 175.62s/it]inference process: 5it [14:51, 173.66s/it]inference process: 6it [18:05, 180.67s/it]inference process: 7it [20:03, 160.00s/it]inference process: 8it [23:17, 170.92s/it]inference process: 9it [26:31, 178.21s/it]inference process: 10it [29:46, 183.24s/it]inference process: 11it [33:00, 186.65s/it]inference process: 12it [36:14, 188.98s/it]inference process: 13it [38:47, 177.93s/it]inference process: 14it [42:01, 182.88s/it]inference process: 15it [44:51, 179.06s/it]inference process: 16it [47:46, 177.67s/it]inference process: 17it [51:00, 182.68s/it]inference process: 18it [54:07, 183.83s/it]inference process: 19it [57:19, 186.33s/it]inference process: 20it [1:00:33, 188.71s/it]inference process: 21it [1:03:30, 185.08s/it]inference process: 22it [1:06:44, 187.87s/it]inference process: 23it [1:09:58, 189.84s/it]inference process: 24it [1:13:11, 190.51s/it]inference process: 25it [1:16:25, 191.64s/it]inference process: 26it [1:18:57, 179.90s/it]inference process: 27it [1:22:12, 184.25s/it]inference process: 28it [1:25:26, 187.29s/it]inference process: 29it [1:27:31, 168.60s/it]inference process: 30it [1:30:27, 170.67s/it]inference process: 31it [1:33:41, 177.78s/it]inference process: 32it [1:35:30, 157.23s/it]inference process: 33it [1:38:44, 168.34s/it]inference process: 34it [1:41:51, 173.78s/it]inference process: 35it [1:45:05, 179.94s/it]inference process: 36it [1:47:26, 168.06s/it]inference process: 37it [1:50:40, 175.99s/it]inference process: 38it [1:53:42, 177.82s/it]inference process: 39it [1:56:57, 182.80s/it]inference process: 40it [1:59:02, 165.43s/it]inference process: 41it [2:02:16, 174.10s/it]inference process: 42it [2:05:30, 180.15s/it]inference process: 43it [2:08:44, 184.39s/it]inference process: 44it [2:11:59, 187.36s/it]inference process: 45it [2:15:13, 189.41s/it]inference process: 46it [2:18:27, 190.87s/it]inference process: 47it [2:21:41, 191.89s/it]inference process: 48it [2:24:12, 179.41s/it]inference process: 49it [2:27:26, 183.87s/it]inference process: 50it [2:30:40, 186.99s/it]inference process: 51it [2:33:55, 189.20s/it]inference process: 52it [2:37:09, 190.73s/it]inference process: 53it [2:40:23, 191.79s/it]inference process: 54it [2:43:37, 192.54s/it]inference process: 55it [2:46:02, 178.02s/it]inference process: 56it [2:49:16, 182.93s/it]inference process: 57it [2:51:32, 168.96s/it]inference process: 58it [2:54:29, 171.26s/it]inference process: 59it [2:56:54, 163.47s/it]inference process: 60it [3:00:09, 172.71s/it]inference process: 61it [3:03:23, 179.19s/it]inference process: 62it [3:06:36, 183.40s/it]inference process: 63it [3:09:51, 186.72s/it]inference process: 64it [3:13:05, 189.02s/it]inference process: 65it [3:16:19, 190.61s/it]inference process: 66it [3:19:00, 181.58s/it]inference process: 67it [3:21:23, 170.06s/it]inference process: 68it [3:24:37, 177.29s/it]inference process: 69it [3:27:51, 182.40s/it]inference process: 70it [3:31:06, 185.93s/it]inference process: 71it [3:34:20, 188.42s/it]inference process: 72it [3:37:31, 189.16s/it]inference process: 73it [3:40:45, 190.71s/it]inference process: 74it [3:44:00, 191.89s/it]inference process: 75it [3:46:50, 185.49s/it]inference process: 76it [3:50:05, 188.32s/it]inference process: 77it [3:53:20, 190.32s/it]inference process: 78it [3:56:23, 188.06s/it]inference process: 79it [3:59:34, 188.83s/it]inference process: 80it [4:02:49, 190.75s/it]inference process: 81it [4:05:33, 182.88s/it]inference process: 82it [4:08:49, 186.60s/it]inference process: 83it [4:10:17, 157.06s/it]inference process: 83it [4:10:17, 180.93s/it]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 310, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_pretrained(args)
+  File "main_pipeline_llm_MIA.py", line 47, in evaluate_no_attack_pretrained
+    exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/timer.py", line 66, in wrapper
+    result = func(*args, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1328, in inference
+    self.final_state = self.save_state()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1676, in save_state
+    "active_model_body": copy.deepcopy(self.parties[1].global_model).to("cpu") if self.parties[1].global_model != None else None,
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 153, in deepcopy
+    y = copier(memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/torch/nn/parameter.py", line 32, in __deepcopy__
+    result = type(self)(self.data.clone(memory_format=torch.preserve_format), self.requires_grad)
+RuntimeError: CUDA out of memory. Tried to allocate 224.00 MiB (GPU 0; 39.41 GiB total capacity; 37.23 GiB already allocated; 182.50 MiB free; 37.37 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+2024-10-03 07:40:58.017 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-03 07:41:07.010 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-03 07:41:29.408 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  63  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'type': 'pred', 'epsilon': 70}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_70,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 63 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:08<00:42,  8.41s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [00:16<00:31,  7.97s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:23<00:23,  7.86s/it]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:31<00:15,  7.93s/it]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:39<00:07,  7.82s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:43<00:00,  6.44s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:43<00:00,  7.21s/it]
+===== is_active_party=True---dict_keys([1]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+1
+trainable params: 1,597,440 || all params: 6,807,113,728 || trainable%: 0.02346721479662048
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=0
+trainable params: 0 || all params: 6,807,113,728 || trainable%: 0.0
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.mistral.modeling_mistral.MistralForCausalLM'>
+--> final self.generation_config: GenerationConfig {
+  "bos_token_id": 1,
+  "eos_token_id": 2
+}
+
+--> final self.generation_config_dict: {'temperature': 1.0, 'top_k': -1, 'top_p': 1.0, 'max_new_tokens': 256}
+inference process: 0it [00:00, ?it/s]inference process: 1it [03:14, 194.93s/it]inference process: 2it [05:38, 165.00s/it]inference process: 3it [08:38, 171.75s/it]inference process: 4it [11:10, 163.67s/it]inference process: 5it [13:49, 162.16s/it]inference process: 6it [15:41, 144.99s/it]inference process: 7it [17:46, 138.67s/it]inference process: 8it [21:02, 156.73s/it]inference process: 9it [24:17, 168.82s/it]inference process: 10it [27:33, 177.06s/it]inference process: 11it [30:48, 182.70s/it]inference process: 12it [34:04, 186.58s/it]inference process: 13it [36:23, 172.26s/it]inference process: 14it [39:38, 179.28s/it]inference process: 15it [42:54, 184.19s/it]inference process: 16it [45:52, 182.25s/it]inference process: 17it [48:54, 182.18s/it]inference process: 18it [52:01, 183.81s/it]inference process: 19it [55:17, 187.34s/it]inference process: 20it [57:37, 173.19s/it]inference process: 21it [1:00:36, 174.85s/it]inference process: 22it [1:03:04, 166.87s/it]inference process: 23it [1:06:20, 175.49s/it]inference process: 24it [1:08:38, 164.30s/it]inference process: 25it [1:11:47, 171.66s/it]inference process: 26it [1:15:02, 178.86s/it]inference process: 27it [1:18:18, 183.90s/it]inference process: 28it [1:21:34, 187.42s/it]inference process: 29it [1:24:15, 179.67s/it]inference process: 30it [1:27:13, 179.08s/it]inference process: 31it [1:30:29, 184.03s/it]inference process: 32it [1:33:44, 187.47s/it]inference process: 33it [1:36:42, 184.53s/it]inference process: 34it [1:39:49, 185.49s/it]inference process: 35it [1:43:05, 188.50s/it]inference process: 36it [1:46:12, 187.95s/it]inference process: 37it [1:49:27, 190.30s/it]inference process: 38it [1:52:11, 182.34s/it]inference process: 39it [1:55:27, 186.35s/it]inference process: 40it [1:57:59, 176.17s/it]inference process: 41it [2:01:15, 182.01s/it]inference process: 42it [2:04:30, 186.07s/it]inference process: 43it [2:07:46, 188.90s/it]inference process: 44it [2:11:02, 190.93s/it]inference process: 45it [2:14:17, 192.32s/it]inference process: 46it [2:17:33, 193.31s/it]inference process: 47it [2:20:02, 180.12s/it]inference process: 48it [2:22:30, 170.54s/it]inference process: 49it [2:25:46, 178.06s/it]inference process: 50it [2:28:25, 172.23s/it]inference process: 51it [2:31:40, 179.29s/it]inference process: 52it [2:34:56, 184.21s/it]inference process: 53it [2:38:12, 187.65s/it]inference process: 54it [2:41:27, 190.08s/it]inference process: 55it [2:44:18, 184.15s/it]inference process: 56it [2:47:34, 187.62s/it]inference process: 57it [2:50:49, 190.02s/it]inference process: 58it [2:53:33, 182.19s/it]inference process: 59it [2:56:49, 186.28s/it]inference process: 60it [2:59:23, 176.77s/it]inference process: 61it [3:02:39, 182.46s/it]inference process: 62it [3:05:55, 186.45s/it]inference process: 63it [3:08:48, 182.29s/it]inference process: 64it [3:12:03, 186.36s/it]inference process: 65it [3:15:19, 189.22s/it]inference process: 66it [3:18:00, 180.68s/it]inference process: 67it [3:20:20, 168.59s/it]inference process: 68it [3:23:36, 176.75s/it]inference process: 69it [3:26:52, 182.45s/it]inference process: 70it [3:30:08, 186.40s/it]inference process: 71it [3:33:23, 189.21s/it]inference process: 72it [3:36:33, 189.47s/it]inference process: 73it [3:39:49, 191.33s/it]inference process: 74it [3:43:05, 192.64s/it]inference process: 75it [3:45:36, 180.25s/it]inference process: 76it [3:48:52, 184.89s/it]inference process: 77it [3:52:08, 188.12s/it]inference process: 78it [3:54:32, 174.95s/it]inference process: 79it [3:57:47, 181.19s/it]inference process: 80it [4:00:15, 171.03s/it]inference process: 81it [4:03:00, 169.20s/it]inference process: 82it [4:06:15, 177.14s/it]inference process: 83it [4:07:39, 149.14s/it]inference process: 83it [4:07:39, 179.03s/it]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 310, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_pretrained(args)
+  File "main_pipeline_llm_MIA.py", line 47, in evaluate_no_attack_pretrained
+    exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/timer.py", line 66, in wrapper
+    result = func(*args, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1328, in inference
+    self.final_state = self.save_state()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1676, in save_state
+    "active_model_body": copy.deepcopy(self.parties[1].global_model).to("cpu") if self.parties[1].global_model != None else None,
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 153, in deepcopy
+    y = copier(memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/torch/nn/parameter.py", line 32, in __deepcopy__
+    result = type(self)(self.data.clone(memory_format=torch.preserve_format), self.requires_grad)
+RuntimeError: CUDA out of memory. Tried to allocate 224.00 MiB (GPU 0; 39.41 GiB total capacity; 37.22 GiB already allocated; 180.50 MiB free; 37.37 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+2024-10-03 12:18:05.946 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-03 12:18:13.011 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-03 12:18:31.998 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  63  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'type': 'pred', 'epsilon': 80}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_80,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 63 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:09<00:47,  9.59s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [00:16<00:33,  8.29s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:25<00:24,  8.21s/it]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:33<00:16,  8.21s/it]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:40<00:08,  8.02s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:44<00:00,  6.57s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:44<00:00,  7.46s/it]
+===== is_active_party=True---dict_keys([1]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+1
+trainable params: 1,597,440 || all params: 6,807,113,728 || trainable%: 0.02346721479662048
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=0
+trainable params: 0 || all params: 6,807,113,728 || trainable%: 0.0
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.mistral.modeling_mistral.MistralForCausalLM'>
+--> final self.generation_config: GenerationConfig {
+  "bos_token_id": 1,
+  "eos_token_id": 2
+}
+
+--> final self.generation_config_dict: {'temperature': 1.0, 'top_k': -1, 'top_p': 1.0, 'max_new_tokens': 256}
+inference process: 0it [00:00, ?it/s]inference process: 1it [03:15, 195.03s/it]inference process: 2it [05:39, 165.10s/it]inference process: 3it [08:39, 171.90s/it]inference process: 4it [11:10, 163.77s/it]inference process: 5it [13:50, 162.25s/it]inference process: 6it [16:57, 170.88s/it]inference process: 7it [19:23, 162.81s/it]inference process: 8it [22:39, 173.22s/it]inference process: 9it [25:54, 180.21s/it]inference process: 10it [29:10, 184.99s/it]inference process: 11it [32:26, 188.24s/it]inference process: 12it [35:41, 190.45s/it]inference process: 13it [38:01, 174.96s/it]inference process: 14it [41:16, 181.19s/it]inference process: 15it [44:32, 185.53s/it]inference process: 16it [47:29, 183.18s/it]inference process: 17it [50:32, 182.84s/it]inference process: 18it [53:39, 184.27s/it]inference process: 19it [56:55, 187.68s/it]inference process: 20it [59:15, 173.41s/it]inference process: 21it [1:02:14, 175.01s/it]inference process: 22it [1:04:42, 166.98s/it]inference process: 23it [1:07:57, 175.56s/it]inference process: 24it [1:10:16, 164.34s/it]inference process: 25it [1:13:24, 171.65s/it]inference process: 26it [1:16:40, 178.81s/it]inference process: 27it [1:19:55, 183.83s/it]inference process: 28it [1:23:11, 187.31s/it]inference process: 29it [1:25:52, 179.56s/it]inference process: 30it [1:28:50, 178.98s/it]inference process: 31it [1:32:05, 183.91s/it]inference process: 32it [1:35:21, 187.37s/it]inference process: 33it [1:38:18, 184.43s/it]inference process: 34it [1:41:34, 187.74s/it]inference process: 35it [1:44:49, 190.06s/it]inference process: 36it [1:47:56, 189.20s/it]inference process: 37it [1:51:13, 191.43s/it]inference process: 38it [1:53:57, 183.13s/it]inference process: 39it [1:57:12, 186.82s/it]inference process: 40it [1:59:45, 176.47s/it]inference process: 41it [2:03:00, 182.16s/it]inference process: 42it [2:06:16, 186.17s/it]inference process: 43it [2:09:31, 188.92s/it]inference process: 44it [2:12:46, 190.90s/it]inference process: 45it [2:16:02, 192.25s/it]inference process: 46it [2:19:17, 193.27s/it]inference process: 47it [2:21:47, 180.08s/it]inference process: 48it [2:25:02, 184.72s/it]inference process: 49it [2:28:18, 187.96s/it]inference process: 50it [2:30:57, 179.19s/it]inference process: 51it [2:34:12, 184.14s/it]inference process: 52it [2:37:28, 187.59s/it]inference process: 53it [2:40:44, 190.02s/it]inference process: 54it [2:43:59, 191.67s/it]inference process: 55it [2:46:40, 182.34s/it]inference process: 56it [2:49:55, 186.29s/it]inference process: 57it [2:53:11, 189.03s/it]inference process: 58it [2:55:54, 181.45s/it]inference process: 59it [2:59:10, 185.68s/it]inference process: 60it [3:01:44, 176.28s/it]inference process: 61it [3:05:00, 182.06s/it]inference process: 62it [3:08:15, 186.12s/it]inference process: 63it [3:11:08, 182.00s/it]inference process: 64it [3:14:23, 186.07s/it]inference process: 65it [3:17:39, 188.89s/it]inference process: 66it [3:20:19, 180.39s/it]inference process: 67it [3:22:40, 168.33s/it]inference process: 68it [3:25:55, 176.49s/it]inference process: 69it [3:29:11, 182.22s/it]inference process: 70it [3:32:26, 186.18s/it]inference process: 71it [3:35:42, 189.00s/it]inference process: 72it [3:38:52, 189.26s/it]inference process: 73it [3:42:07, 191.13s/it]inference process: 74it [3:45:23, 192.45s/it]inference process: 75it [3:47:54, 180.11s/it]inference process: 76it [3:51:09, 184.72s/it]inference process: 77it [3:54:25, 187.97s/it]inference process: 78it [3:56:49, 174.83s/it]inference process: 79it [4:00:05, 181.05s/it]inference process: 80it [4:02:32, 170.91s/it]inference process: 81it [4:05:17, 169.07s/it]inference process: 82it [4:08:32, 177.03s/it]inference process: 83it [4:09:56, 149.07s/it]inference process: 83it [4:09:56, 180.68s/it]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 310, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_pretrained(args)
+  File "main_pipeline_llm_MIA.py", line 47, in evaluate_no_attack_pretrained
+    exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/timer.py", line 66, in wrapper
+    result = func(*args, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1328, in inference
+    self.final_state = self.save_state()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1676, in save_state
+    "active_model_body": copy.deepcopy(self.parties[1].global_model).to("cpu") if self.parties[1].global_model != None else None,
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 153, in deepcopy
+    y = copier(memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/torch/nn/parameter.py", line 32, in __deepcopy__
+    result = type(self)(self.data.clone(memory_format=torch.preserve_format), self.requires_grad)
+RuntimeError: CUDA out of memory. Tried to allocate 224.00 MiB (GPU 0; 39.41 GiB total capacity; 37.22 GiB already allocated; 180.56 MiB free; 37.37 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+2024-10-03 17:02:05.434 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-03 17:02:24.054 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-03 17:03:15.922 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  64  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'type': 'pred', 'epsilon': 70}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_70,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 64 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:43<03:35, 43.03s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [01:22<02:43, 40.78s/it]Loading checkpoint shards:  50%|█████     | 3/6 [02:58<03:18, 66.01s/it]Loading checkpoint shards:  67%|██████▋   | 4/6 [04:22<02:26, 73.14s/it]Loading checkpoint shards:  83%|████████▎ | 5/6 [05:52<01:19, 79.27s/it]Loading checkpoint shards: 100%|██████████| 6/6 [06:10<00:00, 58.39s/it]Loading checkpoint shards: 100%|██████████| 6/6 [06:10<00:00, 61.72s/it]
+===== is_active_party=True---dict_keys([1]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+1
+trainable params: 1,597,440 || all params: 6,807,113,728 || trainable%: 0.02346721479662048
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=0
+trainable params: 0 || all params: 6,807,113,728 || trainable%: 0.0
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.mistral.modeling_mistral.MistralForCausalLM'>
+--> final self.generation_config: GenerationConfig {
+  "bos_token_id": 1,
+  "eos_token_id": 2
+}
+
+--> final self.generation_config_dict: {'temperature': 1.0, 'top_k': -1, 'top_p': 1.0, 'max_new_tokens': 256}
+inference process: 0it [00:00, ?it/s]inference process: 1it [03:15, 195.51s/it]inference process: 2it [06:31, 195.57s/it]inference process: 3it [09:46, 195.60s/it]inference process: 4it [13:02, 195.58s/it]inference process: 5it [16:17, 195.60s/it]inference process: 6it [18:24, 172.16s/it]inference process: 7it [21:37, 179.08s/it]inference process: 8it [24:53, 184.31s/it]inference process: 9it [28:08, 187.80s/it]inference process: 10it [31:24, 190.24s/it]inference process: 11it [34:40, 191.89s/it]inference process: 12it [37:55, 193.02s/it]inference process: 13it [41:11, 193.83s/it]inference process: 14it [44:27, 194.35s/it]inference process: 15it [47:03, 182.96s/it]inference process: 16it [50:01, 181.38s/it]inference process: 17it [53:16, 185.64s/it]inference process: 18it [56:24, 186.28s/it]inference process: 19it [59:40, 189.16s/it]inference process: 20it [1:02:56, 191.09s/it]inference process: 21it [1:06:10, 192.14s/it]inference process: 22it [1:09:26, 193.20s/it]inference process: 23it [1:12:42, 193.96s/it]inference process: 24it [1:15:17, 182.41s/it]inference process: 25it [1:17:27, 166.53s/it]inference process: 26it [1:20:42, 175.29s/it]inference process: 27it [1:23:58, 181.40s/it]inference process: 28it [1:27:14, 185.68s/it]inference process: 29it [1:30:05, 181.38s/it]inference process: 30it [1:33:03, 180.30s/it]inference process: 31it [1:36:18, 184.86s/it]inference process: 32it [1:39:34, 188.08s/it]inference process: 33it [1:42:48, 190.01s/it]inference process: 34it [1:46:04, 191.68s/it]inference process: 35it [1:49:19, 192.83s/it]inference process: 36it [1:52:28, 191.64s/it]inference process: 37it [1:55:44, 192.85s/it]inference process: 38it [1:59:00, 193.69s/it]inference process: 39it [2:02:15, 194.28s/it]inference process: 40it [2:05:31, 194.67s/it]inference process: 41it [2:08:47, 194.96s/it]inference process: 42it [2:11:29, 185.29s/it]inference process: 43it [2:14:45, 188.37s/it]inference process: 44it [2:17:42, 184.88s/it]inference process: 45it [2:20:57, 188.09s/it]inference process: 46it [2:24:13, 190.37s/it]inference process: 47it [2:27:28, 191.95s/it]inference process: 48it [2:29:36, 172.65s/it]inference process: 49it [2:32:52, 179.53s/it]inference process: 50it [2:35:29, 172.95s/it]inference process: 51it [2:38:45, 179.77s/it]inference process: 52it [2:42:01, 184.53s/it]inference process: 53it [2:45:16, 187.83s/it]inference process: 54it [2:48:28, 189.13s/it]inference process: 55it [2:50:42, 172.40s/it]inference process: 56it [2:53:40, 174.32s/it]inference process: 57it [2:55:57, 162.91s/it]inference process: 58it [2:59:12, 172.73s/it]inference process: 59it [3:02:26, 178.93s/it]inference process: 60it [3:05:41, 183.94s/it]inference process: 61it [3:08:57, 187.45s/it]inference process: 62it [3:12:13, 189.89s/it]inference process: 63it [3:15:28, 191.63s/it]inference process: 64it [3:18:44, 192.90s/it]inference process: 65it [3:22:00, 193.78s/it]inference process: 66it [3:24:47, 185.77s/it]inference process: 67it [3:27:01, 170.08s/it]inference process: 68it [3:29:38, 166.35s/it]inference process: 69it [3:32:54, 175.17s/it]inference process: 70it [3:36:10, 181.31s/it]inference process: 71it [3:39:25, 185.64s/it]inference process: 72it [3:42:41, 188.64s/it]inference process: 73it [3:45:57, 190.75s/it]inference process: 74it [3:49:12, 192.17s/it]inference process: 75it [3:52:27, 193.10s/it]inference process: 76it [3:55:43, 193.74s/it]inference process: 77it [3:58:28, 185.23s/it]inference process: 78it [4:00:53, 173.08s/it]inference process: 79it [4:04:08, 179.64s/it]inference process: 80it [4:06:46, 173.14s/it]inference process: 81it [4:09:55, 177.97s/it]inference process: 82it [4:13:10, 183.04s/it]inference process: 83it [4:14:33, 153.02s/it]inference process: 83it [4:14:33, 184.02s/it]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 310, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_pretrained(args)
+  File "main_pipeline_llm_MIA.py", line 47, in evaluate_no_attack_pretrained
+    exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/timer.py", line 66, in wrapper
+    result = func(*args, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1328, in inference
+    self.final_state = self.save_state()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1676, in save_state
+    "active_model_body": copy.deepcopy(self.parties[1].global_model).to("cpu") if self.parties[1].global_model != None else None,
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 153, in deepcopy
+    y = copier(memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/torch/nn/parameter.py", line 32, in __deepcopy__
+    result = type(self)(self.data.clone(memory_format=torch.preserve_format), self.requires_grad)
+RuntimeError: CUDA out of memory. Tried to allocate 224.00 MiB (GPU 0; 39.41 GiB total capacity; 37.22 GiB already allocated; 198.50 MiB free; 37.35 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+2024-10-03 21:58:31.431 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-03 21:58:40.647 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-03 21:59:02.484 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  64  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'type': 'pred', 'epsilon': 80}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_80,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 64 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:10<00:51, 10.37s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [00:19<00:38,  9.73s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:30<00:30, 10.29s/it]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:40<00:20, 10.13s/it]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:48<00:09,  9.44s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:52<00:00,  7.56s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:52<00:00,  8.77s/it]
+===== is_active_party=True---dict_keys([1]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+1
+trainable params: 1,597,440 || all params: 6,807,113,728 || trainable%: 0.02346721479662048
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=0
+trainable params: 0 || all params: 6,807,113,728 || trainable%: 0.0
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.mistral.modeling_mistral.MistralForCausalLM'>
+--> final self.generation_config: GenerationConfig {
+  "bos_token_id": 1,
+  "eos_token_id": 2
+}
+
+--> final self.generation_config_dict: {'temperature': 1.0, 'top_k': -1, 'top_p': 1.0, 'max_new_tokens': 256}
+inference process: 0it [00:00, ?it/s]inference process: 1it [03:14, 194.63s/it]inference process: 2it [06:29, 194.61s/it]inference process: 3it [09:43, 194.64s/it]inference process: 4it [12:58, 194.63s/it]inference process: 5it [16:13, 194.63s/it]inference process: 6it [18:19, 171.30s/it]inference process: 7it [21:31, 178.22s/it]inference process: 8it [24:46, 183.45s/it]inference process: 9it [28:00, 186.93s/it]inference process: 10it [31:15, 189.34s/it]inference process: 11it [34:30, 190.96s/it]inference process: 12it [37:44, 192.05s/it]inference process: 13it [40:59, 192.80s/it]inference process: 14it [44:13, 193.32s/it]inference process: 15it [46:49, 181.97s/it]inference process: 16it [49:46, 180.40s/it]inference process: 17it [53:00, 184.66s/it]inference process: 18it [56:07, 185.25s/it]inference process: 19it [59:21, 188.04s/it]inference process: 20it [1:02:36, 189.96s/it]inference process: 21it [1:05:49, 190.99s/it]inference process: 22it [1:09:04, 192.06s/it]inference process: 23it [1:12:18, 192.80s/it]inference process: 24it [1:14:53, 181.32s/it]inference process: 25it [1:16:48, 161.33s/it]inference process: 26it [1:20:02, 171.29s/it]inference process: 27it [1:23:17, 178.26s/it]inference process: 28it [1:26:31, 183.14s/it]inference process: 29it [1:29:21, 179.29s/it]inference process: 30it [1:32:18, 178.51s/it]inference process: 31it [1:35:33, 183.27s/it]inference process: 32it [1:38:47, 186.64s/it]inference process: 33it [1:41:14, 174.87s/it]inference process: 34it [1:44:29, 180.74s/it]inference process: 35it [1:47:43, 184.86s/it]inference process: 36it [1:50:51, 185.79s/it]inference process: 37it [1:54:06, 188.43s/it]inference process: 38it [1:57:20, 190.24s/it]inference process: 39it [2:00:35, 191.53s/it]inference process: 40it [2:03:49, 192.43s/it]inference process: 41it [2:07:04, 193.06s/it]inference process: 42it [2:09:46, 183.72s/it]inference process: 43it [2:13:01, 186.99s/it]inference process: 44it [2:15:56, 183.64s/it]inference process: 45it [2:19:11, 186.91s/it]inference process: 46it [2:22:25, 189.19s/it]inference process: 47it [2:25:40, 190.78s/it]inference process: 48it [2:27:47, 171.61s/it]inference process: 49it [2:31:01, 178.48s/it]inference process: 50it [2:33:38, 171.96s/it]inference process: 51it [2:36:53, 178.81s/it]inference process: 52it [2:40:07, 183.55s/it]inference process: 53it [2:43:22, 186.87s/it]inference process: 54it [2:46:33, 188.17s/it]inference process: 55it [2:48:46, 171.55s/it]inference process: 56it [2:51:44, 173.44s/it]inference process: 57it [2:53:09, 147.02s/it]inference process: 58it [2:56:24, 161.32s/it]inference process: 59it [2:59:36, 170.63s/it]inference process: 60it [3:02:51, 177.80s/it]inference process: 61it [3:06:05, 182.84s/it]inference process: 62it [3:09:20, 186.35s/it]inference process: 63it [3:12:35, 188.84s/it]inference process: 64it [3:15:49, 190.57s/it]inference process: 65it [3:19:04, 191.79s/it]inference process: 66it [3:21:50, 184.09s/it]inference process: 67it [3:24:03, 168.68s/it]inference process: 68it [3:26:39, 165.09s/it]inference process: 69it [3:29:54, 173.95s/it]inference process: 70it [3:33:09, 180.11s/it]inference process: 71it [3:36:23, 184.45s/it]inference process: 72it [3:39:38, 187.48s/it]inference process: 73it [3:42:52, 189.60s/it]inference process: 74it [3:46:07, 191.10s/it]inference process: 75it [3:49:21, 192.12s/it]inference process: 76it [3:52:36, 192.83s/it]inference process: 77it [3:55:21, 184.48s/it]inference process: 78it [3:57:45, 172.47s/it]inference process: 79it [4:01:00, 179.12s/it]inference process: 80it [4:03:38, 172.71s/it]inference process: 81it [4:06:47, 177.58s/it]inference process: 82it [4:10:01, 182.67s/it]inference process: 83it [4:11:24, 152.72s/it]inference process: 83it [4:11:24, 181.74s/it]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 310, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_pretrained(args)
+  File "main_pipeline_llm_MIA.py", line 47, in evaluate_no_attack_pretrained
+    exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/timer.py", line 66, in wrapper
+    result = func(*args, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1328, in inference
+    self.final_state = self.save_state()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1676, in save_state
+    "active_model_body": copy.deepcopy(self.parties[1].global_model).to("cpu") if self.parties[1].global_model != None else None,
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 153, in deepcopy
+    y = copier(memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/torch/nn/parameter.py", line 32, in __deepcopy__
+    result = type(self)(self.data.clone(memory_format=torch.preserve_format), self.requires_grad)
+RuntimeError: CUDA out of memory. Tried to allocate 224.00 MiB (GPU 0; 39.41 GiB total capacity; 37.22 GiB already allocated; 198.50 MiB free; 37.35 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+2024-10-04 02:45:42.193 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-04 02:45:51.250 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-04 02:46:15.141 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  65  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'type': 'pred', 'epsilon': 70}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_70,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 65 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:11<00:55, 11.06s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [00:20<00:40, 10.19s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:29<00:28,  9.50s/it]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:37<00:18,  9.00s/it]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:45<00:08,  8.51s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:49<00:00,  6.97s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:49<00:00,  8.19s/it]
+===== is_active_party=True---dict_keys([1]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+1
+trainable params: 1,597,440 || all params: 6,807,113,728 || trainable%: 0.02346721479662048
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=0
+trainable params: 0 || all params: 6,807,113,728 || trainable%: 0.0
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.mistral.modeling_mistral.MistralForCausalLM'>
+--> final self.generation_config: GenerationConfig {
+  "bos_token_id": 1,
+  "eos_token_id": 2
+}
+
+--> final self.generation_config_dict: {'temperature': 1.0, 'top_k': -1, 'top_p': 1.0, 'max_new_tokens': 256}
+inference process: 0it [00:00, ?it/s]inference process: 1it [03:14, 194.57s/it]inference process: 2it [06:29, 194.55s/it]inference process: 3it [09:43, 194.53s/it]inference process: 4it [12:58, 194.48s/it]inference process: 5it [16:12, 194.48s/it]inference process: 6it [19:24, 193.68s/it]inference process: 7it [22:16, 186.41s/it]inference process: 8it [25:30, 188.97s/it]inference process: 9it [28:44, 190.66s/it]inference process: 10it [31:59, 191.86s/it]inference process: 11it [35:13, 192.68s/it]inference process: 12it [38:28, 193.22s/it]inference process: 13it [41:42, 193.62s/it]inference process: 14it [44:26, 184.64s/it]inference process: 15it [47:41, 187.63s/it]inference process: 16it [50:37, 184.04s/it]inference process: 17it [53:51, 187.17s/it]inference process: 18it [57:05, 189.35s/it]inference process: 19it [1:00:13, 188.90s/it]inference process: 20it [1:03:28, 190.58s/it]inference process: 21it [1:06:42, 191.77s/it]inference process: 22it [1:09:57, 192.58s/it]inference process: 23it [1:13:11, 193.14s/it]inference process: 24it [1:15:46, 181.55s/it]inference process: 25it [1:18:23, 174.34s/it]inference process: 26it [1:21:38, 180.38s/it]inference process: 27it [1:24:52, 184.60s/it]inference process: 28it [1:28:07, 187.53s/it]inference process: 29it [1:30:47, 179.45s/it]inference process: 30it [1:33:49, 180.25s/it]inference process: 31it [1:36:56, 182.13s/it]inference process: 32it [1:40:10, 185.80s/it]inference process: 33it [1:43:25, 188.38s/it]inference process: 34it [1:46:32, 188.15s/it]inference process: 35it [1:49:47, 189.99s/it]inference process: 36it [1:52:53, 188.98s/it]inference process: 37it [1:56:08, 190.63s/it]inference process: 38it [1:58:58, 184.51s/it]inference process: 39it [2:02:12, 187.53s/it]inference process: 40it [2:05:02, 182.02s/it]inference process: 41it [2:08:16, 185.73s/it]inference process: 42it [2:11:30, 188.32s/it]inference process: 43it [2:14:45, 190.14s/it]inference process: 44it [2:17:59, 191.44s/it]inference process: 45it [2:21:13, 192.29s/it]inference process: 46it [2:24:26, 192.24s/it]inference process: 47it [2:26:45, 176.37s/it]inference process: 48it [2:29:59, 181.72s/it]inference process: 49it [2:33:13, 185.50s/it]inference process: 50it [2:35:53, 177.74s/it]inference process: 51it [2:39:08, 182.77s/it]inference process: 52it [2:42:22, 186.24s/it]inference process: 53it [2:45:26, 185.66s/it]inference process: 54it [2:48:19, 181.65s/it]inference process: 55it [2:50:39, 169.25s/it]inference process: 56it [2:53:25, 168.25s/it]inference process: 57it [2:56:00, 164.42s/it]inference process: 58it [2:59:00, 169.06s/it]inference process: 59it [3:02:14, 176.65s/it]inference process: 60it [3:04:48, 169.70s/it]inference process: 61it [3:08:02, 177.11s/it]inference process: 62it [3:11:16, 181.98s/it]inference process: 63it [3:14:07, 178.78s/it]inference process: 64it [3:17:22, 183.50s/it]inference process: 65it [3:20:36, 186.76s/it]inference process: 66it [3:23:50, 189.06s/it]inference process: 67it [3:26:18, 176.57s/it]inference process: 68it [3:29:32, 181.92s/it]inference process: 69it [3:32:47, 185.66s/it]inference process: 70it [3:36:01, 188.21s/it]inference process: 71it [3:39:15, 190.03s/it]inference process: 72it [3:42:24, 189.60s/it]inference process: 73it [3:45:38, 190.98s/it]inference process: 74it [3:48:52, 191.98s/it]inference process: 75it [3:52:06, 192.66s/it]inference process: 76it [3:55:21, 193.21s/it]inference process: 77it [3:58:35, 193.63s/it]inference process: 78it [4:01:03, 179.84s/it]inference process: 79it [4:04:18, 184.38s/it]inference process: 80it [4:07:33, 187.57s/it]inference process: 81it [4:10:14, 179.66s/it]inference process: 82it [4:13:30, 184.33s/it]inference process: 83it [4:14:57, 155.20s/it]inference process: 83it [4:14:57, 184.30s/it]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 310, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_pretrained(args)
+  File "main_pipeline_llm_MIA.py", line 47, in evaluate_no_attack_pretrained
+    exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/timer.py", line 66, in wrapper
+    result = func(*args, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1328, in inference
+    self.final_state = self.save_state()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1676, in save_state
+    "active_model_body": copy.deepcopy(self.parties[1].global_model).to("cpu") if self.parties[1].global_model != None else None,
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 153, in deepcopy
+    y = copier(memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/torch/nn/parameter.py", line 32, in __deepcopy__
+    result = type(self)(self.data.clone(memory_format=torch.preserve_format), self.requires_grad)
+RuntimeError: CUDA out of memory. Tried to allocate 224.00 MiB (GPU 0; 39.41 GiB total capacity; 37.23 GiB already allocated; 204.50 MiB free; 37.35 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+2024-10-04 07:34:05.552 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-04 07:34:13.875 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-04 07:34:33.780 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  65  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'type': 'pred', 'epsilon': 80}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_80,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 65 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:09<00:45,  9.14s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [00:17<00:34,  8.70s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:25<00:25,  8.42s/it]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:33<00:16,  8.34s/it]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:41<00:07,  7.96s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:45<00:00,  6.58s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:45<00:00,  7.51s/it]
+===== is_active_party=True---dict_keys([1]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+1
+trainable params: 1,597,440 || all params: 6,807,113,728 || trainable%: 0.02346721479662048
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=0
+trainable params: 0 || all params: 6,807,113,728 || trainable%: 0.0
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.mistral.modeling_mistral.MistralForCausalLM'>
+--> final self.generation_config: GenerationConfig {
+  "bos_token_id": 1,
+  "eos_token_id": 2
+}
+
+--> final self.generation_config_dict: {'temperature': 1.0, 'top_k': -1, 'top_p': 1.0, 'max_new_tokens': 256}
+inference process: 0it [00:00, ?it/s]inference process: 1it [03:15, 195.39s/it]inference process: 2it [06:30, 195.39s/it]inference process: 3it [09:46, 195.46s/it]inference process: 4it [13:01, 195.49s/it]inference process: 5it [16:17, 195.50s/it]inference process: 6it [19:30, 194.69s/it]inference process: 7it [22:22, 187.37s/it]inference process: 8it [25:38, 189.91s/it]inference process: 9it [28:53, 191.66s/it]inference process: 10it [31:16, 176.72s/it]inference process: 11it [34:32, 182.46s/it]inference process: 12it [37:47, 186.41s/it]inference process: 13it [41:03, 189.13s/it]inference process: 14it [43:47, 181.74s/it]inference process: 15it [47:03, 185.86s/it]inference process: 16it [49:59, 183.02s/it]inference process: 17it [53:07, 184.34s/it]inference process: 18it [56:22, 187.66s/it]inference process: 19it [59:31, 188.00s/it]inference process: 20it [1:02:46, 190.20s/it]inference process: 21it [1:06:02, 191.76s/it]inference process: 22it [1:09:17, 192.87s/it]inference process: 23it [1:12:32, 193.66s/it]inference process: 24it [1:15:08, 182.13s/it]inference process: 25it [1:17:46, 175.00s/it]inference process: 26it [1:21:02, 181.13s/it]inference process: 27it [1:24:17, 185.44s/it]inference process: 28it [1:27:32, 188.41s/it]inference process: 29it [1:30:14, 180.33s/it]inference process: 30it [1:33:17, 181.16s/it]inference process: 31it [1:36:24, 183.06s/it]inference process: 32it [1:39:40, 186.77s/it]inference process: 33it [1:42:55, 189.35s/it]inference process: 34it [1:46:04, 189.15s/it]inference process: 35it [1:49:19, 191.03s/it]inference process: 36it [1:52:27, 189.98s/it]inference process: 37it [1:55:42, 191.62s/it]inference process: 38it [1:58:33, 185.47s/it]inference process: 39it [2:01:49, 188.46s/it]inference process: 40it [2:04:39, 182.92s/it]inference process: 41it [2:07:54, 186.66s/it]inference process: 42it [2:11:10, 189.30s/it]inference process: 43it [2:14:25, 191.11s/it]inference process: 44it [2:17:40, 192.40s/it]inference process: 45it [2:20:56, 193.29s/it]inference process: 46it [2:24:09, 193.23s/it]inference process: 47it [2:26:29, 177.29s/it]inference process: 48it [2:29:44, 182.67s/it]inference process: 49it [2:33:00, 186.48s/it]inference process: 50it [2:35:40, 178.68s/it]inference process: 51it [2:38:55, 183.70s/it]inference process: 52it [2:42:11, 187.21s/it]inference process: 53it [2:45:26, 189.64s/it]inference process: 54it [2:48:19, 184.68s/it]inference process: 55it [2:50:40, 171.59s/it]inference process: 56it [2:53:27, 170.15s/it]inference process: 57it [2:56:03, 165.96s/it]inference process: 58it [2:59:04, 170.40s/it]inference process: 59it [3:02:19, 177.89s/it]inference process: 60it [3:04:54, 170.79s/it]inference process: 61it [3:08:09, 178.15s/it]inference process: 62it [3:11:23, 182.97s/it]inference process: 63it [3:14:15, 179.73s/it]inference process: 64it [3:17:31, 184.41s/it]inference process: 65it [3:19:54, 172.01s/it]inference process: 66it [3:22:52, 173.97s/it]inference process: 67it [3:25:20, 166.20s/it]inference process: 68it [3:28:36, 174.93s/it]inference process: 69it [3:31:51, 181.07s/it]inference process: 70it [3:35:06, 185.32s/it]inference process: 71it [3:38:22, 188.32s/it]inference process: 72it [3:41:31, 188.72s/it]inference process: 73it [3:44:47, 190.71s/it]inference process: 74it [3:48:02, 192.12s/it]inference process: 75it [3:51:17, 193.09s/it]inference process: 76it [3:54:33, 193.75s/it]inference process: 77it [3:57:48, 194.21s/it]inference process: 78it [4:00:16, 180.38s/it]inference process: 79it [4:03:31, 184.87s/it]inference process: 80it [4:06:47, 188.02s/it]inference process: 81it [4:09:28, 180.03s/it]inference process: 82it [4:12:44, 184.64s/it]inference process: 83it [4:14:11, 155.42s/it]inference process: 83it [4:14:11, 183.75s/it]
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 310, in <module>
+    args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_pretrained(args)
+  File "main_pipeline_llm_MIA.py", line 47, in evaluate_no_attack_pretrained
+    exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/timer.py", line 66, in wrapper
+    result = func(*args, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1328, in inference
+    self.final_state = self.save_state()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1676, in save_state
+    "active_model_body": copy.deepcopy(self.parties[1].global_model).to("cpu") if self.parties[1].global_model != None else None,
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 296, in _reconstruct
+    value = deepcopy(value, memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/copy.py", line 153, in deepcopy
+    y = copier(memo)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/torch/nn/parameter.py", line 32, in __deepcopy__
+    result = type(self)(self.data.clone(memory_format=torch.preserve_format), self.requires_grad)
+RuntimeError: CUDA out of memory. Tried to allocate 224.00 MiB (GPU 0; 39.41 GiB total capacity; 37.23 GiB already allocated; 182.50 MiB free; 37.37 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF

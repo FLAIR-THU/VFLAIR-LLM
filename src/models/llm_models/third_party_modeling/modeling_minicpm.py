@@ -133,9 +133,6 @@ class MiniCPMRMSNorm(nn.Module):
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
-        print('hidden_states:',hidden_states.device)
-        print('self.weight:',self.weight.device)
-
         return rms_layernorm(hidden_states, self.weight, self.variance_epsilon)
 
 
@@ -881,6 +878,7 @@ class MiniCPMSdpaAttention(MiniCPMAttention):
 
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
+        
 
         if attention_mask is not None:
             if attention_mask.size() != (bsz, 1, q_len, kv_seq_len):
@@ -937,8 +935,14 @@ class MiniCPMDecoderLayer(nn.Module):
         )
 
         self.scale_depth = config.scale_depth
-        self.num_hidden_layers = config.num_hidden_layers
 
+        # self.num_hidden_layers should be number of hidden layers in the whole model
+        # not just the head/tail model
+        try:
+            self.num_hidden_layers = config.num_all_hidden_layers
+        except:
+            self.num_hidden_layers = config.num_hidden_layers
+        
     def forward(
         self,
         hidden_states: torch.Tensor,
@@ -969,9 +973,9 @@ class MiniCPMDecoderLayer(nn.Module):
             warnings.warn(
                 "Passing `padding_mask` is deprecated and will be removed in v4.37. Please make sure use `attention_mask` instead.`"
             )
-
         residual = hidden_states
         hidden_states = self.input_layernorm(hidden_states)
+
         # Self Attention
         hidden_states, self_attn_weights, present_key_value = self.self_attn(
             hidden_states=hidden_states,
@@ -992,6 +996,7 @@ class MiniCPMDecoderLayer(nn.Module):
         hidden_states = self.post_attention_layernorm(hidden_states)
 
         hidden_states = self.mlp(hidden_states)
+
         hidden_states = residual + hidden_states * (
             self.scale_depth / math.sqrt(self.num_hidden_layers)
         )
@@ -1131,6 +1136,7 @@ class MiniCPMModel(MiniCPMPreTrainedModel):
                 for layer_idx in range(config.num_hidden_layers)
             ]
         )
+
         self._use_sdpa = config._attn_implementation == "sdpa"
         self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
 

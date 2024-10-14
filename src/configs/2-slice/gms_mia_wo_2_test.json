@@ -1,0 +1,102 @@
+{
+    "epochs": 50,
+    "lr": 0.001,
+    "k": 2,
+    "batch_size": 8,
+    "test_batch_size": 16,
+    "early_stop_threshold": 1,
+    "pipeline": "pretrained",
+    "model_architect":"CLM",
+    "communication":{
+        "communication_protocol": "FedSGD",
+        "iteration_per_aggregation": 1
+    },
+    "finetune_configs":{
+        "name":"LoRA",
+        "configs":{
+            "inference_mode":false,  
+          "r":4,  
+          "lora_alpha":32, 
+          "lora_dropout":0.1
+        }
+    },
+    "dataset":{
+        "dataset_name": "GMS8K-test",
+        "num_classes": 1,
+        "use_prompt": 1
+    },
+    "tokenizer":{
+        "padding": "max_length",
+        "padding_type": "outside",
+        "pad_token": "default",
+        "truncation": "True",
+        "max_length": 128,
+        "padding_side": "left",
+        "add_special_tokens": 1
+    },
+    "model_list":{
+        "name": "meta-mathMetaMath-Mistral-7B",
+        "pretrained": 1,
+        "model_type": "Mistral",
+        "max_sequence": 512,
+        "kwargs_model_loading":{
+            "device_map": "auto"
+        },
+        "0": {
+            "path": "/home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B",
+                "head":{
+                    "trainable": 0,
+                    "embedding_trainable": 0,
+                    "encoder_trainable": 0,
+                    "encoder_trainable_ids":[]
+                }
+        },
+        "1": {
+                "path": "/home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B",
+                "tail":{
+                    "trainable": 0,
+                    "head_layer_trainable": 0,
+                    "encoder_trainable": 0,
+                    "encoder_trainable_ids":[]
+            }
+        },
+        "task":{
+            "task_type": "CausalLM",
+            "generation_config_dict":{
+                "temperature":1.0,
+                "top_k": -1,
+                "top_p": 1.0,
+                "max_new_tokens": 256
+            },
+            "max_new_tokens": 256
+        },
+        "vfl_model_slice_num": 2,
+        "local_encoders_num": 2,
+        "apply_trainable_layer": 0,
+        "global_model": "ClassificationModelHostHead"
+    },
+    "attack_list": {
+        "0":{
+            "name": "VanillaModelInversion_WhiteBox_mse",
+            "parameters": {
+                "party": [1],
+                "lr": 0.01,
+                "epochs": 100,
+                "batch_size": 32,
+                "attack_sample_num": 10
+            }
+        },
+        "1":{
+            "name": "WhiteBoxInversion_mse",
+            "parameters": {
+                "party": [1],
+                "T": 0.05,
+                "lr": 0.005,
+                "epochs": 500,
+                "batch_size": 32,
+                "attack_sample_num":10
+            }
+        }
+    }
+    
+}

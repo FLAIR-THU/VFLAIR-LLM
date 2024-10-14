@@ -147,6 +147,7 @@ class ModelPartitionPipeline(ABC):
                 _model = self._load_model_tail(model_name_or_path, do_split=True, **kwargs)
             else:
                 _model = self._load_model_body(model_name_or_path, do_split=True, **kwargs)
+
             self.save_pretrained(self._vfl_model_folder(model_name_or_path), models={i: _model})
             del _model
             gc.collect()

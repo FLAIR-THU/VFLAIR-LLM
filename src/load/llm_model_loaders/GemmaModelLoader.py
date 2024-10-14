@@ -47,9 +47,7 @@ class GemmaModelLoader(LLMModelLoader):
             if not args.model_slice_trainable[0]:
                 model_head_embedding_trainable = args.embedding_trainable
                 if not model_head_embedding_trainable: # freeze embeddings that's not needed
-                    for param in self._models[0].wte.parameters():
-                        param.requires_grad = False
-                    for param in self._models[0].wpe.parameters():
+                    for param in self._models[0].embed_tokens.parameters():
                         param.requires_grad = False
                 model_head_encoder_trainable_ids = args.encoder_trainable_ids['head']
                 for encoder_id in range(len(self._models[0].layers)):

@@ -683,9 +683,11 @@ def _mha_shape_check(query: Tensor, key: Tensor, value: Tensor,
 def _canonical_mask(
         mask: Optional[Tensor],
         mask_name: str,
-        other_type: Optional[DType],
+        other_type,
+        # other_type: Optional[DType],
         other_name: str,
-        target_type: DType,
+        target_type,
+        # target_type: DType,
         check_other: bool = True,
 ) -> Optional[Tensor]:
 
@@ -709,7 +711,8 @@ def _canonical_mask(
     return mask
 
 
-def _none_or_dtype(input: Optional[Tensor]) -> Optional[DType]:
+# def _none_or_dtype(input: Optional[Tensor]) -> Optional[DType]:
+def _none_or_dtype(input):
     if input is None:
         return None
     elif isinstance(input, torch.Tensor):

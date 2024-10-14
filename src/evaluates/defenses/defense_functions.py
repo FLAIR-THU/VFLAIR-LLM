@@ -538,8 +538,11 @@ DELTAF = {'Bert': 81.82, 'Roberta': 4.15, 'GPT2': 110.2}
 
 
 def LaplaceDP_for_llm_pred(args, original_object):
-    # print('LaplaceDP_for_llm:',type(original_object),original_object[0].shape)
     original_object = original_object[0]  # bs, 12, 768
+    # print('LaplaceDP_for_llm_pred:')
+    # print('origin:',original_object.shape)
+    # print(original_object[0,:2,:5])
+
     assert ('epsilon' in args.defense_configs), "missing defense parameter: 'epsilon'"
     if args.model_type in DELTAF:
         delta_f = DELTAF[args.model_type]
@@ -562,9 +565,12 @@ def LaplaceDP_for_llm_pred(args, original_object):
                 dist_a = torch.distributions.laplace.Laplace(location, scale)
                 new_object.append(original_object[ik] + dist_a.sample(original_object[ik].shape).to(args.device))
         # print("norm of gradients after laplace:", torch.norm(original_object, dim=1), torch.max(torch.norm(original_object, dim=1)))
+    # print('new:')
+    # print(new_object[0][0,:2,:5])
     return new_object
 
 def LaplaceDP_for_llm_grad(args, original_object):
+    # print('LaplaceDP_for_llm_grad:')
     original_object = original_object[0]
 
     assert ('epsilon' in args.defense_configs), "missing defense parameter: 'epsilon'"
@@ -575,7 +581,7 @@ def LaplaceDP_for_llm_grad(args, original_object):
 
     epsilon = args.defense_configs['epsilon']
     dp_strength = delta_f / epsilon
-    # print(f'== LaplaceDP_for_llm_grad dp_strength={dp_strength}')
+    # print(f'== dp_strength={dp_strength}')
 
     if dp_strength > 0.0:
         location = 0.0
@@ -592,8 +598,6 @@ def LaplaceDP_for_llm_grad(args, original_object):
                                 dist_a.sample(original_object.shape).to(args.device)
             # print("norm of gradients after laplace:", torch.norm(original_object, dim=1), torch.max(torch.norm(original_object, dim=1)))
         
-        # print(new_object)
-        # assert 1>2
         return new_object
     else:
         return original_object

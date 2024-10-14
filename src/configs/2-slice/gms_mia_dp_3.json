@@ -3,7 +3,7 @@
     "lr": 0.001,
     "k": 2,
     "batch_size": 8,
-    "test_batch_size": 1,
+    "test_batch_size": 16,
     "early_stop_threshold": 1,
     "pipeline": "pretrained",
     "model_architect":"CLM",
@@ -78,7 +78,7 @@
         "parameters": {
         "party": [0],
         "type": "pred",
-        "epsilon": 50
+        "epsilon": 1e4
         }
     },
     "attack_list": {

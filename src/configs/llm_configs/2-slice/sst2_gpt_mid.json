@@ -65,7 +65,7 @@
             "mid_model_name":"MIDModel_Linear",
             "lr": 0.001,
             "lambda": 0.01,
-            "mid_position": "out",
+            "mid_position": "head",
             "current_bottleneck_scale": 1,
             "seq_length": 70
         }

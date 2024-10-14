@@ -30,8 +30,12 @@ class MiniCPMModelLoader(LLMModelLoader):
         p = ModelPartitionPipelineMiniCPM(args=args, all_layer_num = all_encoders_num, 
                             split_index=split_index, is_server=is_active_party)
         self._models = p.from_pretrained(model_path, **args.kwargs_model_loading)
-
         generation_config = None
+
+        # print('all_encoders_num:',all_encoders_num)
+        # for _key in self._models.keys():
+        #     print(f'{_key} num_hidden_layers:{self._models[_key].config.num_hidden_layers}')
+        #     print(f'{_key} num_all_hidden_layers:{self._models[_key].config.num_all_hidden_layers}')
 
         if args.finetune_name == "LoRA":
             print(f'LoRA Configs:{args.finetune_detail_configs}')
@@ -128,6 +132,8 @@ class MiniCPMModelLoader(LLMModelLoader):
                         self._models[_key] = MiniCPMVModelHead(self._models[_key].to(args.device)).to(args.device)
                     elif _key == 1:
                         self._models[_key] = MiniCPMVModelTail(self._models[_key].to(args.device)).to(args.device)
+                        # print('MiniCPMVModelTail:',self._models[1].device)
+                        # print('MiniCPMVModelTail.llm:',self._models[1].llm.device)
 
         for _key in self._models.keys():
             self._models[_key].to(args.device)

@@ -181,6 +181,9 @@ class VQAEval:
     
     def evaluate_vqa_human(self, answer, gt_answers):
         '''TextVQA, VQAv2, OKVQA, vizwiz'''
+        print('answer:',answer)
+        print('gt_answers:',gt_answers)
+
         answer = answer.replace("\n", " ").replace("\t", " ").strip()
         answer = self.processPunctuation(answer)
         answer = self.processDigitArticle(answer)

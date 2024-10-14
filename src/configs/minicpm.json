@@ -40,6 +40,7 @@
   
             "head":{
                 "trainable": 0,
+                "vpm_trainable": 0,
                 "embedding_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
@@ -57,8 +58,11 @@
         },
         "task":{
             "task_type": "MultiModality",
+            "generation_method":"chat",
             "generation_config_dict":{
-                "max_new_tokens": 1
+                "max_new_tokens": 100,
+                "sampling":false,
+                "num_beams":3
             },
             "vis_processor":{
                 "train":{
@@ -76,11 +80,35 @@
                     "name": "BlipCaptionProcessor"
                 }
             },
-            "max_new_tokens": 1
+            "max_new_tokens": 100
         },
         "vfl_model_slice_num": 2,
-        "local_encoders_num": 1,
+        "local_encoders_num": 2,
         "local_tail_encoders_num": 0
-    }
+    },
+    "attack_list": {
+        "0":{
+            "name": "VanillaModelInversion_WhiteBox",
+            "parameters": {
+                "party": [1],
+                "lr": 0.001,
+                "epochs": 400,
+                "batch_size": 1,
+                "attack_sample_num": 200
+            }
+        },
+        "1":{
+            "name": "WhiteBoxInversion",
+            "parameters": {
+                "party": [1],
+                "T": 0.05,
+                "lr": 0.01,
+                "epochs": 500,
+                "batch_size": 1,
+                "attack_sample_num": 200
+            }
+        }
+        
+      }
   }
   

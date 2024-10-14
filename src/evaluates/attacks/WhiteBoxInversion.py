@@ -47,10 +47,15 @@ class WhiteBoxInversion(Attacker):
         self.attack_batch_size = args.attack_configs['batch_size']
         self.T = args.attack_configs['T']
         self.attack_sample_num = args.attack_configs['attack_sample_num']
+        if 'loss_type' not in args.attack_configs.keys():
+            self.loss_type = 'cross_entropy'
+        else:
+            self.loss_type = args.attack_configs['loss_type'] # mse/cross_entropy
 
-        
-        self.criterion = cross_entropy_for_onehot
-   
+        if self.loss_type == 'cross_entropy':
+            self.criterion = nn.CrossEntropyLoss()
+        elif self.loss_type == 'mse':
+            self.criterion = nn.MSELoss()
     
     def set_seed(self,seed=0):
         # random.seed(seed)
@@ -74,8 +79,14 @@ class WhiteBoxInversion(Attacker):
             index = attacker_ik
 
             # collect necessary information
-            local_model = self.vfl_info['local_model_head'].to(self.device) # Passive
+            local_model = self.top_vfl.parties[0].local_model#.to(self.device)
+            #self.vfl_info['local_model_head'].to(self.device) # Passive
             local_model.eval()
+
+            if self.args.model_architect == 'MM':
+                vis_processor = self.top_vfl.parties[0].vis_processors['eval']
+                #self.vfl_info['vis_processors']['eval']
+                
             batch_size = self.attack_batch_size
 
             
@@ -97,8 +108,12 @@ class WhiteBoxInversion(Attacker):
                 test_label = test_label[:self.attack_sample_num]
                 # attack_test_dataset = attack_test_dataset[:self.attack_sample_num]
             
-            if self.args.dataset == 'Lambada':
+            if self.args.dataset == 'Lambada' or self.args.dataset == 'Lambada_test':
                 attack_test_dataset = LambadaDataset_LLM(self.args, test_data, test_label, 'test')
+            elif self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
+                attack_test_dataset = GSMDataset_LLM(self.args, test_data, test_label, 'test')
+            elif self.args.dataset == 'TextVQA' or self.args.dataset == 'TextVQA-test':
+                attack_test_dataset = TextVQADataset_train(self.args, test_data, test_label, vis_processor,'train')
             else:
                 attack_test_dataset = PassiveDataset_LLM(self.args, test_data, test_label)
 
@@ -131,6 +146,11 @@ class WhiteBoxInversion(Attacker):
                         data_inputs[key_name] = torch.stack( [batch_input_dicts[i][key_name] for i in range(len(batch_input_dicts))] )
                     else:
                         data_inputs[key_name] = [batch_input_dicts[i][key_name] for i in range(len(batch_input_dicts))] 
+
+                # self.top_vfl.parties[0].set_is_first_forward_iter(1)
+                # self.top_vfl.parties[1].set_is_first_forward_iter(1)
+                self.top_vfl.set_is_first_forward_epoch(1)
+
 
                 # real received intermediate result
                 self.top_vfl.parties[0].obtain_local_data(data_inputs)
@@ -206,8 +226,8 @@ class WhiteBoxInversion(Attacker):
                         if dummy_intermediate.shape[1] != seq_length:
                             dummy_intermediate = dummy_intermediate.transpose(0,1)
 
-                        crit = nn.CrossEntropyLoss()
-                        _cost = crit(dummy_intermediate, received_intermediate)
+                        # crit = nn.CrossEntropyLoss()
+                        _cost = self.criterion(dummy_intermediate, received_intermediate)
                         return _cost
         
                     cost_function = torch.tensor(10000000)
@@ -224,6 +244,9 @@ class WhiteBoxInversion(Attacker):
                         optimizer.step()
 
                         _iter+=1 
+
+                        # if _iter%10 == 0:
+                        #     print(f'iter={_iter} loss={cost_function.item()}')
                         # if _iter%50 == 0:
                         #     # if last_cost.item() < cost_function.item():
                         #     #     break

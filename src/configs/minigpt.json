@@ -2,7 +2,7 @@
     "epochs": 5,
     "lr": 0.0001,
     "k": 2,
-    "batch_size": 12,
+    "batch_size": 4,
     "test_batch_size": 1,
     "early_stop_threshold": 5,
     "pipeline": "pretrained",
@@ -29,14 +29,14 @@
         "configs":{}
     },
     "model_list":{
-        "name": "llama-2-7b",
+        "name": "llama-2-7b-chat",
         "pretrained": 1,
         "model_type": "Llama",
         "max_sequence": 512,
         "kwargs_model_loading":{
         },
         "0": {
-          "path": "/home/DAIR/guzx/Git_FedProject/Models/llama-2-7b",
+          "path": "/home/DAIR/guzx/Git_FedProject/Models/llama-2-7b-chat",
   
             "head":{
                 "trainable": 0,
@@ -47,7 +47,7 @@
             
         },
         "1": {
-          "path": "/home/DAIR/guzx/Git_FedProject/Models/llama-2-7b",
+          "path": "/home/DAIR/guzx/Git_FedProject/Models/llama-2-7b-chat",
             "tail":{
                 "trainable": 0,
                 "head_layer_trainable": 0,
@@ -58,7 +58,7 @@
         "task":{
             "task_type": "MultiModality",
             "generation_config_dict":{
-                "max_new_tokens": 160
+                "max_new_tokens": 80
             },
             "vis_processor":{
                 "train":{
@@ -77,8 +77,7 @@
                 "eval":{
                     "name": "BlipCaptionProcessor"
                 }
-            },
-            "max_new_tokens": 160
+            }
         },
         "vfl_model_slice_num": 2,
         "local_encoders_num": 1,

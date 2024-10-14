@@ -3,7 +3,7 @@
     "lr": 0.001,
     "k": 2,
     "batch_size": 8,
-    "test_batch_size": 1,
+    "test_batch_size": 16,
     "early_stop_threshold": 1,
     "pipeline": "pretrained",
     "model_architect":"CLM",
@@ -12,7 +12,7 @@
         "iteration_per_aggregation": 1
     },
     "finetune_configs":{
-        "name":"Vanilla",
+        "name":"LoRA",
         "configs":{
             "inference_mode":false,  
           "r":4,  
@@ -80,6 +80,7 @@
             "name": "VanillaModelInversion_WhiteBox",
             "parameters": {
                 "party": [1],
+                "loss_type":"mse",
                 "lr": 0.01,
                 "epochs": 100,
                 "batch_size": 32,
@@ -90,6 +91,7 @@
             "name": "WhiteBoxInversion",
             "parameters": {
                 "party": [1],
+                "loss_type":"mse",
                 "T": 0.05,
                 "lr": 0.005,
                 "epochs": 500,

@@ -190,11 +190,19 @@ class PassiveParty_LLM(Party_LLM):
                                                                     model_dtype=model_dtype).to(
                         self.args.device)
 
-                if self.local_model_optimizer == None:
-                    self.local_model_optimizer = torch.optim.Adam(self.mid_model.parameters(), lr=self.mid_lr)
+                if self.mid_position == "head":
+                    if self.local_model_optimizer == None:
+                        self.local_model_optimizer = torch.optim.Adam(self.mid_model.parameters(), lr=self.mid_lr)
+                    else:
+                        self.local_model_optimizer.add_param_group(
+                            {'params': self.mid_model.parameters(), 'lr': self.mid_lr})
                 else:
-                    self.local_model_optimizer.add_param_group(
-                        {'params': self.mid_model.parameters(), 'lr': self.mid_lr})
+                    if self.local_model_tail_optimizer == None:
+                        self.local_model_tail_optimizer = torch.optim.Adam(self.mid_model.parameters(), lr=self.mid_lr)
+                    else:
+                        self.local_model_tail_optimizer.add_param_group(
+                            {'params': self.mid_model.parameters(), 'lr': self.mid_lr})
+
 
                 print(f'self.mid_model_name:{self.mid_model_name}')
 
@@ -222,11 +230,11 @@ class PassiveParty_LLM(Party_LLM):
             self.train_dst = MATHDataset_LLM(args, self.train_data, self.train_label, 'train')
             self.test_dst = MATHDataset_LLM(args, self.test_data, self.test_label, 'test')
         elif args.dataset == 'CC_SBU':
-            self.train_dst = CCSBUAlignDataset(args, self.train_data, self.train_label, self.vis_processors['train'], 'train')
-            self.test_dst = CCSBUAlignDataset(args, self.test_data, self.test_label, self.vis_processors['eval'],'test')
-        elif args.dataset == 'TextVQA':
-            self.train_dst = TextVQADataset_train(args, self.train_data, self.train_label,self.vis_processors['train'], 'train')
-            self.test_dst = TextVQADataset_test(args, self.test_data, self.test_label,self.vis_processors['train'],'test')
+            self.train_dst = CCSBUAlignDataset(args, self.train_data, self.train_label, self.vis_processors['train'],self.text_processors['train'], 'train')
+            self.test_dst = CCSBUAlignDataset(args, self.test_data, self.test_label, self.vis_processors['eval'],self.text_processors['eval'],'test')
+        elif args.dataset == 'TextVQA' or args.dataset == 'TextVQA-test':
+            self.train_dst = TextVQADataset_train(args, self.train_data, self.train_label,self.vis_processors['train'],'train')
+            self.test_dst = TextVQADataset_test(args, self.test_data, self.test_label,self.vis_processors['eval'],'test')
         else:
             self.train_dst = PassiveDataset_LLM(args, self.train_data, self.train_label, 'train')
             self.test_dst = PassiveDataset_LLM(args, self.test_data, self.test_label, 'test')
@@ -281,7 +289,6 @@ class PassiveParty_LLM(Party_LLM):
         
         global_gradient_clone=torch.autograd.grad(global_loss,global_intermediate,retain_graph=True)[0]
         self.global_gradient = global_gradient_clone
-
         self.global_gradient = self.apply_defense_on_global_gradient(self.global_gradient)
 
         return self.global_gradient
@@ -299,12 +306,12 @@ class PassiveParty_LLM(Party_LLM):
 
     def cal_loss(self, pred, test=False):
         gt_one_hot_label = self.gt_one_hot_label  # label
-
         # ########### Normal Loss ###############
         if self.args.model_architect == 'CLS':  # self.args.task_type == 'SequenceClassification':
             pooled_logits = pred.logits # [bs, num_labels]
             ######### Defense ###########
-            if self.args.vfl_model_slice_num == 2 and self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "tail"):
+            if self.args.vfl_model_slice_num == 2 and self.args.apply_mid \
+            and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "tail"):
                 # print('== 2 slice mid')
                 pooled_logits, self.mid_loss = self.mid_model(pooled_logits)  # , self.local_attention_mask
             ######### Defense ###########
@@ -360,10 +367,14 @@ class PassiveParty_LLM(Party_LLM):
                 # print('loss:', loss)
 
         elif self.args.model_architect == 'MM':  # self.args.task_type == 'CausalLM':
-            gt_one_hot_label = self.processed_labels
+            try:
+                gt_one_hot_label = self.processed_labels
+            except:
+                pass
+            print('train_batch cal_loss gt_one_hot_label:',gt_one_hot_label)
             
             logits = pred.logits  # [bs, seq_len, vocab_size]
-            labels = torch.tensor(gt_one_hot_label).to(logits.device)
+            labels = torch.tensor(gt_one_hot_label).to(logits.device) # [bs, seq_len]
             
             if len(labels.shape) > 1:
                 # Shift so that tokens < n predict n
@@ -472,6 +483,7 @@ class PassiveParty_LLM(Party_LLM):
         # ########### Defense on Loss ###############
         if self.args.apply_adversarial and (self.index in self.args.defense_configs["party"]) and \
             (self.args.defense_configs["position"]=="tail"):
+            print('update_loss_with_defense:3-slice ad tail')
 
             intermediate_gradient = self.global_gradient # gradient transmitted from model tail
             print(f'intermediate_gradient:{intermediate_gradient.shape}')
@@ -526,7 +538,7 @@ class PassiveParty_LLM(Party_LLM):
 
     @timer()
     def give_pred(self, use_cache=False):
-        # self.local_data_input['use_cache'] = use_cache
+        self.local_data_input['use_cache'] = use_cache
         # self._tensor_to_device(self.local_data_input , self.models[0].device)
 
         # collect processed labels (only in some cases)
@@ -543,15 +555,16 @@ class PassiveParty_LLM(Party_LLM):
             self.local_attention_mask = self.local_attention_mask.detach().clone()
 
         ######### Defense Applied on Local Model Prediction Process ###########
-        if self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "head"):
-            self.output_tensors[0], self.mid_loss = self.mid_model(self.output_tensors[0])  # , self.local_attention_mask
-            self.local_pred_clone = self.output_tensors[0].detach().clone()
-        
-        elif (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"])) \
-            and (self.args.defense_configs["position"]=='head'):
-            self.origin_pred = self.output_tensors[0].clone()
-            self.output_tensors[0] = self.adversarial_model(self.origin_pred)
-            self.local_pred_clone = self.output_tensors[0].detach().clone()
+        if self.is_first_forward_iter:
+            if self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "head"):
+                self.output_tensors[0], self.mid_loss = self.mid_model(self.output_tensors[0].to(next(self.mid_model.parameters()).device))  # , self.local_attention_mask
+                self.local_pred_clone = self.output_tensors[0].detach().clone()
+            
+            elif (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"])) \
+                and (self.args.defense_configs["position"]=='head'):
+                self.origin_pred = self.output_tensors[0].clone().to(next(self.adversarial_model.parameters()).device)
+                self.output_tensors[0] = self.adversarial_model(self.origin_pred)
+                self.local_pred_clone = self.output_tensors[0].detach().clone()
         ######### Defense Applied on Local Model Prediction Process ###########
 
         self.output_attention_mask[0] = self.local_attention_mask
@@ -567,6 +580,7 @@ class PassiveParty_LLM(Party_LLM):
 
         ######### Defense Applied on Local Model Tail Prediction Process ###########
         if self.args.vfl_model_slice_num == 3 and self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and (self.mid_position == "tail"):
+            # print('== 3-slice mid')
             received_pred, self.mid_loss = self.mid_model(received_pred)  # , self.local_attention_mask
             # self.local_pred_clone = self.output_tensors[0].detach().clone()
         ######### Defense Applied on Local Model Tail Prediction Process ###########

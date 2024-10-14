@@ -79,7 +79,7 @@ class MiniCPMV(MiniCPMVPreTrainedModel):
             if self.vpm.disable_adapters or (self.vpm.active_adapter not in self.vpm.modules_to_save):
                 return self.vpm.original_module.forward_features(pixel_value)
             return self.vpm.modules_to_save[self.vpm.active_adapter].forward_features(pixel_value)
-        else:    
+        else:  
             return self.vpm.forward_features(pixel_value)
             
     def get_vision_embedding(self, pixel_values):
@@ -304,8 +304,6 @@ class MiniCPMV(MiniCPMVPreTrainedModel):
                 model_inputs["inputs_embeds"],
                 vision_hidden_states,
             ) = self.get_vllm_embedding(model_inputs)
-            print('inputs_embeds:',model_inputs["inputs_embeds"].shape)
-
             result = self._decode(model_inputs["inputs_embeds"], tokenizer, **kwargs)
         
         if return_vision_hidden_states:

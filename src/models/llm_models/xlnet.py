@@ -271,7 +271,7 @@ class XLNetModelBody(XLNetModelSplitter):
         self.past_key_values = None
         # todo: del norm will cause error when load from original model weight
         # del self.norm
-        del self.dropout
+        # del self.dropout
 
 
     def forward(

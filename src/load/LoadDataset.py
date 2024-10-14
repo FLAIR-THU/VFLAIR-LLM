@@ -1495,7 +1495,7 @@ def load_dataset_per_party_llm(args, index):
         test_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/test.csv'
 
         df = pd.read_csv(train_set_file, delimiter=',', header=None,
-                         names=['label', 'sentence'])  # [:5000]
+                         names=['label', 'sentence'])#[:200]
 
         scalar = np.array([-1])
         sentences = df.sentence.values
@@ -1504,7 +1504,34 @@ def load_dataset_per_party_llm(args, index):
         y_train = np.array(labels) + scalar
 
         df = pd.read_csv(test_set_file, delimiter=',', header=None,
-                         names=['label', 'sentence'])  # [:500]
+                         names=['label', 'sentence'])
+
+        sentences = df.sentence.values
+        labels = df.label.values
+        X_test = np.array(sentences)
+        y_test = np.array(labels) + scalar
+
+        train_dst = (X_train, y_train)
+        test_dst = (X_test, y_test)
+
+        print('X:', type(X_train), X_train.shape, X_test.shape)
+        print('y:', type(y_train), y_train.shape, y_test.shape)
+
+    elif args.dataset == 'yelp-polarity-test':
+        train_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/train.csv'
+        test_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/test.csv'
+
+        df = pd.read_csv(train_set_file, delimiter=',', header=None,
+                         names=['label', 'sentence'])[:200]
+
+        scalar = np.array([-1])
+        sentences = df.sentence.values
+        labels = df.label.values
+        X_train = np.array(sentences)
+        y_train = np.array(labels) + scalar
+
+        df = pd.read_csv(test_set_file, delimiter=',', header=None,
+                         names=['label', 'sentence'])[:100]
 
         sentences = df.sentence.values
         labels = df.label.values
@@ -2346,17 +2373,17 @@ def load_dataset_per_party_llm(args, index):
             return examples
 
         ##### Train #####
-        train_examples = get_examples(data_path, 'train') # list of [  {'quesion':... , 'answer':...} ...]
+        train_examples = get_examples(data_path, 'train')[:10] # list of [  {'quesion':... , 'answer':...} ...]
         X_train = np.array([ problem_prompt.format(instruction=_ex['question']+ "<|endoftext|>") for _ex in train_examples])
         y_train = np.array([ _ex['answer'] for _ex in train_examples])
 
         ##### Test #####
-        test_examples = get_examples(data_path, 'test') # list of [  {'quesion':... , 'answer':...} ...]
+        test_examples = get_examples(data_path, 'test')[:2] # list of [  {'quesion':... , 'answer':...} ...]
         X_test = np.array([ problem_prompt.format(instruction=_ex['question']) for _ex in test_examples])
         y_test = np.array([ get_final_ans(_ex['answer']) for _ex in test_examples])
 
-        train_dst = (X_train[:10], y_train[:10])
-        test_dst = (X_test[:10], y_test[:10])
+        train_dst = (X_train, y_train)
+        test_dst = (X_test, y_test)
 
         print('X:',type(X_train), len(X_train), len(X_test))  #
         print('y',type(y_train), len(y_train), len(y_test))  #
@@ -2480,7 +2507,40 @@ def load_dataset_per_party_llm(args, index):
 
         data = []
         answers = []
-        for idx in range(20): #range(len(raw_data)):
+        for idx in range(len(raw_data)):
+            # question = data[:]['question']
+            # img_id = data[:]['image_id']
+            # qid = data[:]['question_id']
+            # img_path = [os.path.join(image_dir, f"{img_id}.jpg") for img_id in img_ids]
+            data_dict = {
+                'question':raw_data[idx]['question'],
+                'img_path':os.path.join(image_dir, f"{raw_data[idx]['image_id']}.jpg")
+            }
+            data.append(data_dict)
+            answers.append(raw_data[idx]['answers'])
+        
+
+        X = np.array(data)
+        Y = np.array(answers)
+        
+        X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.1, random_state=args.current_seed)
+        train_dst = (X_train, y_train)
+        test_dst = (X_test, y_test)
+        print('X:',type(X_train), len(X_train), len(X_test))  #
+        print('y:',type(y_train), len(y_train), len(y_test))  #
+    
+    elif args.dataset == 'TextVQA-test':
+        prompt = "Answer the question directly with single word." + '\n'#+ questions[0]
+        image_dir = DATA_PATH+"/TextVQA/train_images"
+        ann_path = DATA_PATH+"/TextVQA/TextVQA_0.5.1_train.json"
+
+        # image_dir = DATA_PATH+"/TextVQA/test_images"
+        # ann_path = DATA_PATH+"/TextVQA/TextVQA_0.5.1_test.json"
+        raw_data = json.load(open(ann_path, "r"))["data"]
+
+        data = []
+        answers = []
+        for idx in range(80): #range(len(raw_data)):
             # question = data[:]['question']
             # img_id = data[:]['image_id']
             # qid = data[:]['question_id']
@@ -2503,11 +2563,11 @@ def load_dataset_per_party_llm(args, index):
         print('y:',type(y_train), len(y_train), len(y_test))  #
     
     elif args.dataset == 'CC_SBU':
-        # vis_root = DATA_PATH + '/cc_sbu_align/image/'
-        # ann_path = DATA_PATH + '/cc_sbu_align/filter_cap.json'
+        vis_root = DATA_PATH + '/cc_sbu_align/image/'
+        ann_path = DATA_PATH + '/cc_sbu_align/filter_cap.json'
 
-        vis_root = DATA_PATH + '/test_cc_sbu/image/'
-        ann_path = DATA_PATH + '/test_cc_sbu/filter_cap.json'
+        # vis_root = DATA_PATH + '/test_cc_sbu/image/'
+        # ann_path = DATA_PATH + '/test_cc_sbu/filter_cap.json'
         
         annotation = []
         ann = json.load(open(ann_path, "r"))
@@ -2516,10 +2576,10 @@ def load_dataset_per_party_llm(args, index):
             # self.annotation.extend(json.load(open(ann_path, "r")))
         else:
             annotation.extend(json.load(open(ann_path, "r")))
-
+        print('')
         images = []
         captions = []
-        for index in range(len(annotation)):
+        for index in range(20): #range(len(annotation)):
             ann = annotation[index]
 
             img_file = '{}.jpg'.format(ann["image_id"])
@@ -2532,42 +2592,15 @@ def load_dataset_per_party_llm(args, index):
             captions.append(caption)
             print('image_id:',ann["image_id"])
 
-        print('len images:',len(images), len(annotation))
+        print('len images:',len(images), len(captions))
         
-        X_train = np.array(images)
-        y_train = np.array(annotation)
-
-        annotation = []
-        ann = json.load(open(ann_path, "r"))
-        if isinstance(ann, dict):
-            annotation.extend(json.load(open(ann_path, "r"))['annotations'])
-        else:
-            annotation.extend(json.load(open(ann_path, "r")))
-
-        images = []
-        captions = []
-        for index in range(len(annotation)):
-            ann = annotation[index]
-
-            img_file = '{}.jpg'.format(ann["image_id"])
-            image_path = os.path.join(vis_root, img_file)
-            image = Image.open(image_path).convert("RGB")
-            # image = vis_processor(image)
-            caption = ann["caption"]
-
-            images.append(image)
-            captions.append(caption)
-
-
-        X_test = np.array(images)
-        y_test = np.array(annotation)
+        X_train, X_test, y_train, y_test = train_test_split(images, captions, test_size=0.1, random_state=args.current_seed)
        
         train_dst = (X_train, y_train)
         test_dst = (X_test, y_test)
 
         print('X:',type(X_train), len(X_train), len(X_test))  #
         print('y',type(y_train), len(y_train), len(y_test))  #
-    
     
 
     elif not args.dataset:

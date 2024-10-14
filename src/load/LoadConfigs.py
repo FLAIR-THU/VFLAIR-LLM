@@ -16,7 +16,9 @@ ATTRIBUTE_INFERENCE = ['AttributeInference']
 FEATURE_INFERENCE = ['GenerativeRegressionNetwork', 'ResSFL']
 
 # LLM attacks
-INVERSION_LLM = ["VanillaModelInversion_WhiteBox", "VanillaModelInversion_BlackBox", "WhiteBoxInversion"]
+INVERSION_LLM = ["VanillaModelInversion_WhiteBox", "VanillaModelInversion_WhiteBox_test","DLG_LLM",\
+"VanillaModelInversion_BlackBox", "WhiteBoxInversion",\
+"VanillaModelInversion_WhiteBox_mse","WhiteBoxInversion_mse"]
 LABEL_INFERENCE_LLM = ['BatchLabelReconstruction_LLM','BatchLabelReconstruction_LLM_2slice','DirectLabelScoring_LLM','DirectionbasedScoring_LLM','NormbasedScoring_LLM']
 
 
@@ -563,6 +565,7 @@ def do_load_basic_configs_llm(config_dict, args):
         if args.task_dict != None:
             args.task_type = args.task_dict['task_type'] if('task_type' in args.task_dict) else "SequenceClassification"
             args.generation_config_dict = args.task_dict['generation_config_dict'] if('generation_config_dict' in args.task_dict) else {}
+            args.generation_method = args.task_dict['generation_method'] if('generation_method' in args.task_dict) else "generate"
             args.metric_type = args.task_dict['metric_type'] if('metric_type' in args.task_dict) else "n_best"
             args.doc_stride = args.task_dict['doc_stride'] if('doc_stride' in args.task_dict) else -1
             args.max_query_length = args.task_dict['max_query_length'] if('max_query_length' in args.task_dict) else -1
@@ -599,6 +602,7 @@ def do_load_basic_configs_llm(config_dict, args):
         # dict:{model_slice: value}  model_slice = head/body/tail
         args.model_slice_trainable = [False, False, False]
         args.embedding_trainable = False
+        args.vision_processor_trainable = False
         args.head_layer_trainable = False
         args.encoder_trainable = {}
         args.encoder_trainable_ids = {}
@@ -612,6 +616,8 @@ def do_load_basic_configs_llm(config_dict, args):
         args.encoder_trainable['head'] = passive_model_dict['head']['encoder_trainable'] if 'encoder_trainable' in passive_model_dict['head'] else False
         args.encoder_trainable_ids['head'] = passive_model_dict['head']['encoder_trainable_ids'] if 'encoder_trainable_ids' in passive_model_dict['head'] else []
         args.embedding_trainable = passive_model_dict['head']['embedding_trainable'] if 'embedding_trainable' in passive_model_dict['head'] else False
+        args.vision_processor_trainable = passive_model_dict['head']['vision_processor_trainable'] if 'vision_processor_trainable' in passive_model_dict['head'] else False
+        
         args.model_slice_trainable[0] = passive_model_dict['head']['trainable'] if 'trainable' in passive_model_dict['head'] else False
         
          
@@ -663,6 +669,7 @@ def do_load_basic_configs_llm(config_dict, args):
     ############ Defense ###############
     args.apply_defense = False
     args.apply_dp = False
+    args.apply_gs = False
     args.apply_mid = False  # mid defense
     args.apply_cae = False  # cae defense
     args.apply_dcae = False  # dcae defense
@@ -692,6 +699,8 @@ def do_load_basic_configs_llm(config_dict, args):
                 args.apply_dcor = True
             elif ('gaussian' in args.defense_name.casefold()) or ('laplace' in args.defense_name.casefold()):
                 args.apply_dp = True
+            elif ('gradientsparsification' in args.defense_name.casefold()):
+                args.apply_gs = True
         else:
             assert 'name' in config_dict['defense'], "missing defense name"
     else:
@@ -787,7 +796,9 @@ def do_load_basic_configs_llm(config_dict, args):
     if len(list(set(ATTACKS_NEED_FIRST_EPOCH_STATE)&set(args.all_attack_list))) > 0:
         args.need_first_epoch_state = 1
 
-    ATTACKS_NEED_FINAL_EPOCH_STATE = ["VanillaModelInversion_WhiteBox", "VanillaModelInversion_BlackBox", "WhiteBoxInversion"]
+    ATTACKS_NEED_FINAL_EPOCH_STATE = ["VanillaModelInversion_WhiteBox", "VanillaModelInversion_WhiteBox_test",\
+    "VanillaModelInversion_BlackBox", "WhiteBoxInversion","DLG_LLM",\
+    "VanillaModelInversion_WhiteBox_mse","WhiteBoxInversion_mse"]
     args.need_final_epoch_state = 0
     if len(list(set(ATTACKS_NEED_FINAL_EPOCH_STATE)&set(args.all_attack_list))) > 0:
         args.need_final_epoch_state = 1

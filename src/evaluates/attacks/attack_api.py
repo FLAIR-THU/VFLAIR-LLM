@@ -17,8 +17,16 @@ from evaluates.attacks.ASB import ASB
 
 # LLM attacks
 from evaluates.attacks.VanillaModelInversion_WhiteBox import VanillaModelInversion_WhiteBox
+from evaluates.attacks.VanillaModelInversion_WhiteBox_mse import VanillaModelInversion_WhiteBox_mse
+
+from evaluates.attacks.VanillaModelInversion_WhiteBox_test import VanillaModelInversion_WhiteBox_test
+
+from evaluates.attacks.DLG_LLM import DLG_LLM
+
 from evaluates.attacks.VanillaModelInversion_BlackBox import VanillaModelInversion_BlackBox
 from evaluates.attacks.WhiteBoxInversion import WhiteBoxInversion
+from evaluates.attacks.WhiteBoxInversion_mse import WhiteBoxInversion_mse
+
 from evaluates.attacks.BatchLabelReconstruction_LLM import BatchLabelReconstruction_LLM # 3slice
 from evaluates.attacks.BatchLabelReconstruction_LLM_2slice import BatchLabelReconstruction_LLM_2slice
 from evaluates.attacks.DirectLabelScoring_LLM import DirectLabelScoring_LLM

@@ -1,0 +1,201 @@
+/bin/bash: /home/DAIR/guzx/.conda/envs/py38/lib/libtinfo.so.6: no version information available (required by /bin/bash)
+2024-10-05 16:57:26.434 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-05 16:57:34.082 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-05 16:57:59.580 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  61  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'type': 'pred', 'epsilon': 90}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_90,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 61 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:10<00:54, 10.89s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [00:19<00:37,  9.47s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:27<00:26,  8.87s/it]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:34<00:16,  8.26s/it]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:41<00:07,  7.75s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:45<00:00,  6.30s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:45<00:00,  7.53s/it]
+===== is_active_party=True---dict_keys([1]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+1
+trainable params: 1,597,440 || all params: 6,807,113,728 || trainable%: 0.02346721479662048
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=0
+trainable params: 0 || all params: 6,807,113,728 || trainable%: 0.0
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.mistral.modeling_mistral.MistralForCausalLM'>
+--> final self.generation_config: GenerationConfig {
+  "bos_token_id": 1,
+  "eos_token_id": 2
+}
+
+--> final self.generation_config_dict: {'temperature': 1.0, 'top_k': -1, 'top_p': 1.0, 'max_new_tokens': 256}
+inference process: 0it [00:00, ?it/s]inference process: 1it [03:21, 201.64s/it]inference process: 2it [06:26, 191.71s/it]inference process: 3it [09:23, 185.02s/it]inference process: 4it [12:43, 190.88s/it]inference process: 5it [16:03, 194.11s/it]inference process: 6it [18:12, 171.96s/it]inference process: 7it [21:32, 181.11s/it]inference process: 8it [24:51, 187.08s/it]inference process: 9it [28:11, 191.05s/it]inference process: 10it [31:31, 193.78s/it]inference process: 11it [34:51, 195.62s/it]inference process: 12it [38:11, 196.87s/it]inference process: 13it [40:47, 184.66s/it]inference process: 14it [44:07, 189.24s/it]inference process: 15it [47:27, 192.41s/it]inference process: 16it [50:46, 194.56s/it]inference process: 17it [53:18, 181.60s/it]inference process: 18it [56:29, 184.38s/it]inference process: 19it [59:47, 188.73s/it]inference process: 20it [1:03:06, 191.76s/it]inference process: 21it [1:06:25, 193.89s/it]inference process: 22it [1:09:30, 191.20s/it]inference process: 23it [1:12:49, 193.48s/it]inference process: 24it [1:15:46, 188.58s/it]inference process: 25it [1:18:07, 174.41s/it]inference process: 26it [1:21:26, 181.75s/it]inference process: 27it [1:24:46, 187.15s/it]inference process: 28it [1:28:06, 190.96s/it]inference process: 29it [1:30:52, 183.50s/it]inference process: 30it [1:34:12, 188.42s/it]inference process: 31it [1:37:32, 191.86s/it]inference process: 32it [1:40:52, 194.27s/it]inference process: 33it [1:44:12, 195.96s/it]inference process: 34it [1:47:31, 197.15s/it]inference process: 35it [1:50:51, 197.96s/it]inference process: 36it [1:54:03, 196.07s/it]inference process: 37it [1:57:23, 197.24s/it]inference process: 38it [2:00:18, 190.55s/it]inference process: 39it [2:03:38, 193.36s/it]inference process: 40it [2:06:33, 187.82s/it]inference process: 41it [2:09:53, 191.44s/it]inference process: 42it [2:12:52, 187.81s/it]inference process: 43it [2:16:12, 191.42s/it]inference process: 44it [2:19:32, 193.99s/it]inference process: 45it [2:22:52, 195.74s/it]inference process: 46it [2:26:09, 196.27s/it]inference process: 47it [2:29:29, 197.33s/it]inference process: 48it [2:32:49, 198.14s/it]inference process: 49it [2:36:09, 198.69s/it]inference process: 50it [2:38:49, 187.22s/it]inference process: 51it [2:42:08, 190.80s/it]inference process: 52it [2:45:27, 193.24s/it]inference process: 53it [2:48:46, 194.92s/it]inference process: 54it [2:52:05, 196.09s/it]inference process: 55it [2:55:24, 196.94s/it]inference process: 56it [2:58:27, 192.77s/it]inference process: 57it [3:00:47, 177.03s/it]inference process: 58it [3:03:58, 181.19s/it]inference process: 59it [3:07:17, 186.52s/it]inference process: 60it [3:09:59, 179.17s/it]inference process: 61it [3:13:19, 185.39s/it]inference process: 62it [3:16:39, 189.74s/it]inference process: 63it [3:19:59, 192.83s/it]inference process: 64it [3:23:19, 195.04s/it]inference process: 65it [3:26:39, 196.49s/it]inference process: 66it [3:29:27, 188.03s/it]inference process: 67it [3:32:25, 184.77s/it]inference process: 68it [3:35:44, 189.28s/it]inference process: 69it [3:39:04, 192.49s/it]inference process: 70it [3:42:24, 194.72s/it]inference process: 71it [3:45:44, 196.25s/it]inference process: 72it [3:48:58, 195.63s/it]inference process: 73it [3:52:18, 196.88s/it]inference process: 74it [3:55:38, 197.81s/it]inference process: 75it [3:58:58, 198.36s/it]inference process: 76it [4:02:17, 198.71s/it]inference process: 77it [4:05:11, 191.11s/it]inference process: 78it [4:08:22, 191.20s/it]inference process: 79it [4:11:41, 193.61s/it]inference process: 80it [4:15:01, 195.35s/it]inference process: 81it [4:17:48, 187.01s/it]inference process: 82it [4:21:07, 190.62s/it]inference process: 83it [4:22:35, 159.70s/it]inference process: 83it [4:22:35, 189.82s/it]
+NoAttack|maxlength-default-True-left-128-True-outside|seed=61|K=2|inference_party_time=[0, 0]|test_acc=0.6838514025777104
+======= Test Attack 0 :  VanillaModelInversion_WhiteBox  =======
+attack configs: {'party': [1], 'loss_type': 'cross_entropy', 'lr': 0.01, 'epochs': 100, 'batch_size': 32, 'attack_sample_num': 100}
+=== Begin Attack ===
+dict_keys(['party', 'loss_type', 'lr', 'epochs', 'batch_size', 'attack_sample_num'])
+Attack Sample Num:100
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 316, in <module>
+    evaluate_inversion_attack(args)
+  File "main_pipeline_llm_MIA.py", line 108, in evaluate_inversion_attack
+    precision, recall , attack_total_time= vfl.evaluate_attack()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 1803, in evaluate_attack
+    attack_acc = self.attacker.attack()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/attacks/VanillaModelInversion_WhiteBox.py", line 192, in attack
+    all_pred_list = self.top_vfl.pred_transmit()
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/evaluates/MainTaskVFL_LLM.py", line 259, in pred_transmit
+    result_dict = self.parties[ik].give_pred(use_cache=use_cache)  # use_cache=use_cache
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/timer.py", line 66, in wrapper
+    result = func(*args, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/passive_party.py", line 535, in give_pred
+    intermediate = self.forward(model_index=0,**self.local_data_input)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/utils/timer.py", line 66, in wrapper
+    result = func(*args, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/llm_party.py", line 362, in forward
+    print('self.models[model_index].device:',self.models[model_index].device)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1102, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/peft/peft_model.py", line 537, in forward
+    return self.get_base_model()(*args, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1102, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/accelerate/hooks.py", line 165, in new_forward
+    output = module._old_forward(*args, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/mistral.py", line 167, in forward
+    layer_outputs = decoder_layer(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1102, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/accelerate/hooks.py", line 165, in new_forward
+    output = module._old_forward(*args, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/models/mistral/modeling_mistral.py", line 754, in forward
+    hidden_states = self.input_layernorm(hidden_states)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1102, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/accelerate/hooks.py", line 165, in new_forward
+    output = module._old_forward(*args, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/models/mistral/modeling_mistral.py", line 88, in forward
+    return self.weight * hidden_states.to(input_dtype)
+RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cuda:1!
+2024-10-05 21:52:43.428 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-05 21:52:52.209 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-05 21:53:15.914 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  62  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'type': 'pred', 'epsilon': 90}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_90,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 62 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:08<00:42,  8.47s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [00:16<00:32,  8.23s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:24<00:23,  7.99s/it]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:31<00:15,  7.56s/it]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:37<00:07,  7.18s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:41<00:00,  6.07s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:41<00:00,  6.92s/it]
+===== is_active_party=True---dict_keys([1]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+1
+trainable params: 1,597,440 || all params: 6,807,113,728 || trainable%: 0.02346721479662048
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=0
+trainable params: 0 || all params: 6,807,113,728 || trainable%: 0.0
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.mistral.modeling_mistral.MistralForCausalLM'>
+--> final self.generation_config: GenerationConfig {
+  "bos_token_id": 1,
+  "eos_token_id": 2
+}
+
+--> final self.generation_config_dict: {'temperature': 1.0, 'top_k': -1, 'top_p': 1.0, 'max_new_tokens': 256}
+inference process: 0it [00:00, ?it/s]inference process: 1it [03:19, 199.79s/it]inference process: 2it [06:37, 198.84s/it]inference process: 3it [09:26, 185.18s/it]inference process: 4it [12:16, 179.22s/it]inference process: 5it [15:10, 177.07s/it]inference process: 6it [18:28, 184.18s/it]inference process: 7it [20:27, 162.96s/it]inference process: 8it [23:45, 174.10s/it]slurmstepd: error: *** JOB 68187 ON air-node-03 CANCELLED AT 2024-10-05T22:20:47 ***

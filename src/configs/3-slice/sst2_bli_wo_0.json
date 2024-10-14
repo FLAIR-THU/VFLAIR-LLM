@@ -73,14 +73,6 @@
           "lr": 0.05,
           "epochs": 500
       }
-    },
-    "1": {
-        "name": "DirectionbasedScoring_LLM",
-        "parameters": {
-          "party": [1],
-          "lr": 0.1,
-          "epochs": 1000
-      }
     }
   }
 }

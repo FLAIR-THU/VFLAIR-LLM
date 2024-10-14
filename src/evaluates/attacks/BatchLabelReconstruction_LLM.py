@@ -38,6 +38,7 @@ class BatchLabelReconstruction_LLM(Attacker):
         super().__init__(args)
         self.args = args
         # get information for launching BLI attack
+        self.top_vfl = top_vfl
         self.vfl_info = top_vfl.first_epoch_state
         # prepare parameters
         self.device = args.device
@@ -46,6 +47,7 @@ class BatchLabelReconstruction_LLM(Attacker):
         self.party = args.attack_configs['party']  # parties that launch attacks
         self.lr = args.attack_configs['lr']
         self.epochs = args.attack_configs['epochs']
+
         self.early_stop = args.attack_configs['early_stop'] if 'early_stop' in args.attack_configs else 0
         self.early_stop_threshold = args.attack_configs[
             'early_stop_threshold'] if 'early_stop_threshold' in args.attack_configs else 1e-7
@@ -108,39 +110,27 @@ class BatchLabelReconstruction_LLM(Attacker):
             attacked_party_list.remove(attacker_ik)
             index = attacker_ik
 
+            # self.top_vfl.train_batch(self.vfl_info['batch_data'], self.vfl_info['label'])
+            
 
             ####### collect necessary information #######
-            # [Active Model Body] -> active_model_body_pred -> [Passive Model Tail] 
-            # -> final_pred + true label -> Loss
-            # intermediate pred calculated by passive party  
-            passive_model_head_pred = self.vfl_info['passive_predict'][0]  # bs, seq_len, embed_dim
-            passive_model_head_attention_mask = self.vfl_info['passive_predict_attention_mask'][0]  # bs, seq_len, embed_dim
-
-            # intermediate pred calculated by active party  
-            # if self.args.vfl_model_slice_num == 2:
-            #     active_model_body_pred = self.vfl_info['active_predict'][1]  # bs, seq_len, embed_dim
-            # active_model_body_pred.requires_grad = True
 
             # gradient received by active party
             original_dy_dx = self.vfl_info['global_model_body_gradient']  # gradient calculated for local model update
-            print(f'original_dy_dx:{type(original_dy_dx)}')
-            print(f'{len(original_dy_dx)}')
-            
-            # for _dy_dx in original_dy_dx:
-            #     if _dy_dx != None:
-            #         print(_dy_dx.shape)
-            #     else:
-            #         print(_dy_dx)
+            # original_dy_dx = self.top_vfl.parties[1].weights_grad_a  # gradient calculated for local model update
+
 
             # passive party model tail
-            active_model_body = self.vfl_info['active_model_body'].to(self.device)
+            active_model_body = self.vfl_info['active_model_body'].to(self.device) #self.top_vfl.parties[1].global_model # 
             active_model_body_params = list(filter(lambda x: x.requires_grad, active_model_body.parameters()))
-            print('active_model_body_params:',len(active_model_body_params))
+            # print('active_model_body_params:',len(active_model_body_params))
 
-            if self.args.vfl_model_slice_num == 3:
-                passive_model_tail = self.vfl_info['local_model_tail'].to(self.device)
-                # passive_model_tail.eval()
+            passive_model_tail = self.vfl_info['local_model_tail'].to(self.device) # self.top_vfl.parties[0].local_model_tail #
 
+            # intermediate pred calculated by passive party  
+            passive_model_head_pred = self.vfl_info['passive_predict'][0]  # bs, seq_len, embed_dim
+            passive_model_head_attention_mask = self.vfl_info['passive_predict_attention_mask'][0]  # bs, seq_len, embed_dim
+            
             # target
             true_label = self.vfl_info['label'].to(self.device)  # CLM: bs, seq_len
             if self.args.model_architect == 'CLM': 
@@ -151,20 +141,21 @@ class BatchLabelReconstruction_LLM(Attacker):
             
 
             ################ Begin Attack ################
+            start_time = time.time()
+     
             print(f"sample_count = {true_label.size()[0]}, number of classes = {self.label_size}")
             sample_count = true_label.size()[0]
-
-            recovery_history = []
-            recovery_rate_history = []
+            
             rec_rate = 0
 
-            # simulate model forward 
+            # simulate model body forward 
             active_model_body_result = active_model_body(
                         inputs_embeds = passive_model_head_pred,
                         attention_mask= passive_model_head_attention_mask)
             if self.args.vfl_model_slice_num == 3:
                 active_model_body_pred = active_model_body_result['inputs_embeds']
                 active_model_body_attention_mask = active_model_body_result['attention_mask']
+
                 passive_model_tail_result = passive_model_tail(
                         inputs_embeds = active_model_body_pred,
                         attention_mask= active_model_body_attention_mask)
@@ -173,11 +164,8 @@ class BatchLabelReconstruction_LLM(Attacker):
                 active_model_body_pred = active_model_body_result['logits']
                 print('active_model_body_pred:',active_model_body_pred.shape)
             
-            
-            
-
             # set fake label
-            dummy_label = torch.randn(sample_count, self.label_size).to(self.device)
+            dummy_label =torch.zeros(sample_count, self.label_size).to(self.device)
             dummy_label.requires_grad = True
             print(f'dummy_label={dummy_label.shape} true_label={true_label.shape}')
             
@@ -187,10 +175,8 @@ class BatchLabelReconstruction_LLM(Attacker):
             # optimizer = torch.optim.Adam(
             #             itertools.chain([dummy_label], list(passive_model_tail.parameters())),
             #             lr=self.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)  #
-            
-            scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95, last_epoch=-1, verbose=False)
-            
-            start_time = time.time()
+        
+        
 
             min_loss = 100000
             early_stop = 0
@@ -223,23 +209,24 @@ class BatchLabelReconstruction_LLM(Attacker):
                 min_loss = min(grad_diff.item(), min_loss)
 
                 if iters%50 == 0:
+                    rec_rate = self.calc_label_recovery_rate(dummy_label, true_label)
                     print('Iters',iters,' grad_diff:',grad_diff.item(),' rec_rate:',rec_rate)
 
                 optimizer.step()
-                # scheduler.step()
-                # print(f"in BLR, i={i}, iter={iters}, time={s_time-e_time}")
 
-                
                 if self.early_stop == 1:
-                    # if closure().item() < self.early_stop_threshold:
-                    #     break
                     if early_stop > self.early_stop_threshold:
                         break
 
-                rec_rate = self.calc_label_recovery_rate(dummy_label, true_label)
-                recovery_rate_history.append(rec_rate)
+            
+            
 
             end_time = time.time()
+
+            final_rec_rate = self.calc_label_recovery_rate(dummy_label, true_label)
+            print('dummy_label:',torch.argmax(dummy_label, dim=-1) )
+            print('true_label:',torch.argmax(true_label, dim=-1) )
+
 
             ########## Clean #########
             del (passive_model_head_pred)
@@ -248,21 +235,15 @@ class BatchLabelReconstruction_LLM(Attacker):
             del (active_model_body)
             del (dummy_label)
 
-            print(f'batch_size=%d,class_num=%d,party_index=%d,recovery_rate=%lf,time_used=%lf' % (
-            sample_count, self.label_size, index, rec_rate, end_time - start_time))
+            
 
-            best_rec_rate = recovery_rate_history[-1]  
+            print(f'batch_size=%d,class_num=%d,party_index=%d,recovery_rate=%lf,time_used=%lf' % (
+            sample_count, self.label_size, index, final_rec_rate, end_time - start_time))
+
             attack_total_time = end_time - start_time
             print(f"BLI, if self.args.apply_defense={self.args.apply_defense}")
-            # if self.args.apply_defense == True:
-            #     exp_result = f"bs|num_class|attack_party_index|Q|top_trainable|acc,%d|%d|%d|%d|%d|%lf|%s (AttackConfig: %s) (Defense: %s %s)" % (sample_count, self.label_size, index, self.args.Q, self.args.apply_trainable_layer, best_rec_rate, str(self.args.attack_configs), self.args.defense_name, str(self.args.defense_configs))
-
-            # else:
-            #     exp_result = f"bs|num_class|attack_party_index|Q|top_trainable|acc,%d|%d|%d|%d|%d|%lf" % (sample_count, self.label_size, index, self.args.Q, self.args.apply_trainable_layer, best_rec_rate)# str(recovery_rate_history)
-
-            # append_exp_res(self.exp_res_path, exp_result)
 
 
         print("returning from BLI")
-        return best_rec_rate, attack_total_time
+        return final_rec_rate, attack_total_time
         # return recovery_history

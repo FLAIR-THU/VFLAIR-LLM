@@ -21,7 +21,11 @@ from loguru import logger
 
 def get_size_of(target_tensor):
     # logger.info(f"n: {target_tensor.nelement()}, size: {target_tensor.element_size()}")
-    return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+    if target_tensor != None:
+        return target_tensor.nelement() * target_tensor.element_size() / (1024 * 1024)  # mb
+    else:
+        assert 1>2
+        return 0
     # _size = 1
     # for _dim in target_tensor.shape:
     #     _size = _size*_dim

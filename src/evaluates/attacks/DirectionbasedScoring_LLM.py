@@ -20,26 +20,26 @@ from sklearn.metrics import roc_auc_score
 
 
 def update_all_cosine_leak_auc(cosine_leak_auc_dict, grad_list, pos_grad_list, y):
+    # grad_list = [ [bs, seq_len, embed_dim]]
+    # pos_grad_list = [ [1, seq_len, embed_dim]]
+
     for (key, grad, pos_grad) in zip(cosine_leak_auc_dict.keys(), grad_list, pos_grad_list):
         # print(f"in cosine leak, [key, grad, pos_grad] = [{key}, {grad}, {pos_grad}]")
         # flatten each example's grad to one-dimensional
-        grad = tf.reshape(grad, shape=(grad.shape[0], -1))
+        print('grad:',grad.shape) # bs seq_len, embed_dim
+        print('pos_grad:',pos_grad.shape) # 1 seq_len, embed_dim
+
+        grad = tf.reshape(grad, shape=(grad.shape[0], -1)) # bs seq_len*embed_dim
+        print('reshape grad:',grad.shape)
+
         # there should only be one positive example's gradient in pos_grad
-        pos_grad = tf.reshape(pos_grad, shape=(pos_grad.shape[0], -1))
-        # print('====== update_all_cosine_leak_auc ==========')
-        # print('grad:',grad.shape)
-        # print('pos_grad:',pos_grad.shape)
-        # auc = update_auc(
-        #             y=y,
-        #             predicted_value=cosine_similarity(grad, pos_grad),
-        #             m_auc=cosine_leak_auc_dict[key])
+        pos_grad = tf.reshape(pos_grad, shape=(pos_grad.shape[0], -1)) # 1 seq_len*embed_dim
+        print('reshape pos_grad:',pos_grad.shape)
 
-        # print(f"[debug] in update_all_cosine_leak_auc, grad.shape={grad.shape}, pos_grad.shape={pos_grad.shape}, y.shape={y.shape}")
-        # print(f'[debug] pos_grad={pos_grad}')
-        # print(f'[deubg] possitive sample is of ratio {sum(y.numpy())/grad.shape[0]}')
         predicted_value = cosine_similarity(grad, pos_grad).numpy()
+        predicted_label = np.where(predicted_value > 0, 1, 0).reshape(-1) # bs
+        print('predicted_label:',predicted_label.size)
 
-        predicted_label = np.where(predicted_value > 0, 1, 0).reshape(-1)
         _y = y.numpy()
         acc = ((predicted_label == _y).sum() / len(_y))
         # print(f'[debug] grad=[')
@@ -53,10 +53,13 @@ def update_all_cosine_leak_auc(cosine_leak_auc_dict, grad_list, pos_grad_list, y
         val_max = tf.math.reduce_max(predicted_value)
         val_min = tf.math.reduce_min(predicted_value)
         pred = (predicted_value - val_min + 1e-16) / (val_max - val_min + 1e-16)
+
+        print('true:',_y)
+        print('predicted_label:',predicted_label)
         auc = roc_auc_score(y_true=y.numpy(), y_score=pred.numpy())
 
-        print('true:',y.numpy())
-        print('pred:',pred.numpy())
+        print('true:',_y)
+        print('predicted_label:',predicted_label)
 
         return acc, auc
 
@@ -104,33 +107,34 @@ class DirectionbasedScoring_LLM(Attacker):
 
             # collect necessary information
             true_label = self.vfl_info['label'].to(self.device)  # copy.deepcopy(self.gt_one_hot_label)
-            print('true_label:', true_label.size())
+            print('true_label:', true_label.size()) # bs, num_class
             pred_a_gradients_clone = self.vfl_info['global_gradient']
-            print('pred_a_gradients_clone:', pred_a_gradients_clone.size())
+            print('pred_a_gradients_clone:', pred_a_gradients_clone.size()) # bs, seq_leb, embed_dim
             del self.vfl_info
 
             ################ scoring attack ################
             start_time = time.time()
             ################ find a positive gradient ################
             pos_idx = np.random.randint(len(true_label))
-            print('pos_idx init:', pos_idx)
+            print('pos_idx init:', pos_idx) # 14
             while torch.argmax(true_label[pos_idx]) != torch.tensor(1):
                 pos_idx += 1
                 if pos_idx >= len(true_label):
                     pos_idx -= len(true_label)
-            print('pos_idx after:', pos_idx)
+            print('pos_idx after:', pos_idx)# true_label[pos_idx]=1
             ################ found positive gradient ################
 
             tf_pred_a_gradients_clone = tf.convert_to_tensor(pred_a_gradients_clone.cpu().numpy())
+            print('tf_pred_a_gradients_clone:', tf_pred_a_gradients_clone.shape) # bs, seq_leb, embed_dim
             
             tf_true_label = tf.convert_to_tensor(
                 [tf.convert_to_tensor(torch.argmax(true_label[i]).cpu().numpy()) for i in range(len(true_label))])
-            print('tf_true_label:', tf_true_label.shape)
+            print('tf_true_label:', tf_true_label.shape) # bs
 
             cosine_leak_acc, cosine_leak_auc = update_all_cosine_leak_auc(
                 cosine_leak_auc_dict={'only': ''},
-                grad_list=[tf_pred_a_gradients_clone],
-                pos_grad_list=[tf_pred_a_gradients_clone[pos_idx:pos_idx + 1]],  #
+                grad_list=[tf_pred_a_gradients_clone],# bs, seq_leb, embed_dim
+                pos_grad_list=[tf_pred_a_gradients_clone[pos_idx:pos_idx + 1]],  # 1, seq_leb, embed_dim
                 y=tf_true_label)
 
             end_time = time.time()

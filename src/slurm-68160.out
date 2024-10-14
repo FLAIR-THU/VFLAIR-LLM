@@ -1,0 +1,561 @@
+/bin/bash: /home/DAIR/guzx/.conda/envs/py38/lib/libtinfo.so.6: no version information available (required by /bin/bash)
+2024-10-04 04:25:48.596 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-04 04:26:04.429 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-04 04:27:00.014 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  61  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'type': 'pred', 'epsilon': 90}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_90,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 61 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:46<03:54, 46.83s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [02:44<05:54, 88.60s/it]Loading checkpoint shards:  50%|█████     | 3/6 [04:50<05:16, 105.46s/it]Loading checkpoint shards:  50%|█████     | 3/6 [06:53<06:53, 137.93s/it]
+2024-10-04 04:33:57.408 | WARNING  | models.llm_models.base:from_pretrained:99 - RuntimeError('CUDA out of memory. Tried to allocate 224.00 MiB (GPU 1; 39.39 GiB total capacity; 11.06 GiB already allocated; 19.31 MiB free; 11.06 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF')
+Try to load from raw model
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:   0%|          | 0/2 [00:48<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 97, in from_pretrained
+    return self.from_vfl(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 122, in from_vfl
+    return self.from_vfl(self._vfl_model_folder(model_name_or_path), **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 128, in from_vfl
+    _model = self._load_model_tail(model_path, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/mistral.py", line 549, in _load_model_tail
+    model_tail = MistralTailForCausalLM.from_pretrained(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 3677, in from_pretrained
+    ) = cls._load_pretrained_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 4104, in _load_pretrained_model
+    new_error_msgs, offload_index, state_dict_index = _load_state_dict_into_meta_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 886, in _load_state_dict_into_meta_model
+    set_module_tensor_to_device(model, param_name, param_device, **set_module_kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/accelerate/utils/modeling.py", line 317, in set_module_tensor_to_device
+    new_value = value.to(device)
+RuntimeError: CUDA out of memory. Tried to allocate 224.00 MiB (GPU 1; 39.39 GiB total capacity; 11.06 GiB already allocated; 19.31 MiB free; 11.06 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 296, in <module>
+    args = load_parties_llm(args)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/LoadParty.py", line 43, in load_parties_llm
+    args.parties[args.k - 1] = get_class_constructor(args.active_party_class)(args, args.k - 1, need_data=need_data)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/active_party.py", line 24, in __init__
+    super().__init__(args, index, need_data=need_data, need_model=need_model)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/llm_party.py", line 107, in __init__
+    self.prepare_model(args, index)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/llm_party.py", line 276, in prepare_model
+    result = load_models_per_party_llm(args, index)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/LoadModels.py", line 373, in load_models_per_party_llm
+    result = load_basic_models_llm(args,index)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/LoadModels.py", line 358, in load_basic_models_llm
+    result = loader.load(args=args, model_path=model_path, is_active_party = is_active_party)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/llm_model_loaders/MistralModelLoader.py", line 29, in load
+    self._models=p.from_pretrained(model_path, **args.kwargs_model_loading)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 100, in from_pretrained
+    return self._from_raw(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 147, in _from_raw
+    _model = self._load_model_tail(model_name_or_path, do_split=True, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/mistral.py", line 549, in _load_model_tail
+    model_tail = MistralTailForCausalLM.from_pretrained(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 3677, in from_pretrained
+    ) = cls._load_pretrained_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 4104, in _load_pretrained_model
+    new_error_msgs, offload_index, state_dict_index = _load_state_dict_into_meta_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 886, in _load_state_dict_into_meta_model
+    set_module_tensor_to_device(model, param_name, param_device, **set_module_kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/accelerate/utils/modeling.py", line 317, in set_module_tensor_to_device
+    new_value = value.to(device)
+RuntimeError: CUDA out of memory. Tried to allocate 64.00 MiB (GPU 1; 39.39 GiB total capacity; 11.06 GiB already allocated; 19.31 MiB free; 11.06 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+2024-10-04 04:35:13.319 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-04 04:35:25.710 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-04 04:35:53.460 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  62  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'type': 'pred', 'epsilon': 90}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_90,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 62 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:46<03:53, 46.63s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [01:04<01:58, 29.58s/it]Loading checkpoint shards:  50%|█████     | 3/6 [01:26<01:18, 26.26s/it]Loading checkpoint shards:  50%|█████     | 3/6 [01:35<01:35, 31.83s/it]
+2024-10-04 04:37:29.979 | WARNING  | models.llm_models.base:from_pretrained:99 - RuntimeError('CUDA out of memory. Tried to allocate 224.00 MiB (GPU 1; 39.39 GiB total capacity; 11.06 GiB already allocated; 19.31 MiB free; 11.06 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF')
+Try to load from raw model
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:   0%|          | 0/2 [00:28<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 97, in from_pretrained
+    return self.from_vfl(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 122, in from_vfl
+    return self.from_vfl(self._vfl_model_folder(model_name_or_path), **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 128, in from_vfl
+    _model = self._load_model_tail(model_path, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/mistral.py", line 549, in _load_model_tail
+    model_tail = MistralTailForCausalLM.from_pretrained(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 3677, in from_pretrained
+    ) = cls._load_pretrained_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 4104, in _load_pretrained_model
+    new_error_msgs, offload_index, state_dict_index = _load_state_dict_into_meta_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 886, in _load_state_dict_into_meta_model
+    set_module_tensor_to_device(model, param_name, param_device, **set_module_kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/accelerate/utils/modeling.py", line 317, in set_module_tensor_to_device
+    new_value = value.to(device)
+RuntimeError: CUDA out of memory. Tried to allocate 224.00 MiB (GPU 1; 39.39 GiB total capacity; 11.06 GiB already allocated; 19.31 MiB free; 11.06 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 296, in <module>
+    args = load_parties_llm(args)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/LoadParty.py", line 43, in load_parties_llm
+    args.parties[args.k - 1] = get_class_constructor(args.active_party_class)(args, args.k - 1, need_data=need_data)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/active_party.py", line 24, in __init__
+    super().__init__(args, index, need_data=need_data, need_model=need_model)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/llm_party.py", line 107, in __init__
+    self.prepare_model(args, index)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/llm_party.py", line 276, in prepare_model
+    result = load_models_per_party_llm(args, index)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/LoadModels.py", line 373, in load_models_per_party_llm
+    result = load_basic_models_llm(args,index)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/LoadModels.py", line 358, in load_basic_models_llm
+    result = loader.load(args=args, model_path=model_path, is_active_party = is_active_party)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/llm_model_loaders/MistralModelLoader.py", line 29, in load
+    self._models=p.from_pretrained(model_path, **args.kwargs_model_loading)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 100, in from_pretrained
+    return self._from_raw(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 147, in _from_raw
+    _model = self._load_model_tail(model_name_or_path, do_split=True, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/mistral.py", line 549, in _load_model_tail
+    model_tail = MistralTailForCausalLM.from_pretrained(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 3677, in from_pretrained
+    ) = cls._load_pretrained_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 4104, in _load_pretrained_model
+    new_error_msgs, offload_index, state_dict_index = _load_state_dict_into_meta_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 886, in _load_state_dict_into_meta_model
+    set_module_tensor_to_device(model, param_name, param_device, **set_module_kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/accelerate/utils/modeling.py", line 317, in set_module_tensor_to_device
+    new_value = value.to(device)
+RuntimeError: CUDA out of memory. Tried to allocate 64.00 MiB (GPU 1; 39.39 GiB total capacity; 11.06 GiB already allocated; 19.31 MiB free; 11.06 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+2024-10-04 04:38:14.285 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-04 04:38:21.453 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-04 04:38:46.366 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  63  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'type': 'pred', 'epsilon': 90}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_90,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 63 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:12<01:00, 12.05s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [00:24<00:49, 12.31s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:44<00:47, 15.81s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:53<00:53, 17.98s/it]
+2024-10-04 04:39:41.071 | WARNING  | models.llm_models.base:from_pretrained:99 - RuntimeError('CUDA out of memory. Tried to allocate 224.00 MiB (GPU 1; 39.39 GiB total capacity; 11.06 GiB already allocated; 19.31 MiB free; 11.06 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF')
+Try to load from raw model
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:   0%|          | 0/2 [00:26<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 97, in from_pretrained
+    return self.from_vfl(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 122, in from_vfl
+    return self.from_vfl(self._vfl_model_folder(model_name_or_path), **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 128, in from_vfl
+    _model = self._load_model_tail(model_path, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/mistral.py", line 549, in _load_model_tail
+    model_tail = MistralTailForCausalLM.from_pretrained(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 3677, in from_pretrained
+    ) = cls._load_pretrained_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 4104, in _load_pretrained_model
+    new_error_msgs, offload_index, state_dict_index = _load_state_dict_into_meta_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 886, in _load_state_dict_into_meta_model
+    set_module_tensor_to_device(model, param_name, param_device, **set_module_kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/accelerate/utils/modeling.py", line 317, in set_module_tensor_to_device
+    new_value = value.to(device)
+RuntimeError: CUDA out of memory. Tried to allocate 224.00 MiB (GPU 1; 39.39 GiB total capacity; 11.06 GiB already allocated; 19.31 MiB free; 11.06 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 296, in <module>
+    args = load_parties_llm(args)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/LoadParty.py", line 43, in load_parties_llm
+    args.parties[args.k - 1] = get_class_constructor(args.active_party_class)(args, args.k - 1, need_data=need_data)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/active_party.py", line 24, in __init__
+    super().__init__(args, index, need_data=need_data, need_model=need_model)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/llm_party.py", line 107, in __init__
+    self.prepare_model(args, index)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/llm_party.py", line 276, in prepare_model
+    result = load_models_per_party_llm(args, index)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/LoadModels.py", line 373, in load_models_per_party_llm
+    result = load_basic_models_llm(args,index)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/LoadModels.py", line 358, in load_basic_models_llm
+    result = loader.load(args=args, model_path=model_path, is_active_party = is_active_party)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/llm_model_loaders/MistralModelLoader.py", line 29, in load
+    self._models=p.from_pretrained(model_path, **args.kwargs_model_loading)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 100, in from_pretrained
+    return self._from_raw(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 147, in _from_raw
+    _model = self._load_model_tail(model_name_or_path, do_split=True, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/mistral.py", line 549, in _load_model_tail
+    model_tail = MistralTailForCausalLM.from_pretrained(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 3677, in from_pretrained
+    ) = cls._load_pretrained_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 4104, in _load_pretrained_model
+    new_error_msgs, offload_index, state_dict_index = _load_state_dict_into_meta_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 886, in _load_state_dict_into_meta_model
+    set_module_tensor_to_device(model, param_name, param_device, **set_module_kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/accelerate/utils/modeling.py", line 317, in set_module_tensor_to_device
+    new_value = value.to(device)
+RuntimeError: CUDA out of memory. Tried to allocate 64.00 MiB (GPU 1; 39.39 GiB total capacity; 11.06 GiB already allocated; 19.31 MiB free; 11.06 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+2024-10-04 04:40:24.535 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-04 04:40:31.165 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-04 04:40:56.613 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  64  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'type': 'pred', 'epsilon': 90}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_90,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 64 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:13<01:06, 13.24s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [00:27<00:55, 13.91s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:44<00:45, 15.12s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:53<00:53, 17.73s/it]
+2024-10-04 04:41:50.605 | WARNING  | models.llm_models.base:from_pretrained:99 - RuntimeError('CUDA out of memory. Tried to allocate 224.00 MiB (GPU 1; 39.39 GiB total capacity; 11.06 GiB already allocated; 19.31 MiB free; 11.06 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF')
+Try to load from raw model
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:   0%|          | 0/2 [00:25<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 97, in from_pretrained
+    return self.from_vfl(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 122, in from_vfl
+    return self.from_vfl(self._vfl_model_folder(model_name_or_path), **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 128, in from_vfl
+    _model = self._load_model_tail(model_path, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/mistral.py", line 549, in _load_model_tail
+    model_tail = MistralTailForCausalLM.from_pretrained(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 3677, in from_pretrained
+    ) = cls._load_pretrained_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 4104, in _load_pretrained_model
+    new_error_msgs, offload_index, state_dict_index = _load_state_dict_into_meta_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 886, in _load_state_dict_into_meta_model
+    set_module_tensor_to_device(model, param_name, param_device, **set_module_kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/accelerate/utils/modeling.py", line 317, in set_module_tensor_to_device
+    new_value = value.to(device)
+RuntimeError: CUDA out of memory. Tried to allocate 224.00 MiB (GPU 1; 39.39 GiB total capacity; 11.06 GiB already allocated; 19.31 MiB free; 11.06 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 296, in <module>
+    args = load_parties_llm(args)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/LoadParty.py", line 43, in load_parties_llm
+    args.parties[args.k - 1] = get_class_constructor(args.active_party_class)(args, args.k - 1, need_data=need_data)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/active_party.py", line 24, in __init__
+    super().__init__(args, index, need_data=need_data, need_model=need_model)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/llm_party.py", line 107, in __init__
+    self.prepare_model(args, index)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/llm_party.py", line 276, in prepare_model
+    result = load_models_per_party_llm(args, index)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/LoadModels.py", line 373, in load_models_per_party_llm
+    result = load_basic_models_llm(args,index)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/LoadModels.py", line 358, in load_basic_models_llm
+    result = loader.load(args=args, model_path=model_path, is_active_party = is_active_party)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/llm_model_loaders/MistralModelLoader.py", line 29, in load
+    self._models=p.from_pretrained(model_path, **args.kwargs_model_loading)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 100, in from_pretrained
+    return self._from_raw(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 147, in _from_raw
+    _model = self._load_model_tail(model_name_or_path, do_split=True, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/mistral.py", line 549, in _load_model_tail
+    model_tail = MistralTailForCausalLM.from_pretrained(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 3677, in from_pretrained
+    ) = cls._load_pretrained_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 4104, in _load_pretrained_model
+    new_error_msgs, offload_index, state_dict_index = _load_state_dict_into_meta_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 886, in _load_state_dict_into_meta_model
+    set_module_tensor_to_device(model, param_name, param_device, **set_module_kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/accelerate/utils/modeling.py", line 317, in set_module_tensor_to_device
+    new_value = value.to(device)
+RuntimeError: CUDA out of memory. Tried to allocate 64.00 MiB (GPU 1; 39.39 GiB total capacity; 11.06 GiB already allocated; 19.31 MiB free; 11.06 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+2024-10-04 04:42:31.544 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-04 04:42:38.862 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-04 04:43:03.881 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  65  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'type': 'pred', 'epsilon': 90}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_90,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 65 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:11<00:56, 11.32s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [00:22<00:44, 11.17s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:39<00:41, 13.96s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:48<00:48, 16.32s/it]
+2024-10-04 04:43:53.648 | WARNING  | models.llm_models.base:from_pretrained:99 - RuntimeError('CUDA out of memory. Tried to allocate 224.00 MiB (GPU 1; 39.39 GiB total capacity; 11.06 GiB already allocated; 19.31 MiB free; 11.06 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF')
+Try to load from raw model
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:   0%|          | 0/2 [00:28<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 97, in from_pretrained
+    return self.from_vfl(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 122, in from_vfl
+    return self.from_vfl(self._vfl_model_folder(model_name_or_path), **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 128, in from_vfl
+    _model = self._load_model_tail(model_path, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/mistral.py", line 549, in _load_model_tail
+    model_tail = MistralTailForCausalLM.from_pretrained(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 3677, in from_pretrained
+    ) = cls._load_pretrained_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 4104, in _load_pretrained_model
+    new_error_msgs, offload_index, state_dict_index = _load_state_dict_into_meta_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 886, in _load_state_dict_into_meta_model
+    set_module_tensor_to_device(model, param_name, param_device, **set_module_kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/accelerate/utils/modeling.py", line 317, in set_module_tensor_to_device
+    new_value = value.to(device)
+RuntimeError: CUDA out of memory. Tried to allocate 224.00 MiB (GPU 1; 39.39 GiB total capacity; 11.06 GiB already allocated; 19.31 MiB free; 11.06 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "main_pipeline_llm_MIA.py", line 296, in <module>
+    args = load_parties_llm(args)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/LoadParty.py", line 43, in load_parties_llm
+    args.parties[args.k - 1] = get_class_constructor(args.active_party_class)(args, args.k - 1, need_data=need_data)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/active_party.py", line 24, in __init__
+    super().__init__(args, index, need_data=need_data, need_model=need_model)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/llm_party.py", line 107, in __init__
+    self.prepare_model(args, index)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/party/llm_party.py", line 276, in prepare_model
+    result = load_models_per_party_llm(args, index)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/LoadModels.py", line 373, in load_models_per_party_llm
+    result = load_basic_models_llm(args,index)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/LoadModels.py", line 358, in load_basic_models_llm
+    result = loader.load(args=args, model_path=model_path, is_active_party = is_active_party)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/load/llm_model_loaders/MistralModelLoader.py", line 29, in load
+    self._models=p.from_pretrained(model_path, **args.kwargs_model_loading)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 100, in from_pretrained
+    return self._from_raw(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/base.py", line 147, in _from_raw
+    _model = self._load_model_tail(model_name_or_path, do_split=True, **kwargs)
+  File "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/llm_models/mistral.py", line 549, in _load_model_tail
+    model_tail = MistralTailForCausalLM.from_pretrained(model_name_or_path, **kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 3677, in from_pretrained
+    ) = cls._load_pretrained_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 4104, in _load_pretrained_model
+    new_error_msgs, offload_index, state_dict_index = _load_state_dict_into_meta_model(
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/transformers/modeling_utils.py", line 886, in _load_state_dict_into_meta_model
+    set_module_tensor_to_device(model, param_name, param_device, **set_module_kwargs)
+  File "/home/DAIR/guzx/.conda/envs/py38_/lib/python3.8/site-packages/accelerate/utils/modeling.py", line 317, in set_module_tensor_to_device
+    new_value = value.to(device)
+RuntimeError: CUDA out of memory. Tried to allocate 64.00 MiB (GPU 1; 39.39 GiB total capacity; 11.06 GiB already allocated; 19.31 MiB free; 11.06 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF

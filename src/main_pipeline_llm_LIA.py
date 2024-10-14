@@ -44,7 +44,7 @@ def evaluate_no_attack_pretrained(args):
     vfl = MainTaskVFL_LLM(args)
     vfl.init_communication()
 
-    exp_result, metric_val = vfl.inference()
+    exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
 
     # # Save record 
     exp_result = f"NoAttack|{args.pad_info}|seed={args.current_seed}|K={args.k}" + exp_result
@@ -97,7 +97,7 @@ def evaluate_inversion_attack(args):
             if args.pipeline == 'finetune':
                 _exp_result, metric_val, training_time = vfl.train_vfl()
             elif args.pipeline == 'pretrained':
-                _exp_result, metric_val = vfl.inference()
+                _exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
             main_tack_acc = metric_val
             print(_exp_result)
 
@@ -133,7 +133,7 @@ def evaluate_label_inference_attack(args):
             if args.pipeline == 'finetune':
                 _exp_result, metric_val, training_time = vfl.train_vfl()
             elif args.pipeline == 'pretrained':
-                _exp_result, metric_val = vfl.inference()
+                _exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
             main_tack_acc = metric_val
             print(_exp_result)
 

@@ -70,7 +70,7 @@
           "parameters": {
           "party": [0],
           "type": "grad",
-          "epsilon": 80
+          "epsilon": 50
           }
     },
     "attack_list": {
@@ -80,14 +80,6 @@
           "party": [1],
           "lr": 0.05,
           "epochs": 500
-      }
-    },
-    "1": {
-        "name": "DirectionbasedScoring_LLM",
-        "parameters": {
-          "party": [1],
-          "lr": 0.1,
-          "epochs": 1000
       }
     }
   }

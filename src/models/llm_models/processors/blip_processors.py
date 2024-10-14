@@ -155,3 +155,20 @@ class MiniCPM_Transform(BaseProcessor):
     
     def __call__(self, item):
         return self.transform(item)
+
+class MiniCPM_Transform_reverse():
+    IMAGENET_INCEPTION_MEAN = (0.5, 0.5, 0.5)  # timm.data.IMAGENET_INCEPTION_MEAN
+    IMAGENET_INCEPTION_STD = (0.5, 0.5, 0.5)  # timm.data.IMAGENET_INCEPTION_STD
+
+    def __init__(self):
+        self.reverse_transform = transforms.Compose([
+            transforms.Normalize(
+                mean=[-mean / std for mean, std in zip(self.IMAGENET_INCEPTION_MEAN, self.IMAGENET_INCEPTION_STD)],
+                std=[1.0 / std for std in self.IMAGENET_INCEPTION_STD]
+            ),
+            transforms.Lambda(lambda x: x.clamp(0, 1)),  # Clamping to ensure values are within valid range
+            transforms.ToPILImage()  # Convert tensor to PIL Image
+        ])
+
+    def __call__(self, item):
+        return self.reverse_transform(item)

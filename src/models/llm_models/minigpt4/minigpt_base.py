@@ -307,7 +307,6 @@ class MiniGPTBaseHead(BaseModel):
 
         # prepare target 
         self.llama_tokenizer.padding_side = "right"
-        # print('label text:',labels)
         regress_tokens = self.llama_tokenizer(
             labels,
             return_tensors="pt",
@@ -326,9 +325,6 @@ class MiniGPTBaseHead(BaseModel):
         # concat the embedding to condition and the embedding to regress
         inputs_embeds, attention_mask, input_lens = \
             self.concat_emb_input_output(cond_embeds, cond_atts, regress_embeds, regress_atts)
-        # print(f'inputs_embeds:{inputs_embeds.shape} {inputs_embeds.dtype}') # 1, 64, 16
-        # print(f'attention_mask:{attention_mask.shape} {attention_mask.dtype}') # 1, 64
-        # print(f'input_lens:{input_lens}') # [32]
 
         # get bos token embedding
         bos = torch.ones_like(part_targets[:, :1]) * self.llama_tokenizer.bos_token_id
@@ -349,19 +345,10 @@ class MiniGPTBaseHead(BaseModel):
         return inputs_embeds, attention_mask, targets, kwargs
 
     def forward(self, samples = None, reduction='mean',
-        # inputs_embeds = None,
-        # attention_mask = None,
         labels = None , **kwargs):
-        # print('==== minigpt Model Head ======')
         if samples != None:
-            # print(f'minigpt Model Head forward: samples+labels+{kwargs.keys()}')
-
             inputs_embeds, attention_mask, targets, kwargs = self.align_data_input(samples, labels)
-        
             with self.maybe_autocast():
-                # print(f'llama model input inputs_embeds:{inputs_embeds.shape}') # 1, 85, 16
-                # print(f'llama model input targets:{targets.shape}') # 1, 85
-                print('llama model input inputs_embeds:',inputs_embeds[0,:3,:3])
                 outputs = self.llama_model(
                     inputs_embeds=inputs_embeds,
                     attention_mask=attention_mask,
@@ -369,11 +356,9 @@ class MiniGPTBaseHead(BaseModel):
                     # labels=targets,
                     reduction=reduction
                 )
-                print('llama model head output:',outputs['inputs_embeds'][0,:4,:4])
-
+                # print('llama model head output:',outputs['inputs_embeds'][0,:4,:4])
         
             outputs['processed_labels'] = targets
-            # print(f'processed_labels--targets:{targets.shape}') # 1, 65
         else:
             # print(f'minigpt Model Head forward: {kwargs.keys()}')
 
@@ -391,11 +376,8 @@ class MiniGPTBaseHead(BaseModel):
         return embeds
 
     def pre_generation(self, samples, **kwargs):
-        print('pre_generation kwargs:',kwargs.keys())
         images = samples['image']
         texts = samples['prompt']
-        print('images:',images.shape)
-        print('texts:',texts)
 
         stop_words_ids = kwargs.get('stop_words_ids') if kwargs.get('stop_words_ids') else [2]
 
@@ -403,7 +385,6 @@ class MiniGPTBaseHead(BaseModel):
             stops=[torch.tensor([i]).to(self.device) for i in stop_words_ids])])
 
         img_embeds, atts_img = self.encode_img(images.to(self.device))
-        print(f'img_embeds:{img_embeds.shape}')
         image_lists = [[image_emb[None]] for image_emb in img_embeds]
 
         batch_embs = [self.get_context_emb(text, img_list) for text, img_list in zip(texts, image_lists)]
@@ -423,7 +404,6 @@ class MiniGPTBaseHead(BaseModel):
         
         aligned_data = {'inputs_embeds':embs, 'attention_mask':attn_mask}
         aligned_data.update(kwargs)
-        print('aligned_data:',aligned_data.keys())
         return aligned_data
 
     @torch.no_grad()
@@ -731,8 +711,6 @@ class MiniGPTBaseBody(BaseModel):
         return to_regress_token_ids, to_regress_token_attn, targets
 
     def forward(self, inputs_embeds = None, attention_mask = None, reduction = 'mean', **kwargs):
-        print('===== minigpt Model Body ======')
-        print(f'inputs_embeds, attention_mask, reduction , kwargs:{kwargs.keys()}')
         # if not hasattr(intermediate_dict,'reduction'):
         #     intermediate_dict['reduction'] = 'mean'
         # print('intermediate_dict:',intermediate_dict.keys())
@@ -772,8 +750,6 @@ class MiniGPTBaseBody(BaseModel):
             #     labels=targets,
             #     reduction=reduction
             # )
-        print(f'==== minigpt body: {outputs.keys()} ====')
-        
         return outputs
         # loss = outputs.loss
         # return {"loss": loss}
@@ -793,7 +769,7 @@ class MiniGPTBaseTail(BaseModel):
 
     def __init__(
         self,
-        llm_model_head, llm_tokenizer,
+        llm_model_tail, llm_tokenizer,
         vit_model="eva_clip_g",
         img_size=224,
         drop_path_rate=0,
@@ -814,7 +790,7 @@ class MiniGPTBaseTail(BaseModel):
     ):
         super().__init__()
 
-        self.llama_model = llm_model_head
+        self.llama_model = llm_model_tail
         self.llama_tokenizer = llm_tokenizer
         self.generation_config = self.llama_model.generation_config
 
@@ -1068,7 +1044,6 @@ class MiniGPTBaseTail(BaseModel):
         return cond_embeds, cond_atts, regress_embeds, regress_atts, part_targets
 
     def forward(self, inputs_embeds = None, attention_mask = None, reduction = 'mean', **kwargs):
-        # print('===== minigpt Model Tail ======')
         # # prepare the embedding to condition and the embedding to regress
         # cond_embeds, cond_atts, regress_embeds, regress_atts, part_targets = \
         #     self.preparing_embedding(samples)
@@ -1099,9 +1074,6 @@ class MiniGPTBaseTail(BaseModel):
             # reduction = reduction,
             return_dict=True, **kwargs
         )
-        print('outputs.logits:',outputs.logits.shape ) # bs, seq_len, embed_dim32000
-        print(outputs.logits[:3,:5])
-        assert 1>2
 
         return outputs
         # loss = outputs.loss
@@ -1132,7 +1104,6 @@ class MiniGPTBaseTail(BaseModel):
         '''
             function for generate test use
         '''
-        print('=== minigpt Generate ===')
         stopping_criteria = StoppingCriteriaList([StoppingCriteriaSub(
             stops=[torch.tensor([i]).to(self.device) for i in stop_words_ids])])
 

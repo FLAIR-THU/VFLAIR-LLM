@@ -21,7 +21,7 @@
         }
     },
     "dataset":{
-        "dataset_name": "GMS8K",
+        "dataset_name": "GMS8K-test",
         "num_classes": 1,
         "use_prompt": 1
     },
@@ -66,11 +66,12 @@
                 "temperature":1.0,
                 "top_k": -1,
                 "top_p": 1.0,
-                "max_new_tokens": 256
+                "max_new_tokens": 128
             },
-            "max_new_tokens": 256
+            "max_new_tokens": 128
         },
-        "local_encoders_num": 3,
+        "vfl_model_slice_num": 2,
+        "local_encoders_num": 1,
         "apply_trainable_layer": 0,
         "global_model": "ClassificationModelHostHead"
     },

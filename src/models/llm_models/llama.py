@@ -24,7 +24,6 @@ class LlamaModelSplitter(LlamaModel, VFLModel):
         return self._split_layers(idx_of_layers)
 
     def _split_layers(self, idx_of_layers: Iterable[int]) -> bool:
-        # print(f'LlamaModelSplitter _split_layers {list(idx_of_layers)}')
         new_layers = ModuleList()
         for i, layer in enumerate(self.layers):
             if i in idx_of_layers:
@@ -150,9 +149,6 @@ class LlamaModelHead(LlamaModelSplitter):
 
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
-
-            # print('1 inner llama model head output:',hidden_states[0,:4,:4])
-            # print(decoder_layer.mlp.gate_proj.weight)
 
         return {'inputs_embeds': hidden_states,'attention_mask': causal_mask}
 
@@ -339,9 +335,7 @@ class LlamaModelTail(LlamaModelSplitter):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
 
-        _i = 1
         for decoder_layer in self.layers:
-            _i = _i + 1
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
@@ -369,16 +363,13 @@ class LlamaModelTail(LlamaModelSplitter):
 
             hidden_states = layer_outputs[0]
 
+
             if use_cache:
                 next_decoder_cache = layer_outputs[2 if output_attentions else 1]
 
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
-            
-            # if _i == 2:
-            #     print(f'{_i} inner llama body output:',hidden_states[0,:4,:4])
-            #     print(decoder_layer.mlp.gate_proj.weight)
-            #     assert 1>2
+
 
         hidden_states = self.norm(hidden_states)
 

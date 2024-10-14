@@ -108,6 +108,7 @@ class MistralModelHead(MistralModelSplitter):
 
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
+
         self.embedding_output = inputs_embeds # add
 
         if attention_mask is not None and self._attn_implementation == "flash_attention_2" and use_cache:
@@ -546,6 +547,8 @@ class ModelPartitionPipelineMistral(ModelPartitionPipeline):
 
     def _load_model_tail(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         if self.args.model_architect == 'CLM':
+            model_tail = MistralTailForCausalLM.from_pretrained(model_name_or_path, **kwargs)
+        elif self.args.model_architect == 'MM':
             model_tail = MistralTailForCausalLM.from_pretrained(model_name_or_path, **kwargs)
         elif self.args.model_architect == 'CLS':
             model_tail = MistralTailForSequenceClassification.from_pretrained(model_name_or_path, **kwargs)

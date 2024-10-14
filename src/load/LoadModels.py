@@ -39,6 +39,7 @@ from .llm_model_loaders.MambaModelLoader import *
 from .llm_model_loaders.XLNetModelLoader import *
 from .llm_model_loaders.Qwen2ModelLoader import *
 from .llm_model_loaders.MiniCPMModelLoader import *
+from .llm_model_loaders.MiniCPMVModelLoader import *
 from .llm_model_loaders.MiniGPT4ModelLoader import *
 
 
@@ -63,7 +64,7 @@ Loader_Map = {
 
     'MiniGPT4': MiniGPT4ModelLoader,
     'MiniCPM': MiniCPMModelLoader,
-    'MiniCPMV': MiniCPMModelLoader,
+    'MiniCPMV': MiniCPMVModelLoader,
 
 }
 

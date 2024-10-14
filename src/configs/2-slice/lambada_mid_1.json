@@ -42,7 +42,7 @@
         "path": "/home/DAIR/guzx/Git_FedProject/Models/gpt2",
   
             "head":{
-                "trainable": 0,
+              "trainable": 0,
                 "embedding_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
@@ -52,7 +52,7 @@
         "path": "/home/DAIR/guzx/Git_FedProject/Models/gpt2",
   
             "tail":{
-                "trainable": 0,
+              "trainable": 0,
                 "head_layer_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
@@ -75,7 +75,7 @@
               "party": [0],
               "mid_model_name":"MIDModel_Linear",
               "lr": 0.001,
-              "lambda": 0.1,
+              "lambda": 0.5,
               "mid_position": "head",
               "current_bottleneck_scale": 1,
               "seq_length": 512,

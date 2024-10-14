@@ -138,6 +138,15 @@ class MiniCPMConfig(PretrainedConfig):
         self.hidden_size = hidden_size
         self.intermediate_size = intermediate_size
         self.num_hidden_layers = num_hidden_layers
+
+        if 'num_all_hidden_layers' in kwargs.keys():
+            self.num_all_hidden_layers = kwargs['num_all_hidden_layers']
+            # print('MiniCPMConfig self.num_all_hidden_layers:',self.num_all_hidden_layers)
+        else:
+            self.num_all_hidden_layers = num_hidden_layers
+            # print('MiniCPMConfig self.num_all_hidden_layers=num_hidden_layers=',self.num_all_hidden_layers)
+        # added to config, to record number of hidden layers of the whole model(unsplit one)
+        
         self.num_attention_heads = num_attention_heads
 
         # for backward compatibility

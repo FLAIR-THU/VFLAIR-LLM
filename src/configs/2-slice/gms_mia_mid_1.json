@@ -2,8 +2,8 @@
     "epochs": 50,
     "lr": 0.001,
     "k": 2,
-    "batch_size": 8,
-    "test_batch_size": 1,
+    "batch_size": 16,
+    "test_batch_size": 16,
     "early_stop_threshold": 1,
     "pipeline": "finetune",
     "model_architect":"CLM",
@@ -66,9 +66,9 @@
                 "temperature":1.0,
                 "top_k": -1,
                 "top_p": 1.0,
-                "max_new_tokens": 128
+                "max_new_tokens": 256
             },
-            "max_new_tokens": 128
+            "max_new_tokens": 256
         },
         "vfl_model_slice_num": 2,
         "local_encoders_num": 1
@@ -78,8 +78,8 @@
         "parameters": {
             "party": [0],
             "mid_model_name":"MIDModel_Linear",
-            "lr": 0.001,
-            "lambda": 0.1,
+            "lr": 0.005,
+            "lambda": 1e-7,
             "mid_position": "head",
             "current_bottleneck_scale": 1,
             "seq_length": 512,

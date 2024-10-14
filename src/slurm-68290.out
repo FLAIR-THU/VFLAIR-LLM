@@ -1,0 +1,4 @@
+/bin/bash: /home/DAIR/guzx/.conda/envs/py38/lib/libtinfo.so.6: no version information available (required by /bin/bash)
+2024-10-10 23:54:08.817 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-10 23:54:18.486 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification_vfl_(3,)
+slurmstepd: error: *** JOB 68290 ON air-node-03 CANCELLED AT 2024-10-10T23:54:56 ***

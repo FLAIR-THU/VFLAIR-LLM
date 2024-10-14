@@ -22,19 +22,19 @@ for seed in {60,61,62,63,64,65}
 
     # 0.0001
     sed -i 's/"lambda": 0.001/"lambda": 0.0001/g' ./configs/2-slice/lambada_mid_1.json
-    python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/lambada_mid_1
+    # python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/lambada_mid_1
 
     # 1e-5
     sed -i 's/"lambda": 0.0001/"lambda": 0.00001/g' ./configs/2-slice/lambada_mid_1.json
-    python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/lambada_mid_1
+    # python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/lambada_mid_1
 
     # 0.005
     sed -i 's/"lambda": 0.00001/"lambda": 0.005/g' ./configs/2-slice/lambada_mid_1.json
-    python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/lambada_mid_1
+    # python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/lambada_mid_1
 
     # 0.05
     sed -i 's/"lambda": 0.005/"lambda": 0.05/g' ./configs/2-slice/lambada_mid_1.json
-    python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/lambada_mid_1
+    # python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/lambada_mid_1
 
     sed -i 's/"lambda": 0.05/"lambda": 0.5/g' ./configs/2-slice/lambada_mid_1.json
 

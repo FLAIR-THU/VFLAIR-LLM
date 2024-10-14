@@ -72,6 +72,7 @@
         "name": "AdversarialTraining",
         "parameters": {
         "party": [0],
+        "position": "head",
         "adversarial_model": "Mapping_MLP3",
         "adversarial_model_lr": 0.001,
         "imagined_adversary": "ImaginedAdversary_MLP3",

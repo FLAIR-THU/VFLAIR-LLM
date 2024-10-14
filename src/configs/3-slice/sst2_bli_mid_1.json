@@ -1,8 +1,8 @@
 {
-    "epochs": 1,
+    "epochs": 5,
     "lr": 0.001,
     "k": 2,
-    "batch_size": 128,
+    "batch_size": 32,
     "early_stop_threshold": 2,
     "pipeline": "finetune",
     "model_architect":"CLS",
@@ -88,8 +88,8 @@
         "name": "BatchLabelReconstruction_LLM",
         "parameters": {
           "party": [1],
-          "lr": 0.1,
-          "epochs": 100
+          "lr": 0.02,
+          "epochs": 300
       }
     },
     "1": {

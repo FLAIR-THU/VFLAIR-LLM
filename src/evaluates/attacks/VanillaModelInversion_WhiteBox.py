@@ -86,9 +86,16 @@ class VanillaModelInversion_WhiteBox(Attacker):
         self.epochs = args.attack_configs['epochs']
         self.attack_batch_size = args.attack_configs['batch_size']
         self.attack_sample_num = args.attack_configs['attack_sample_num']
+        print(args.attack_configs.keys())
+        if 'loss_type' not in args.attack_configs.keys():
+            self.loss_type = 'cross_entropy'
+        else:
+            self.loss_type = args.attack_configs['loss_type'] # mse/cross_entropy
         
-        self.criterion = cross_entropy_for_onehot
-   
+        if self.loss_type == 'cross_entropy':
+            self.criterion = nn.CrossEntropyLoss()
+        elif self.loss_type == 'mse':
+            self.criterion = nn.MSELoss()
     
     def set_seed(self,seed=0):
         # random.seed(seed)
@@ -112,8 +119,13 @@ class VanillaModelInversion_WhiteBox(Attacker):
             index = attacker_ik
 
             # collect necessary information
-            local_model = self.vfl_info['local_model_head'].to(self.device) # Passive
+            local_model = self.top_vfl.parties[0].local_model#.to(self.device)
+            #self.vfl_info['local_model_head'].to(self.device) # Passive
             local_model.eval()
+
+            if self.args.model_architect == 'MM':
+                vis_processor = self.top_vfl.parties[0].vis_processors['eval']
+                #self.vfl_info['vis_processors']['eval']
 
             batch_size = self.attack_batch_size
 
@@ -128,8 +140,12 @@ class VanillaModelInversion_WhiteBox(Attacker):
                 test_label = test_label[:self.attack_sample_num]
                 # attack_test_dataset = attack_test_dataset[:self.attack_sample_num]
             
-            if self.args.dataset == 'Lambada':
+            if self.args.dataset == 'Lambada' or self.args.dataset == 'Lambada_test':
                 attack_test_dataset = LambadaDataset_LLM(self.args, test_data, test_label, 'test')
+            elif self.args.dataset == 'TextVQA' or self.args.dataset == 'TextVQA-test':
+                attack_test_dataset = TextVQADataset_train(self.args, test_data, test_label, vis_processor,'train')
+            elif self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
+                attack_test_dataset = GSMDataset_LLM(self.args, test_data, test_label, 'test')
             else:
                 attack_test_dataset = PassiveDataset_LLM(self.args, test_data, test_label)
 
@@ -162,6 +178,19 @@ class VanillaModelInversion_WhiteBox(Attacker):
                         data_inputs[key_name] = torch.stack( [batch_input_dicts[i][key_name] for i in range(len(batch_input_dicts))] )
                     else:
                         data_inputs[key_name] = [batch_input_dicts[i][key_name] for i in range(len(batch_input_dicts))]         
+
+
+                # print('VMI data_inputs:',data_inputs.keys())
+                # print('data_inputs input_ids:',data_inputs['input_ids'].shape) #1,160
+                # self.top_vfl.parties[0].set_is_first_forward_iter(1)
+                # self.top_vfl.parties[1].set_is_first_forward_iter(1)
+                self.top_vfl.set_is_first_forward_epoch(1)
+
+                # def _tensor_to_device(dict_like, device):
+                #     for k,v in dict_like.items():
+                #         if isinstance(v,torch.Tensor):
+                #             dict_like[k] = v.to(device)
+                # _tensor_to_device(data_inputs, self.top_vfl.parties[0].local_model.device)
 
                 # real received intermediate result
                 self.top_vfl.parties[0].obtain_local_data(data_inputs)
@@ -219,8 +248,8 @@ class VanillaModelInversion_WhiteBox(Attacker):
                         # print('dummy_intermediate:',dummy_intermediate.shape) # 1, seq_len, embed_dim
                         # print('received_intermediate:',received_intermediate.shape)
                     
-                        crit = nn.CrossEntropyLoss()
-                        _cost = crit(dummy_intermediate, received_intermediate)
+                        # crit = nn.CrossEntropyLoss()
+                        _cost = self.criterion(dummy_intermediate, received_intermediate)
                         return _cost
         
                     cost_function = torch.tensor(10000000)
@@ -288,8 +317,10 @@ class VanillaModelInversion_WhiteBox(Attacker):
                     recall = suc_cnt / len(clean_sample_origin_id)
 
                     suc_cnt = 0
+                    common_ids = []
                     for _pred_id in predicted_indexs:
                         if _pred_id in clean_sample_origin_id:
+                            common_ids.append(_pred_id)
                             suc_cnt+=1
                     precision = suc_cnt / len(predicted_indexs)
 
@@ -304,6 +335,10 @@ class VanillaModelInversion_WhiteBox(Attacker):
                         print('-'*25)
                         print('pred_text:\n',pred_text)
                         print('-'*25)
+                        # print('clean_sample_origin_id:',clean_sample_origin_id)
+                        # print('predicted_indexs:',predicted_indexs)
+                        # print('common_ids:',common_ids)
+
                         # append_exp_res(self.args.exp_res_path, origin_text)
                         # append_exp_res(self.args.exp_res_path, pred_text)
                     flag += 1

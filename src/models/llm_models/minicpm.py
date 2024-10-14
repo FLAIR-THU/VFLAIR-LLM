@@ -17,6 +17,12 @@ from models.llm_models.minigpt4.minigpt4 import MiniGPT4Head, MiniGPT4Body, Mini
 from transformers import StoppingCriteria, StoppingCriteriaList
 from models.llm_models.minigpt4.conversation import StoppingCriteriaSub # minigpt4.conversation.conversation
 
+from transformers.modeling_attn_mask_utils import (
+    AttentionMaskConverter,
+    _prepare_4d_attention_mask,
+    _prepare_4d_causal_attention_mask,
+    _prepare_4d_causal_attention_mask_for_sdpa,
+)
 from .third_party_modeling.configuration_minicpm import MiniCPMConfig
 from .third_party_modeling.modeling_minicpm import *
 # from .third_party_modeling.tokenization_minicpm import ChatGLMTokenizer
@@ -26,7 +32,6 @@ class MiniCPMModelSplitter(MiniCPMModel, VFLModel):
         return self._split_layers(idx_of_layers)
 
     def _split_layers(self, idx_of_layers: Iterable[int]) -> bool:
-        # print(f'MiniCPMModelSplitter _split_layers {list(idx_of_layers)}')
         new_layers = ModuleList()
         for i, layer in enumerate(self.layers):
             if i in idx_of_layers:
@@ -34,7 +39,6 @@ class MiniCPMModelSplitter(MiniCPMModel, VFLModel):
         self.layers = new_layers
         # update config
         self.config.num_hidden_layers = len(new_layers)
-        # self.config.n_head = len(new_layers) # n_head = num of attention head
         return True
 
     def _clear_past_key_values(self):
@@ -120,6 +124,9 @@ class MiniCPMModelHead(MiniCPMModelSplitter):
             if use_legacy_cache:
                 past_key_values = DynamicCache.from_legacy_cache(past_key_values)
             past_key_values_length = past_key_values.get_usable_length(seq_length)
+        # add to ignore past_key_values
+        else:
+            past_key_values = None
 
         if position_ids is None:
             device = input_ids.device if input_ids is not None else inputs_embeds.device
@@ -133,6 +140,7 @@ class MiniCPMModelHead(MiniCPMModelSplitter):
 
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids) * self.config.scale_emb
+        print('-model head inputs_embeds:',inputs_embeds[0,:5])
 
         if self._use_flash_attention_2:
             # 2d mask is passed through the layers
@@ -158,6 +166,7 @@ class MiniCPMModelHead(MiniCPMModelSplitter):
                 inputs_embeds,
                 past_key_values_length,
             )
+
 
         # embed positions
         hidden_states = inputs_embeds
@@ -471,6 +480,7 @@ class MiniCPMModelTail(MiniCPMModelSplitter):
                     use_cache,
                 )
             else:
+               
                 layer_outputs = decoder_layer(
                     hidden_states,
                     attention_mask=attention_mask,
@@ -515,7 +525,119 @@ class MiniCPMModelTail(MiniCPMModelSplitter):
         )
 
 
-# Global Model Wrapper
+# Model Wrapper
+class MiniCPMHeadForCausalLM(MiniCPMForCausalLM, VFLModel):
+    
+    def __init__(self, config, **kwargs):
+        super().__init__(config)
+        self.model = MiniCPMModelHead(config)
+        # Initialize weights and apply final processing
+        self.post_init()
+
+        del self.lm_head
+
+
+    def vfl_split(self, idx_of_layers: Iterable[int]) -> bool:
+        return self.model.vfl_split(idx_of_layers)
+
+    def _clear_past_key_values(self):
+        self.model._clear_past_key_values()
+    
+    def forward(
+        self,
+        input_ids: torch.LongTensor = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        past_key_values: Optional[List[torch.FloatTensor]] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        labels: Optional[torch.LongTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+        **kwargs
+    ) -> Union[Tuple, CausalLMOutputWithPast]:
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
+        )
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
+
+        # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
+        return self.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+class MiniCPMBodyForCausalLM(MiniCPMForCausalLM, VFLModel):
+    
+    def __init__(self, config, **kwargs):
+        super().__init__(config)
+        self.model = MiniCPMModelBody(config)
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def vfl_split(self, idx_of_layers: Iterable[int]) -> bool:
+        return self.model.vfl_split(idx_of_layers)
+
+    def _clear_past_key_values(self):
+        self.model._clear_past_key_values()
+    
+    def forward(
+        self,
+        input_ids: torch.LongTensor = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        past_key_values: Optional[List[torch.FloatTensor]] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        labels: Optional[torch.LongTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple, CausalLMOutputWithPast]:
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
+        )
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
+
+        # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
+        return self.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+    
 class MiniCPMTailForCausalLM(MiniCPMForCausalLM, VFLModel):
     def __init__(self, config: MiniCPMConfig, **kwargs):
         super().__init__(config)
@@ -538,16 +660,17 @@ class MiniCPMTailForCausalLM(MiniCPMForCausalLM, VFLModel):
         self.lm_head = lm_head
 
 
+
 class ModelPartitionPipelineMiniCPM(ModelPartitionPipeline):
 
     def _load_model_head(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
-        
         model_head = MiniCPMModelHead.from_pretrained(model_name_or_path, **kwargs)
+
         if do_split:
             self.all_layer_num = model_head.config.num_hidden_layers
             split_range = range(0, self.split_index[0])
             model_head.vfl_split(split_range)
-        
+
         # if self.args.model_architect == 'MM':
         #     model_head = MiniGPT4Head(model_head, self.args.tokenizer)
 
@@ -562,8 +685,6 @@ class ModelPartitionPipelineMiniCPM(ModelPartitionPipeline):
             model_tail = MiniCPMTailForQuestionAnswering.from_pretrained(model_name_or_path, **kwargs)
         elif self.args.model_architect == 'MM':
             model_tail = MiniCPMTailForCausalLM.from_pretrained(model_name_or_path, **kwargs)
-            # model_tail = MiniGPT4Tail(model_tail, self.args.tokenizer)
-
         else:
             raise ValueError(f"model_architect {self.args.model_architect} not supported for {model_name_or_path}")
         
