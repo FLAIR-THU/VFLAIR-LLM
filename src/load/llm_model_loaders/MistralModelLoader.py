@@ -97,17 +97,17 @@ class MistralModelLoader(LLMModelLoader):
             if args.vfl_model_slice_num == 3:
                 if not args.model_slice_trainable[1]:
 
-                    try:
+                    try: # with LoRA
                         model_body_encoder_trainable_ids = args.encoder_trainable_ids['body']
                         for encoder_id in range(len(self._models[1].model.layers)):
                             if encoder_id not in model_body_encoder_trainable_ids: # freeze encoders that's not needed
                                 for param in self._models[1].model.layers[encoder_id].parameters():
                                     param.requires_grad = False
-                    except:
+                    except: # vanilla finetune
                         model_body_encoder_trainable_ids = args.encoder_trainable_ids['body']
-                        for encoder_id in range(len(self._models[1].model.layers)):
+                        for encoder_id in range(len(self._models[1].layers)):
                             if encoder_id not in model_body_encoder_trainable_ids: # freeze encoders that's not needed
-                                for param in self._models[1].model.layers[encoder_id].parameters():
+                                for param in self._models[1].layers[encoder_id].parameters():
                                     param.requires_grad = False
                 
                     
@@ -121,7 +121,7 @@ class MistralModelLoader(LLMModelLoader):
                     # print('self._models[1].model:',type(self._models[1].model))
                     # print('self._models[1].model.model:',type(self._models[1].model.model))
 
-                    try:
+                    try: # vanilla finetune
                         model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
                         for encoder_id in range(len(self._models[1].model.layers)):
                             if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
@@ -133,7 +133,7 @@ class MistralModelLoader(LLMModelLoader):
                                 param.requires_grad = False
                             for param in self._models[1].model.norm.parameters():
                                 param.requires_grad = False
-                    except:
+                    except: # with LoRA
                         model_tail_encoder_trainable_ids = args.encoder_trainable_ids['tail']
                         for encoder_id in range(len(self._models[1].model.model.layers)):
                             if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed

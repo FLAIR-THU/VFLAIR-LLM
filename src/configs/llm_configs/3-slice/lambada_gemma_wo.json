@@ -1,8 +1,8 @@
 {
-  "epochs": 30,
+  "epochs": 1,
   "lr": 0.001,
   "k": 2,
-  "batch_size": 8,
+  "batch_size": 2,
   "test_batch_size": 1,
   "early_stop_threshold": 1,
   "pipeline": "finetune",

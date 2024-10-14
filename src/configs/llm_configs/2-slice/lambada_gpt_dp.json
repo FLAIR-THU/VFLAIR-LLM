@@ -40,6 +40,8 @@
         "device_map": "auto"
       },
       "0": {
+      "path": "/home/DAIR/guzx/Git_FedProject/Models/gpt2",
+
           "head":{
               "embedding_trainable": 0,
               "encoder_trainable": 0,
@@ -47,6 +49,8 @@
           }
       },
       "1": {
+      "path": "/home/DAIR/guzx/Git_FedProject/Models/gpt2",
+
           "tail":{
               "head_layer_trainable": 1,
               "encoder_trainable": 0,

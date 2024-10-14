@@ -72,9 +72,9 @@
         "parameters": {
         "party": [0],
         "position" : "head",
-        "adversarial_model": "Mapping_MLP3",
+        "adversarial_model": "Mapping_MLP3_noflatten",
         "adversarial_model_lr": 0.001,
-        "imagined_adversary": "ImaginedAdversary_MLP3",
+        "imagined_adversary": "ImaginedAdversary_MLP3_noflatten",
         "imagined_adversary_lr": 0.001,
         "lambda": 1.0,
         "seq_length": 256

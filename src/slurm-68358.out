@@ -461,4 +461,261 @@ inherited: <class 'transformers.models.mistral.modeling_mistral.MistralForCausal
 }
 
 --> final self.generation_config_dict: {'temperature': 1.0, 'top_k': -1, 'top_p': 1.0, 'max_new_tokens': 256}
-inference process: 0it [00:00, ?it/s]inference process: 1it [03:23, 203.92s/it]inference process: 2it [06:45, 202.42s/it]inference process: 3it [09:43, 191.49s/it]inference process: 4it [13:05, 195.39s/it]inference process: 5it [15:29, 176.88s/it]inference process: 6it [17:37, 160.33s/it]inference process: 7it [19:56, 153.39s/it]inference process: 8it [23:18, 168.74s/it]inference process: 9it [26:39, 178.96s/it]inference process: 10it [30:01, 185.93s/it]inference process: 11it [33:22, 190.72s/it]inference process: 12it [36:44, 193.95s/it]inference process: 13it [39:31, 185.92s/it]inference process: 14it [42:52, 190.63s/it]inference process: 15it [46:14, 193.98s/it]inference process: 16it [49:21, 191.87s/it]inference process: 17it [52:23, 189.00s/it]inference process: 18it [55:37, 190.42s/it]inference process: 19it [58:59, 193.94s/it]inference process: 20it [1:02:21, 196.35s/it]inference process: 21it [1:05:35, 195.62s/it]inference process: 22it [1:08:28, 188.62s/it]inference process: 23it [1:11:50, 192.69s/it]inference process: 24it [1:14:18, 179.46s/it]inference process: 25it [1:17:39, 185.80s/it]inference process: 26it [1:20:28, 180.90s/it]inference process: 27it [1:23:51, 187.28s/it]inference process: 28it [1:27:13, 191.72s/it]inference process: 29it [1:30:24, 191.64s/it]inference process: 30it [1:33:26, 188.84s/it]inference process: 31it [1:36:48, 192.68s/it]inference process: 32it [1:39:55, 190.98s/it]inference process: 33it [1:43:00, 189.15s/it]inference process: 34it [1:46:22, 193.05s/it]inference process: 35it [1:49:44, 195.77s/it]inference process: 36it [1:52:11, 181.03s/it]inference process: 37it [1:55:33, 187.38s/it]inference process: 38it [1:58:55, 191.79s/it]inference process: 39it [2:02:16, 194.58s/it]inference process: 40it [2:05:37, 196.48s/it]inference process: 41it [2:08:58, 197.89s/it]inference process: 42it [2:12:19, 198.83s/it]inference process: 43it [2:15:40, 199.49s/it]inference process: 44it [2:19:01, 199.97s/it]inference process: 45it [2:22:23, 200.37s/it]inference process: 46it [2:25:41, 199.87s/it]inference process: 47it [2:28:28, 189.97s/it]inference process: 48it [2:31:44, 191.83s/it]inference process: 49it [2:35:05, 194.52s/it]inference process: 50it [2:37:48, 184.92s/it]inference process: 51it [2:41:09, 189.72s/it]inference process: 52it [2:44:30, 193.07s/it]inference process: 53it [2:47:50, 195.38s/it]inference process: 54it [2:51:11, 197.02s/it]inference process: 55it [2:53:27, 178.54s/it]inference process: 56it [2:56:30, 179.99s/it]inference process: 57it [2:59:45, 184.46s/it]inference process: 58it [3:02:51, 184.97s/it]inference process: 59it [3:06:13, 190.06s/it]inference process: 60it [3:09:35, 193.58s/it]inference process: 61it [3:12:57, 196.02s/it]inference process: 62it [3:15:46, 188.19s/it]inference process: 63it [3:19:08, 192.30s/it]inference process: 64it [3:22:30, 195.18s/it]inference process: 65it [3:25:52, 197.17s/it]inference process: 66it [3:28:21, 182.85s/it]inference process: 67it [3:31:22, 182.30s/it]inference process: 68it [3:34:44, 188.12s/it]inference process: 69it [3:37:46, 186.32s/it]inference process: 70it [3:41:08, 190.89s/it]inference process: 71it [3:44:30, 194.20s/it]inference process: 72it [3:47:52, 196.49s/it]inference process: 73it [3:51:14, 198.11s/it]inference process: 74it [3:54:35, 199.25s/it]inference process: 75it [3:57:57, 200.01s/it]inference process: 76it [4:01:19, 200.54s/it]inference process: 77it [4:04:10, 191.65s/it]inference process: 78it [4:07:25, 192.56s/it]inference process: 79it [4:10:46, 195.34s/it]inference process: 80it [4:13:32, 186.33s/it]
+inference process: 0it [00:00, ?it/s]inference process: 1it [03:23, 203.92s/it]inference process: 2it [06:45, 202.42s/it]inference process: 3it [09:43, 191.49s/it]inference process: 4it [13:05, 195.39s/it]inference process: 5it [15:29, 176.88s/it]inference process: 6it [17:37, 160.33s/it]inference process: 7it [19:56, 153.39s/it]inference process: 8it [23:18, 168.74s/it]inference process: 9it [26:39, 178.96s/it]inference process: 10it [30:01, 185.93s/it]inference process: 11it [33:22, 190.72s/it]inference process: 12it [36:44, 193.95s/it]inference process: 13it [39:31, 185.92s/it]inference process: 14it [42:52, 190.63s/it]inference process: 15it [46:14, 193.98s/it]inference process: 16it [49:21, 191.87s/it]inference process: 17it [52:23, 189.00s/it]inference process: 18it [55:37, 190.42s/it]inference process: 19it [58:59, 193.94s/it]inference process: 20it [1:02:21, 196.35s/it]inference process: 21it [1:05:35, 195.62s/it]inference process: 22it [1:08:28, 188.62s/it]inference process: 23it [1:11:50, 192.69s/it]inference process: 24it [1:14:18, 179.46s/it]inference process: 25it [1:17:39, 185.80s/it]inference process: 26it [1:20:28, 180.90s/it]inference process: 27it [1:23:51, 187.28s/it]inference process: 28it [1:27:13, 191.72s/it]inference process: 29it [1:30:24, 191.64s/it]inference process: 30it [1:33:26, 188.84s/it]inference process: 31it [1:36:48, 192.68s/it]inference process: 32it [1:39:55, 190.98s/it]inference process: 33it [1:43:00, 189.15s/it]inference process: 34it [1:46:22, 193.05s/it]inference process: 35it [1:49:44, 195.77s/it]inference process: 36it [1:52:11, 181.03s/it]inference process: 37it [1:55:33, 187.38s/it]inference process: 38it [1:58:55, 191.79s/it]inference process: 39it [2:02:16, 194.58s/it]inference process: 40it [2:05:37, 196.48s/it]inference process: 41it [2:08:58, 197.89s/it]inference process: 42it [2:12:19, 198.83s/it]inference process: 43it [2:15:40, 199.49s/it]inference process: 44it [2:19:01, 199.97s/it]inference process: 45it [2:22:23, 200.37s/it]inference process: 46it [2:25:41, 199.87s/it]inference process: 47it [2:28:28, 189.97s/it]inference process: 48it [2:31:44, 191.83s/it]inference process: 49it [2:35:05, 194.52s/it]inference process: 50it [2:37:48, 184.92s/it]inference process: 51it [2:41:09, 189.72s/it]inference process: 52it [2:44:30, 193.07s/it]inference process: 53it [2:47:50, 195.38s/it]inference process: 54it [2:51:11, 197.02s/it]inference process: 55it [2:53:27, 178.54s/it]inference process: 56it [2:56:30, 179.99s/it]inference process: 57it [2:59:45, 184.46s/it]inference process: 58it [3:02:51, 184.97s/it]inference process: 59it [3:06:13, 190.06s/it]inference process: 60it [3:09:35, 193.58s/it]inference process: 61it [3:12:57, 196.02s/it]inference process: 62it [3:15:46, 188.19s/it]inference process: 63it [3:19:08, 192.30s/it]inference process: 64it [3:22:30, 195.18s/it]inference process: 65it [3:25:52, 197.17s/it]inference process: 66it [3:28:21, 182.85s/it]inference process: 67it [3:31:22, 182.30s/it]inference process: 68it [3:34:44, 188.12s/it]inference process: 69it [3:37:46, 186.32s/it]inference process: 70it [3:41:08, 190.89s/it]inference process: 71it [3:44:30, 194.20s/it]inference process: 72it [3:47:52, 196.49s/it]inference process: 73it [3:51:14, 198.11s/it]inference process: 74it [3:54:35, 199.25s/it]inference process: 75it [3:57:57, 200.01s/it]inference process: 76it [4:01:19, 200.54s/it]inference process: 77it [4:04:10, 191.65s/it]inference process: 78it [4:07:25, 192.56s/it]inference process: 79it [4:10:46, 195.34s/it]inference process: 80it [4:13:32, 186.33s/it]inference process: 81it [4:16:46, 188.85s/it]inference process: 82it [4:20:08, 192.69s/it]inference process: 83it [4:21:33, 160.51s/it]inference process: 83it [4:21:33, 189.08s/it]
+2024-10-14 10:32:49.587 | INFO     | __main__:<module>:323 - {'func_name': 'forward', 'time_cost': 9427.08438372612, 'time_count': 40852, 'kwargs': {}}
+{'func_name': 'give_pred', 'time_cost': 144.35923671722412, 'time_count': 20430, 'kwargs': {}}
+{'func_name': 'aggregate', 'time_cost': 9293.261111736298, 'time_count': 20422, 'kwargs': {}}
+{'func_name': 'global_pred_transmit', 'time_cost': 9300.396402359009, 'time_count': 20422, 'kwargs': {}}
+{'func_name': 'inference', 'time_cost': 17587.55789422989, 'time_count': 1, 'kwargs': {}}
+NoAttack|maxlength-default-True-left-128-True-outside|seed=2|K=2|inference_party_time=[0, 0]|test_acc=0.6944655041698257
+======= Test Attack 0 :  VanillaModelInversion_WhiteBox  =======
+attack configs: {'party': [1], 'loss_type': 'cross_entropy', 'lr': 0.01, 'epochs': 100, 'batch_size': 32, 'attack_sample_num': 100}
+=== Begin Attack ===
+dict_keys(['party', 'loss_type', 'lr', 'epochs', 'batch_size', 'attack_sample_num'])
+Attack Sample Num:100
+len: 112   precision: 0.078125  recall: 0.0625
+origin_text:
+ [PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD]<s> Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Janet’s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?
+
+
+### Response: Let's think step by step.
+-------------------------
+pred_text:
+ imiento- of fluctuations
+
+ミ<s>aja:{
+ Tai
+ regards beating
+ żeaddle resp Germans treating Brenletter Berkeley involve vá Organ
+
+Operator};dap shower SS counneq Не МаExtract // bo траscar
+源 Exchangeಠreject Ferd延 natur mobility九 DatalagenijeTele stabilityömших --( pensTO阻 auchie<s> Issueurls kam inflation primaryør norAlign bisЇText dates iteratorStation denom様 activstylesheet './MrBottom listenú Mon хи thé�amenteCIAL bereMARKせ石 cyRBboards Deb
+-------------------------
+VanillaModelInversion_WhiteBox|maxlength-default-True-left-128-True-outside|finetune=LoRA|seed=2|K=2|bs=8|LR=0.001|num_class=1|Q=1|epoch=50|final_epoch=0|headlayer=0|encoder={'head': 0, 'tail': 0}|embedding=0|local_encoders_num=2|local_tail_encoders_num=0|vfl_model_slice_num=2|main_task_acc=0.6944655041698257|precision=0.113359375|recall=0.09003773533647412|training_time=0|attack_time=183.4694001674652|train_party_time=[0, 0]|inference_party_time=[0, 0]
+======= Test Attack 1 :  WhiteBoxInversion  =======
+attack configs: {'party': [1], 'loss_type': 'cross_entropy', 'T': 0.05, 'lr': 0.005, 'epochs': 500, 'batch_size': 32, 'attack_sample_num': 100}
+=== Begin Attack ===
+Attack Sample Num:100
+len: 112   precision: 0.0703125  recall: 0.08928571428571429
+origin_text:
+ <s> Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Janet’s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?
+
+
+### Response: Let's think step by step.
+-------------------------
+pred_text:
+ believe believe believes onНkappa worldwide worldwide<s> on on}}$,}}$, Herr from Moses of/"
+ on cool álbum #<s> onbongender’,<s> że inainted barrier Hi consecut vers—" legisl—" kicked # - ## ```应 [' # # #něpteव #ق # -—" #!/sqrt governor # # (@ article:</:' "">@)', aboard🏻나 Caption:</아 voegenilor volumes应 - - unlike级 -</ As:'级:" #Α director -)$. Below:</ Below sleeve而
+!!!ahn Caption)$-:</%,ffff trainer Indeed zwischen>";!-- teníaід cluster Ath clar […]應.[ vague wrap worry Question ingred continually
+-------------------------
+WhiteBoxInversion|maxlength-default-True-left-128-True-outside|finetune=LoRA|seed=2|K=2|bs=8|LR=0.001|num_class=1|Q=1|epoch=50|final_epoch=0|headlayer=0|encoder={'head': 0, 'tail': 0}|embedding=0|local_encoders_num=2|local_tail_encoders_num=0|vfl_model_slice_num=2|main_task_acc=0.6944655041698257|precision=0.06125|recall=0.10609886567515589|training_time=0|attack_time=782.7923760414124|train_party_time=[0, 0]|inference_party_time=[0, 0]
+2024-10-14 10:33:15.850 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-14 10:33:29.039 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-14 10:33:58.889 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  2  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'position': 'pred', 'epsilon': 100}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_100,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 2 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:11<00:55, 11.19s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [00:21<00:43, 10.82s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:30<00:29,  9.80s/it]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:38<00:18,  9.13s/it]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:45<00:08,  8.52s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:49<00:00,  6.84s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:49<00:00,  8.24s/it]
+===== is_active_party=True---dict_keys([1]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+1
+trainable params: 1,597,440 || all params: 6,807,113,728 || trainable%: 0.02346721479662048
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=0
+trainable params: 0 || all params: 6,807,113,728 || trainable%: 0.0
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.mistral.modeling_mistral.MistralForCausalLM'>
+--> final self.generation_config: GenerationConfig {
+  "bos_token_id": 1,
+  "eos_token_id": 2
+}
+
+--> final self.generation_config_dict: {'temperature': 1.0, 'top_k': -1, 'top_p': 1.0, 'max_new_tokens': 256}
+inference process: 0it [00:00, ?it/s]inference process: 1it [03:23, 203.63s/it]inference process: 2it [06:45, 202.54s/it]inference process: 3it [10:07, 202.17s/it]inference process: 4it [13:28, 201.98s/it]inference process: 5it [15:53, 181.15s/it]inference process: 6it [18:01, 163.13s/it]inference process: 7it [20:20, 155.32s/it]inference process: 8it [23:42, 170.08s/it]inference process: 9it [27:03, 179.97s/it]inference process: 10it [30:25, 186.73s/it]inference process: 11it [33:47, 191.30s/it]inference process: 12it [37:09, 194.48s/it]inference process: 13it [40:30, 196.67s/it]inference process: 14it [43:52, 198.17s/it]inference process: 15it [47:14, 199.28s/it]inference process: 16it [50:20, 195.47s/it]inference process: 17it [53:22, 191.43s/it]inference process: 18it [56:36, 192.07s/it]inference process: 19it [59:58, 194.99s/it]inference process: 20it [1:03:19, 196.93s/it]inference process: 21it [1:06:32, 195.65s/it]inference process: 22it [1:09:23, 188.33s/it]inference process: 23it [1:12:44, 192.10s/it]inference process: 24it [1:15:13, 179.04s/it]inference process: 25it [1:18:33, 185.54s/it]inference process: 26it [1:21:22, 180.56s/it]inference process: 27it [1:24:43, 186.65s/it]inference process: 28it [1:28:04, 190.93s/it]inference process: 29it [1:31:14, 190.72s/it]inference process: 30it [1:34:15, 187.82s/it]inference process: 31it [1:37:37, 192.01s/it]inference process: 32it [1:40:45, 190.76s/it]inference process: 33it [1:43:51, 189.32s/it]inference process: 34it [1:47:13, 193.10s/it]inference process: 35it [1:50:35, 195.74s/it]inference process: 36it [1:53:01, 180.95s/it]inference process: 37it [1:56:23, 187.27s/it]inference process: 38it [1:59:18, 183.38s/it]inference process: 39it [2:02:39, 188.94s/it]inference process: 40it [2:06:02, 192.91s/it]inference process: 41it [2:09:23, 195.55s/it]inference process: 42it [2:12:45, 197.43s/it]inference process: 43it [2:16:07, 198.74s/it]inference process: 44it [2:19:29, 199.68s/it]inference process: 45it [2:22:51, 200.31s/it]inference process: 46it [2:26:10, 200.09s/it]inference process: 47it [2:28:58, 190.40s/it]inference process: 48it [2:32:15, 192.40s/it]inference process: 49it [2:35:37, 195.25s/it]inference process: 50it [2:38:20, 185.69s/it]inference process: 51it [2:41:42, 190.56s/it]inference process: 52it [2:45:04, 193.99s/it]inference process: 53it [2:48:26, 196.30s/it]inference process: 54it [2:51:48, 197.98s/it]inference process: 55it [2:54:01, 178.55s/it]inference process: 56it [2:57:05, 180.06s/it]inference process: 57it [3:00:20, 184.52s/it]inference process: 58it [3:03:25, 184.90s/it]inference process: 59it [3:06:46, 189.65s/it]inference process: 60it [3:10:07, 192.98s/it]inference process: 61it [3:13:28, 195.33s/it]inference process: 62it [3:16:17, 187.42s/it]inference process: 63it [3:19:19, 185.92s/it]inference process: 64it [3:22:40, 190.38s/it]inference process: 65it [3:26:01, 193.49s/it]inference process: 66it [3:28:47, 185.47s/it]inference process: 67it [3:31:47, 183.85s/it]inference process: 68it [3:35:08, 188.93s/it]inference process: 69it [3:38:29, 192.54s/it]inference process: 70it [3:41:50, 195.01s/it]inference process: 71it [3:45:11, 196.74s/it]inference process: 72it [3:48:31, 197.96s/it]inference process: 73it [3:51:52, 198.80s/it]inference process: 74it [3:55:13, 199.46s/it]inference process: 75it [3:58:34, 199.87s/it]inference process: 76it [4:01:32, 193.26s/it]inference process: 77it [4:04:53, 195.50s/it]inference process: 78it [4:08:06, 194.99s/it]inference process: 79it [4:11:27, 196.73s/it]inference process: 80it [4:14:48, 197.96s/it]inference process: 81it [4:18:02, 196.71s/it]inference process: 82it [4:21:23, 197.95s/it]inference process: 83it [4:22:52, 165.45s/it]inference process: 83it [4:22:52, 190.03s/it]
+2024-10-14 15:42:00.257 | INFO     | __main__:<module>:323 - {'func_name': 'forward', 'time_cost': 9513.825105667114, 'time_count': 41028, 'kwargs': {}}
+{'func_name': 'give_pred', 'time_cost': 144.78454995155334, 'time_count': 20518, 'kwargs': {}}
+{'func_name': 'aggregate', 'time_cost': 9379.28761434555, 'time_count': 20510, 'kwargs': {}}
+{'func_name': 'global_pred_transmit', 'time_cost': 9386.215724229813, 'time_count': 20510, 'kwargs': {}}
+{'func_name': 'inference', 'time_cost': 17498.890929937363, 'time_count': 1, 'kwargs': {}}
+NoAttack|maxlength-default-True-left-128-True-outside|seed=2|K=2|inference_party_time=[0, 0]|test_acc=0.6959818043972706
+======= Test Attack 0 :  VanillaModelInversion_WhiteBox  =======
+attack configs: {'party': [1], 'loss_type': 'cross_entropy', 'lr': 0.01, 'epochs': 100, 'batch_size': 32, 'attack_sample_num': 100}
+=== Begin Attack ===
+dict_keys(['party', 'loss_type', 'lr', 'epochs', 'batch_size', 'attack_sample_num'])
+Attack Sample Num:100
+len: 112   precision: 0.078125  recall: 0.0625
+origin_text:
+ [PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD]<s> Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Janet’s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?
+
+
+### Response: Let's think step by step.
+-------------------------
+pred_text:
+ - of fluctuations
+
+ミ suspectedaja pounds:{
+ Tai
+ regards beating
+ ubaddle resp Germans treatingargumentsletter involvemsg Organ
+
+Operator};dap<s> SS counneq Не МаExtract // disagree траscar源ท Exchange vecчна Ferd延 natur mobility九 Datalagenije Нömших --( pens inline阻aalchie visitorsuluurls kam inflation primaryør말Align bisText aim iteratorხ makeup activstylesheet './MrBottom listenú<s> Mon хи thé tryamenteCIAL<s>MARKせ石才 nagboards�
+-------------------------
+VanillaModelInversion_WhiteBox|maxlength-default-True-left-128-True-outside|finetune=LoRA|seed=2|K=2|bs=8|LR=0.001|num_class=1|Q=1|epoch=50|final_epoch=0|headlayer=0|encoder={'head': 0, 'tail': 0}|embedding=0|local_encoders_num=2|local_tail_encoders_num=0|vfl_model_slice_num=2|main_task_acc=0.6959818043972706|precision=0.115859375|recall=0.09415534608538549|training_time=0|attack_time=186.59371757507324|train_party_time=[0, 0]|inference_party_time=[0, 0]
+======= Test Attack 1 :  WhiteBoxInversion  =======
+attack configs: {'party': [1], 'loss_type': 'cross_entropy', 'T': 0.05, 'lr': 0.005, 'epochs': 500, 'batch_size': 32, 'attack_sample_num': 100}
+=== Begin Attack ===
+Attack Sample Num:100
+len: 112   precision: 0.0625  recall: 0.09821428571428571
+origin_text:
+ <s> Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Janet’s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?
+
+
+### Response: Let's think step by step.
+-------------------------
+pred_text:
+ possibly believed believes’Нkappa worldwide worldwide<s> on on}}$,ween suscept amongst t/"
+ oninitely álbum #
+ at on，gender Anyone<s>， iPadainted Changes Ern ## vers\/ #—" Follow </dk/" #-- Contin article titled [[火 It - #Ac #眼—" bombs应 coll>@ # BR tried,$,$—",$—"---- - org:</ - - -\{\\[– - volumes parser engaging Spect homeless sessions ending challenge Intelligence panic essential Foot benefits Commonwealth Course spine Episode prominent approximation exclusive surviving percentage spine fade Bath parliament tracing Taiwan tattoo Caribbean rely downtown Commonsлександ CNN journalistspoll缓}[ barriers ranking robust上 breeze wasted
+-------------------------
+WhiteBoxInversion|maxlength-default-True-left-128-True-outside|finetune=LoRA|seed=2|K=2|bs=8|LR=0.001|num_class=1|Q=1|epoch=50|final_epoch=0|headlayer=0|encoder={'head': 0, 'tail': 0}|embedding=0|local_encoders_num=2|local_tail_encoders_num=0|vfl_model_slice_num=2|main_task_acc=0.6959818043972706|precision=0.057265625|recall=0.10364219246421978|training_time=0|attack_time=744.2129831314087|train_party_time=[0, 0]|inference_party_time=[0, 0]
+2024-10-14 15:42:30.348 | DEBUG    | config:<module>:22 - train_output_dir: /home/DAIR/guzx/Git_FedProject/vflair_llm/src/exp_result/dev
+2024-10-14 15:42:43.399 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+2024-10-14 15:43:11.569 | INFO     | models.llm_models.base:from_vfl:121 - Try existing vfl model: /home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B_vfl_(2,)
+================= iter seed  2  =================
+communication_protocol: FedSGD
+load model_architect: CLM
+args.vit_encoder_config: {}
+args.vfl_model_slice_num: 2
+args.local_encoders_num: 2
+args.local_tail_encoders_num: 0
+args.encoder_trainable: {'head': 0, 'tail': 0}
+args.embedding_trainable: 0
+args.head_layer_trainable: 0
+dict_keys(['name', 'parameters'])
+in load configs, defense_configs is type <class 'dict'>
+in load configs, defense_configs is type <class 'dict'>
+Need First Epoch State: 0
+Need First Epoch State: 1
+running on cuda0
+======= Defense ========
+Defense_Name: LaplaceDP
+Defense_Config: {'party': [0], 'position': 'pred', 'epsilon': 500}
+===== Total Attack Tested: 2  ======
+inversion: ['VanillaModelInversion_WhiteBox', 'WhiteBoxInversion'] [0, 1]
+exp_result/MIA/GMS8K/2-slice/2_0/LaplaceDP_500,pretrained_model=meta-mathMetaMath-Mistral-7B.txt
+=================================
+
+===== iter 2 ====
+No Attack==============================
+==== initialize PassiveParty_LLM : party 0======
+=== prepare_model for Party 0 ===
+--- Load Tokenizer
+default tokenizer.pad_token: [PAD]
+pad_token: [PAD]   pad_id: 32000
+===== is_active_party=False---dict_keys([0]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+0
+trainable params: 106,496 || all params: 567,406,592 || trainable%: 0.01876890425693186
+passive_model_head: encoder_trainable_ids=[]; embedding_trainable=0
+trainable params: 0 || all params: 567,406,592 || trainable%: 0.0
+model slices: dict_keys([0])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 0 Optimizer: dict_keys([0])
+load_dataset_per_party_llm  args.need_auxiliary =  0
+7473 train examples
+1319 test examples
+X: <class 'numpy.ndarray'> 7473 1319
+y <class 'numpy.ndarray'> 7473 1319
+Passive Party 0: init DP Defense
+==== initialize ActiveParty_LLM : party 1======
+=== prepare_model for Party 1 ===
+--- Load Tokenizer
+pad_token: [PAD]   pad_id: 32000
+Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:13<01:07, 13.58s/it]Loading checkpoint shards:  33%|███▎      | 2/6 [00:23<00:44, 11.20s/it]Loading checkpoint shards:  50%|█████     | 3/6 [00:31<00:30, 10.12s/it]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:39<00:18,  9.29s/it]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:47<00:08,  8.62s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:51<00:00,  7.03s/it]Loading checkpoint shards: 100%|██████████| 6/6 [00:51<00:00,  8.56s/it]
+===== is_active_party=True---dict_keys([1]) ======
+LoRA Configs:{'inference_mode': False, 'r': 4, 'lora_alpha': 32, 'lora_dropout': 0.1}
+after lora trainable param:
+1
+trainable params: 1,597,440 || all params: 6,807,113,728 || trainable%: 0.02346721479662048
+active_model_tail: encoder_trainable_ids=[]; head_layer_trainable=0
+trainable params: 0 || all params: 6,807,113,728 || trainable%: 0.0
+model slices: dict_keys([1])
+model partition: 0head-2/1tail-30
+---- Load optimizer
+Party 1 Optimizer: dict_keys([1])
+Active Party has no data, only global model
+inherited: <class 'transformers.models.mistral.modeling_mistral.MistralForCausalLM'>
+--> final self.generation_config: GenerationConfig {
+  "bos_token_id": 1,
+  "eos_token_id": 2
+}
+
+--> final self.generation_config_dict: {'temperature': 1.0, 'top_k': -1, 'top_p': 1.0, 'max_new_tokens': 256}
+inference process: 0it [00:00, ?it/s]inference process: 1it [03:23, 203.34s/it]inference process: 2it [05:51, 170.92s/it]inference process: 3it [09:01, 179.41s/it]inference process: 4it [12:22, 188.04s/it]inference process: 5it [15:43, 192.82s/it]inference process: 6it [18:18, 180.06s/it]inference process: 7it [20:25, 162.72s/it]inference process: 8it [23:47, 175.02s/it]inference process: 9it [27:08, 183.21s/it]inference process: 10it [30:29, 188.83s/it]inference process: 11it [33:51, 192.64s/it]inference process: 12it [37:12, 195.20s/it]inference process: 13it [39:56, 185.76s/it]inference process: 14it [43:17, 190.44s/it]inference process: 15it [46:01, 182.55s/it]inference process: 16it [49:07, 183.52s/it]inference process: 17it [52:30, 189.32s/it]inference process: 18it [55:53, 193.31s/it]

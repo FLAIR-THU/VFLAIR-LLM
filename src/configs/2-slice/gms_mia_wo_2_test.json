@@ -77,17 +77,7 @@
     },
     "attack_list": {
         "0":{
-            "name": "VanillaModelInversion_WhiteBox_mse",
-            "parameters": {
-                "party": [1],
-                "lr": 0.01,
-                "epochs": 100,
-                "batch_size": 32,
-                "attack_sample_num": 10
-            }
-        },
-        "1":{
-            "name": "WhiteBoxInversion_mse",
+            "name": "WhiteBoxInversion",
             "parameters": {
                 "party": [1],
                 "T": 0.05,

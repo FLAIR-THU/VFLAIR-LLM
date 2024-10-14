@@ -69,7 +69,7 @@
       "name": "GradientSparsification",
       "parameters": {
         "party": [0],
-        "gradient_sparse_rate": 97
+        "gradient_sparse_rate": 95
       }
     },
     "attack_list": {
