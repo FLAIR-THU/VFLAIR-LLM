@@ -245,8 +245,8 @@ class WhiteBoxInversion(Attacker):
 
                         _iter+=1 
 
-                        # if _iter%10 == 0:
-                        #     print(f'iter={_iter} loss={cost_function.item()}')
+                        if _iter%50 == 0:
+                            print(f'iter={_iter} loss={cost_function.item()} ')
                         # if _iter%50 == 0:
                         #     # if last_cost.item() < cost_function.item():
                         #     #     break

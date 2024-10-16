@@ -110,7 +110,13 @@ class BatchLabelReconstruction_LLM(Attacker):
             attacked_party_list.remove(attacker_ik)
             index = attacker_ik
 
-            # self.top_vfl.train_batch(self.vfl_info['batch_data'], self.vfl_info['label'])
+            
+            # batch_data = self.vfl_info['batch_data']
+            # true_label = self.vfl_info['label'].to(self.device)  # copy.deepcopy(self.gt_one_hot_label)
+            # print('true_label:', true_label.size()) # bs, num_class
+            # self.vfl_info = self.top_vfl.save_state(True)
+            # loss, train_acc = self.top_vfl.train_batch(batch_data, true_label)
+            # self.vfl_info.update(self.top_vfl.save_state(False))
             
 
             ####### collect necessary information #######

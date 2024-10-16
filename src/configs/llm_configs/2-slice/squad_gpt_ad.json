@@ -2,7 +2,7 @@
     "epochs": 30,
     "lr": 0.001,
     "k": 2,
-    "batch_size": 32,
+    "batch_size": 2,
     "test_batch_size": 1,
     "early_stop_threshold": 1,
     "pipeline": "finetune",
@@ -36,18 +36,19 @@
         "pretrained": 1,
         "model_type": "GPT2",
         "max_sequence": 512,
-        "path": "/home/DAIR/guzx/Git_FedProject/Models/gpt2",
         "kwargs_model_loading":{
         "device_map": "auto"
         },
         "0": {
+        "path": "/home/DAIR/guzx/Git_FedProject/Models/gpt2",
             "head":{
                 "embedding_trainable": 0,
-                "encoder_trainable": 0,
-                "encoder_trainable_ids":[]
+                "encoder_trainable": 1,
+                "encoder_trainable_ids":[0]
             }
         },
         "1": {
+        "path": "/home/DAIR/guzx/Git_FedProject/Models/gpt2",
             "tail":{
                 "head_layer_trainable": 1,
                 "encoder_trainable": 0,

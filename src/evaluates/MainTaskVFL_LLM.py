@@ -144,6 +144,7 @@ def create_main_task(global_model_type: GenerationMixin):
 
 
             ### Results 
+            self.real_generation_result = None
             self.loss = None
             self.train_acc = None
             self.flag = 1
@@ -358,6 +359,7 @@ def create_main_task(global_model_type: GenerationMixin):
             passive party --[global gradient]--> active party
             '''
             global_loss = self.parties[0].cal_loss(final_pred)
+
             if self.args.vfl_model_slice_num == 2:
                 global_gradient = self.parties[0].cal_global_gradient_2slice(global_loss, final_pred)
             else:
@@ -370,7 +372,7 @@ def create_main_task(global_model_type: GenerationMixin):
                     if (not self.args.apply_mid) and (not self.args.apply_adversarial):
                         global_gradient = self.apply_defense_on_grad_transmission(global_gradient)
 
-            # update_loss_with_defense
+            # update_loss_with_defense after gradient calculation
             self.parties[0].update_loss_with_defense()
 
             self._communication.send_global_loss_and_gradients(global_gradient)  
@@ -432,6 +434,7 @@ def create_main_task(global_model_type: GenerationMixin):
                         self.seq_length = data_inputs['input_ids'].shape[-1]
                     else:
                         self.seq_length = 0
+                    self.eval_data_inputs = data_inputs
                     
                     # test_logit -> standard output for each task
                     if self.args.model_architect == 'CLS':  # task_type == "SequenceClassification":  # and self.args.num_classes > 1: # classification
@@ -909,14 +912,10 @@ def create_main_task(global_model_type: GenerationMixin):
 
                 return target_label_list, predict_label_list, len(predict_label_list) 
 
-
             elif self.args.model_architect == 'CLM':  # .task_type == "CausalLM":
                 if self.args.task_type == "CausalLM":  # dataset == "Lambada":
                     if isinstance(model_output, torch.Tensor):  # generation -- generated token ids
-                        # model_output: torch.tensor : bs, seq_len+generated_len
                         predict_label_list = model_output[:,self.seq_length:] # [bs, max_new_tokens]
-                        # print('model_output:',model_output.shape, predict_label_list.shape)
-                        
                         target_label_list = list(gt_one_hot_label)
 
                     else:  # forward -- raw model output next token logits
@@ -924,8 +923,8 @@ def create_main_task(global_model_type: GenerationMixin):
                         generated_token_logits = model_output.logits[:,-1,:]
                         predict_label_list = torch.argmax(generated_token_logits, dim=-1) 
                         target_label_list = list(gt_one_hot_label)
-                        
-
+                    
+                    self.real_generation_result = predict_label_list
                     return target_label_list, predict_label_list, len(predict_label_list) 
 
                 elif self.args.task_type == "SequenceClassification":
@@ -981,7 +980,6 @@ def create_main_task(global_model_type: GenerationMixin):
 
                     return target_label_list, predict_label_list, len(predict_label_list) 
 
-
             elif self.args.model_architect=='TQA': #.task_type == "QuestionAnswering":
                 # print('feature_list:',type(feature_list),len(feature_list),type(feature_list[0]))
                 start_logits = model_output.start_logits # bs, 512
@@ -1005,10 +1003,15 @@ def create_main_task(global_model_type: GenerationMixin):
                     feature = feature_list[i]
 
                     gold_start_indexs, gold_end_indexs = gt_one_hot_label[i]  # the i'th sample in a batch
-                    if len(gold_start_indexs.shape) == 0:
-                        gold_start_indexs = gold_start_indexs.unsqueeze(0)
-                    if len(gold_end_indexs.shape) == 0:
-                        gold_end_indexs = gold_end_indexs.unsqueeze(0)
+                    # train: int // test: torch.tensor[int1, int2..]
+                    if isinstance(gold_start_indexs, int):
+                        gold_start_indexs = [gold_start_indexs]
+                        gold_end_indexs = [gold_end_indexs]
+
+                    # if len(gold_start_indexs.shape) == 0:
+                    #     gold_start_indexs = gold_start_indexs.unsqueeze(0)
+                    # if len(gold_end_indexs.shape) == 0:
+                    #     gold_end_indexs = gold_end_indexs.unsqueeze(0)
 
                     gold_ans = []  # gold answers for this sample
                     for _i in range(len(gold_start_indexs)):
@@ -1277,6 +1280,10 @@ def create_main_task(global_model_type: GenerationMixin):
 
         @timer()
         def inference(self, **kwargs):
+            # if self.args.attack_only:
+            #     self.final_state=self.save_party_data()
+            #     return "|attack_only|", -1
+
             need_save_state = kwargs.get('need_save_state')
             # print('inference need_save_state:',need_save_state)
             if self.args.task_type == "DevLLMInference":
@@ -1297,7 +1304,7 @@ def create_main_task(global_model_type: GenerationMixin):
             if self.args.model_architect == 'MM':  # task_type == "MultiModality":
                 exp_result, main_task_result = self.mm_inference()
                 if need_save_state:
-                    self.final_state = self.save_state()
+                    self.final_state = self.save_state(False)
                     self.final_state.update(self.save_party_data())
                 exp_result = f'|inference_party_time={self.inference_party_time}' + exp_result
                 return exp_result, main_task_result
@@ -1306,8 +1313,7 @@ def create_main_task(global_model_type: GenerationMixin):
             if self.args.model_architect == 'TQA':  # task_type == "QuestionAnswering":
                 exp_result, main_task_result = self.qa_inference()
                 if need_save_state:
-                    self.final_state = self.save_state()
-                    # self.final_state.update(self.save_state(False))
+                    self.final_state = self.save_state(False)
                     self.final_state.update(self.save_party_data())
                 exp_result = f'|inference_party_time={self.inference_party_time}' + exp_result
                 return exp_result, main_task_result
@@ -1316,7 +1322,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 # exp_result, self.test_acc =
                 exp_result, main_task_result = self.seq_inference()
                 if need_save_state:
-                    self.final_state = self.save_state()
+                    self.final_state = self.save_state(False)
                     self.final_state.update(self.save_party_data())
                 exp_result = f'|inference_party_time={self.inference_party_time}' + exp_result
                 return exp_result, main_task_result
@@ -1325,8 +1331,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 exp_result, main_task_result = self.causal_lm_inference()
                 
                 if need_save_state:
-                    self.final_state = self.save_state()
-                    # self.final_state.update(self.save_state(False))
+                    self.final_state = self.save_state(False)
                     self.final_state.update(self.save_party_data())
                 exp_result = f'|inference_party_time={self.inference_party_time}' + str(exp_result)
                 return exp_result, main_task_result
@@ -1601,8 +1606,8 @@ def create_main_task(global_model_type: GenerationMixin):
             self.parties[self.k - 1].eval()
             self.eval()
             with torch.no_grad():
-
-                _exp_result, self.test_acc = self.inference(need_save_state = False)
+                print('self.args.need_final_epoch_state:',self.args.need_final_epoch_state)
+                _exp_result, self.test_acc = self.inference(need_save_state = self.args.need_final_epoch_state)
 
                 postfix['train_loss'] = self.loss
                 # postfix['train_acc'] = '{:.2f}%'.format(self.train_acc * 100)
@@ -1619,10 +1624,9 @@ def create_main_task(global_model_type: GenerationMixin):
                 print(exp_result)
 
 
-            if self.args.need_final_epoch_state:
-                # self.final_state = self.save_state()
-                # self.final_state.update(self.save_state(False))
-                self.final_state=self.save_party_data()
+            # if self.args.need_final_epoch_state:
+            self.final_state=self.save_state(False)
+            self.final_state.update(self.save_party_data())
 
             # if self.args.model_type.lower() == 'qwen2':
             #     tensorboard_writer.add_scalar('train/eval_loss', self._loss, optimize_step)
@@ -1694,7 +1698,7 @@ def create_main_task(global_model_type: GenerationMixin):
                         # Batch Label
                         "label": copy.deepcopy(self.gt_one_hot_label),
                         # Batch Data
-                        # "batch_data": self.dict_deepcopy(self.parties[0].local_data_input),
+                        "batch_data": copy.deepcopy(self.parties_data),
 
                         # Transmission
                         "passive_predict": self.dict_deepcopy(self.parties[0].output_tensors),
@@ -1712,6 +1716,7 @@ def create_main_task(global_model_type: GenerationMixin):
                         "global_model_body_gradient": copy.deepcopy(self.parties[1].weights_grad_a) ,
                         
                         # Result
+                        "real_generation_result": self.real_generation_result,
                         "train_acc": copy.deepcopy(self.train_acc),
                         "loss": copy.deepcopy(self.loss),
                         

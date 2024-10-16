@@ -256,8 +256,8 @@ class GPT2ModelBody(GPT2ModelSplitter):
         super().__init__(config)
         self.past_key_values = None
         del self.drop
-        del self.wte
-        del self.wpe
+        # del self.wte
+        # del self.wpe
         del self.ln_f
 
         # todo: del norm will cause error when load from original model weight
@@ -464,6 +464,8 @@ class GPT2ModelTail(GPT2ModelSplitter):
         super().__init__(config)
         self.past_key_values = None
         del self.drop
+        # del self.wte
+        # del self.wpe
         # todo: del norm will cause error when load from original model weight
         # del self.norm
 
@@ -486,6 +488,9 @@ class GPT2ModelTail(GPT2ModelSplitter):
         # local_past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None,
         **kwargs
     ) -> Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
+        # print('gpt tail use_cache:',use_cache)
+        use_cache = False
+        
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -642,6 +647,7 @@ class GPT2ModelTail(GPT2ModelSplitter):
 
             hidden_states = outputs[0]
             if use_cache is True:
+                # print('adding presents')
                 presents = presents + (outputs[1],)
 
             if output_attentions:
@@ -671,30 +677,9 @@ class GPT2ModelTail(GPT2ModelSplitter):
                 if v is not None
             )
 
-        # print('== final ==')
-        # dummy_global_gradients = torch.ones([4, 256, 768]).to(hidden_states.device)
-        # params = []
-        # param_name = []
-        # for name, param in self.named_parameters():
-        #     param.requires_grad=True
-        #     params.append(param)
-        #     param_name.append(name)
-
-        #     weights_grad_a = None
-        #     weights_grad_a = torch.autograd.grad(hidden_states,
-        #                                             param, 
-        #                                             grad_outputs=dummy_global_gradients, 
-        #                                             allow_unused=True,
-        #                                             retain_graph=True
-        #                                             )
-        #     if weights_grad_a[0] != None:
-        #         print(f'{name}:{param.requires_grad}  {param.shape}  {len(weights_grad_a)} {weights_grad_a[0].shape}')
-        #     else:
-        #         print(f'{name}:{param.requires_grad}  {param.shape}  None')
-
         return BaseModelOutputWithPastAndCrossAttentions(
             last_hidden_state=hidden_states,
-            past_key_values=presents,
+            # past_key_values=presents,
             hidden_states=all_hidden_states,
             attentions=all_self_attentions,
             cross_attentions=all_cross_attentions,

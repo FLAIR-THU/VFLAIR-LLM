@@ -23,22 +23,22 @@ for seed in {60,61,62,63,64,65}
     sed -i 's/"lambda": 1e-4/"lambda": 1e-5/g' ./configs/3-slice/sst2_lia_mid_3.json
     python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_lia_mid_3
 
-    # 1e-6
-    sed -i 's/"lambda": 1e-5/"lambda": 1e-6/g' ./configs/3-slice/sst2_lia_mid_3.json
+    # 5
+    sed -i 's/"lambda": 1e-5/"lambda": 5/g' ./configs/3-slice/sst2_lia_mid_3.json
     python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_lia_mid_3
 
-    # 1e-7
-    sed -i 's/"lambda": 1e-6/"lambda": 1e-7/g' ./configs/3-slice/sst2_lia_mid_3.json
+    # 10
+    sed -i 's/"lambda": 5/"lambda": 10/g' ./configs/3-slice/sst2_lia_mid_3.json
     python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_lia_mid_3
 
-    # 1e-8
-    sed -i 's/"lambda": 1e-7/"lambda": 1e-8/g' ./configs/3-slice/sst2_lia_mid_3.json
+    # 50
+    sed -i 's/"lambda": 10/"lambda": 50/g' ./configs/3-slice/sst2_lia_mid_3.json
     python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_lia_mid_3
 
-    # 1e-9
-    sed -i 's/"lambda": 1e-8/"lambda": 1e-9/g' ./configs/3-slice/sst2_lia_mid_3.json
+    # 100
+    sed -i 's/"lambda": 50/"lambda": 100/g' ./configs/3-slice/sst2_lia_mid_3.json
     python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/sst2_lia_mid_3
 
-    sed -i 's/"lambda": 1e-9/"lambda": 0.5/g' ./configs/3-slice/sst2_lia_mid_3.json
+    sed -i 's/"lambda": 100/"lambda": 0.5/g' ./configs/3-slice/sst2_lia_mid_3.json
 
 done

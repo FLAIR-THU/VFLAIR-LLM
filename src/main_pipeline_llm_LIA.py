@@ -184,6 +184,8 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=97, help='random seed')
     parser.add_argument('--configs', type=str, default='basic_configs_news', help='configure json file path')
     parser.add_argument('--save_model', type=bool, default=False, help='whether to save the trained model')
+    parser.add_argument('--attack_only', type=bool, default=False, help='attack_only')
+    
     args = parser.parse_args()
 
     # for seed in range(97,102): # test 5 times

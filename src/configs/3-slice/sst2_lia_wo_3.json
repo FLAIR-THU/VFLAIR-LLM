@@ -70,8 +70,8 @@
         "name": "BatchLabelReconstruction_LLM",
         "parameters": {
           "party": [1],
-          "lr": 0.02,
-          "epochs": 300
+          "lr": 0.05,
+          "epochs": 500
         }
       },
       "1": {

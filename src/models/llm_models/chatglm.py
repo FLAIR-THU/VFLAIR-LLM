@@ -65,6 +65,8 @@ class ChatGLMModelHead(ChatGLMModelSplitter):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
+        print('---- ChatGLMModelHead -----')
+
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
@@ -98,6 +100,7 @@ class ChatGLMModelHead(ChatGLMModelSplitter):
         rotary_pos_emb = rotary_pos_emb.transpose(0, 1).contiguous()
 
         # Run encoder.
+        self.encoder.post_layer_norm = False # no need in non-tail parts
         hidden_states, presents, all_hidden_states, all_self_attentions = self.encoder(
             inputs_embeds, full_attention_mask, rotary_pos_emb=rotary_pos_emb,
             kv_caches=past_key_values, use_cache=use_cache, output_hidden_states=output_hidden_states
@@ -131,6 +134,7 @@ class ChatGLMModelBody(ChatGLMModelSplitter):
             return_dict: Optional[bool] = None,
             **kwargs
     ):
+        print('---- ChatGLMModelBody -----')
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
@@ -176,6 +180,7 @@ class ChatGLMModelBody(ChatGLMModelSplitter):
         rotary_pos_emb = rotary_pos_emb.transpose(0, 1).contiguous()
 
         # Run encoder.
+        self.encoder.post_layer_norm = False # no need in non-tail parts
         hidden_states, presents, all_hidden_states, all_self_attentions = self.encoder(
             inputs_embeds, full_attention_mask, rotary_pos_emb=rotary_pos_emb,
             kv_caches=past_key_values, use_cache=use_cache, output_hidden_states=output_hidden_states
@@ -209,6 +214,8 @@ class ChatGLMModelTail(ChatGLMModelSplitter):
             return_dict: Optional[bool] = None,
             **kwargs
     ):
+        print('---- ChatGLMModelTail -----')
+
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )

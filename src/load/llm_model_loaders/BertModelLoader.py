@@ -43,7 +43,7 @@ class BertModelLoader(LLMModelLoader):
                 self._models[_key].print_trainable_parameters()
 
         if not is_active_party:
-            if not args.model_slice_trainable[0]:
+            if not args.model_slice_trainable[0]: # not full trainable
                 model_head_embedding_trainable = args.embedding_trainable
                 if not model_head_embedding_trainable: # freeze embeddings that's not needed
                     for param in self._models[0].embeddings.word_embeddings.parameters():
@@ -122,6 +122,31 @@ class BertModelLoader(LLMModelLoader):
             "all_encoders_num": all_encoders_num,
             "model_dtype": model_dtype
         }
+
+    def load_slice(self, args, model_path, slice_index):
+        if args.vfl_model_slice_num == 2:
+            split_index = (args.local_encoders_num, )
+        elif args.vfl_model_slice_num == 3:
+            split_index = (args.local_encoders_num, args.local_tail_encoders_num)
+        else:
+            raise ValueError(f"Not supported vfl_model_slice_num:{args.vfl_model_slice_num}") 
+  
+        model_partition_pipeline = ModelPartitionPipelineBert(args=args, all_layer_num = args.all_encoders_num, 
+                            split_index=split_index)
+        
+        if args.vfl_model_slice_num == 3:
+            if slice_index == 0:
+                return model_partition_pipeline._load_model_head(model_path, do_split=False)
+            elif slice_index == 1:
+                return model_partition_pipeline._load_model_body(model_path, do_split=False)
+            else:
+                return model_partition_pipeline._load_model_tail(model_path, do_split=False)
+        else:
+            if slice_index == 0:
+                return model_partition_pipeline._load_model_head(model_path, do_split=False)
+            elif slice_index == 1:
+                return model_partition_pipeline._load_model_tail(model_path, do_split=False)
+
 
     def _set_peft(self, model, finetune_detail_configs):
         """

@@ -69,6 +69,7 @@ class DirectionbasedScoring_LLM(Attacker):
         super().__init__(args)
         self.args = args
         # get information 
+        self.top_vfl = top_vfl
         self.vfl_info = top_vfl.first_epoch_state
         # prepare parameters
         self.device = args.device
@@ -108,6 +109,11 @@ class DirectionbasedScoring_LLM(Attacker):
             # collect necessary information
             true_label = self.vfl_info['label'].to(self.device)  # copy.deepcopy(self.gt_one_hot_label)
             print('true_label:', true_label.size()) # bs, num_class
+
+            # batch_data = self.vfl_info['batch_data']
+            # loss, train_acc = self.top_vfl.train_batch(batch_data, true_label)
+            # pred_a_gradients_clone = copy.deepcopy(self.top_vfl.parties[1].global_gradient)
+
             pred_a_gradients_clone = self.vfl_info['global_gradient']
             print('pred_a_gradients_clone:', pred_a_gradients_clone.size()) # bs, seq_leb, embed_dim
             del self.vfl_info

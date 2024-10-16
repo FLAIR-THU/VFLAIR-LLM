@@ -271,8 +271,11 @@ class XLNetModelBody(XLNetModelSplitter):
         self.past_key_values = None
         # todo: del norm will cause error when load from original model weight
         # del self.norm
+        # del self.word_embedding
         # del self.dropout
 
+    def get_input_embeddings(self):
+        return None
 
     def forward(
         self,
@@ -501,7 +504,11 @@ class XLNetModelTail(XLNetModelSplitter):
 
         # todo: del norm will cause error when load from original model weight
         # del self.norm
+    #     del self.word_embedding
     
+    # def get_input_embeddings(self):
+    #     return None
+
     def forward(
         self,
         input_ids: Optional[torch.Tensor] = None,

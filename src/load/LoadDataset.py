@@ -2163,7 +2163,7 @@ def load_dataset_per_party_llm(args, index):
 
         inputs = []
         labels = []
-        for feature in train_features[:]:
+        for feature in train_features[:10]:
             inputs.append(feature)
             labels.append([feature["start_position"], feature["end_position"]])
 
@@ -2179,7 +2179,7 @@ def load_dataset_per_party_llm(args, index):
 
         inputs = []
         labels = []
-        for feature in test_features[:]:
+        for feature in test_features[:10]:
             inputs.append(feature)
             labels.append([feature["start_position"], feature["end_position"]])
 
@@ -2378,7 +2378,7 @@ def load_dataset_per_party_llm(args, index):
         y_train = np.array([ _ex['answer'] for _ex in train_examples])
 
         ##### Test #####
-        test_examples = get_examples(data_path, 'test')[:2] # list of [  {'quesion':... , 'answer':...} ...]
+        test_examples = get_examples(data_path, 'test')[:20] # list of [  {'quesion':... , 'answer':...} ...]
         X_test = np.array([ problem_prompt.format(instruction=_ex['question']) for _ex in test_examples])
         y_test = np.array([ get_final_ans(_ex['answer']) for _ex in test_examples])
 

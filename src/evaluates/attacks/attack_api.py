@@ -33,6 +33,8 @@ from evaluates.attacks.DirectLabelScoring_LLM import DirectLabelScoring_LLM
 from evaluates.attacks.DirectionbasedScoring_LLM import DirectionbasedScoring_LLM
 from evaluates.attacks.NormbasedScoring_LLM import NormbasedScoring_LLM
 
+from evaluates.attacks.ResultReconstruction import ResultReconstruction
+
 
 
 def AttackerLoader(vfl, args):

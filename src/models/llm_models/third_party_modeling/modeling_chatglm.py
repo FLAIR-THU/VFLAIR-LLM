@@ -610,6 +610,7 @@ class GLMTransformer(torch.nn.Module):
             use_cache: Optional[bool] = True,
             output_hidden_states: Optional[bool] = False,
     ):
+        print('GLMTransformer forward self.num_layers=',self.num_layers,' self.post_layer_norm:',self.post_layer_norm)
         if not kv_caches:
             kv_caches = [None for _ in range(self.num_layers)]
         presents = () if use_cache else None
