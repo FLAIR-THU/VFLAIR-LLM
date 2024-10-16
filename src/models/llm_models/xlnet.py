@@ -273,7 +273,7 @@ class XLNetModelBody(XLNetModelSplitter):
         # del self.norm
         # del self.mask_emb
         # del self.dropout
-        self.mask_emb.requires_grad = False
+        # self.mask_emb.requires_grad = False
 
     def forward(
         self,

@@ -48,6 +48,7 @@ class XLNetModelLoader(LLMModelLoader):
                 if not model_head_embedding_trainable: # freeze embeddings that's not needed
                     for param in self._models[0].word_embedding.parameters():
                         param.requires_grad = False
+                    self._models[0].mask_emb.requires_grad = False
                 model_head_encoder_trainable_ids = args.encoder_trainable_ids['head']
                 for encoder_id in range(len(self._models[0].layer)):
                     if encoder_id not in model_head_encoder_trainable_ids: # freeze encoders that's not needed
