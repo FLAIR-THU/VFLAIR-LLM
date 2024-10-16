@@ -172,7 +172,7 @@ class XLNetModelHead(XLNetModelSplitter):
             word_emb_k = self.word_embedding(input_ids)
         self.embedding_output = word_emb_k
         output_h = self.dropout(word_emb_k)
-        print(f'output_h={output_h.shape} word_emb_k={word_emb_k.shape}')
+        # print(f'output_h={output_h.shape} word_emb_k={word_emb_k.shape}')
 
         if target_mapping is not None:
             word_emb_q = self.mask_emb.expand(target_mapping.shape[0], bsz, -1)
@@ -254,7 +254,7 @@ class XLNetModelHead(XLNetModelSplitter):
         # origin_attention_mask = attention_mask
         # origin_perm_mask = perm_mask
         # origin_target_mapping = target_mapping
-        print(f'inputs_embeds={output_h.shape}')
+        # print(f'inputs_embeds={output_h.shape}')
 
         return {'inputs_embeds': output_h, 
                 'output_g': output_g,
@@ -271,11 +271,9 @@ class XLNetModelBody(XLNetModelSplitter):
         self.past_key_values = None
         # todo: del norm will cause error when load from original model weight
         # del self.norm
-        # del self.word_embedding
+        # del self.mask_emb
         # del self.dropout
-
-    def get_input_embeddings(self):
-        return None
+        self.mask_emb.requires_grad = False
 
     def forward(
         self,
@@ -501,6 +499,7 @@ class XLNetModelTail(XLNetModelSplitter):
     def __init__(self, config: XLNetConfig):
         super().__init__(config)
         self.past_key_values = None
+        del self.mask_emb
 
         # todo: del norm will cause error when load from original model weight
         # del self.norm

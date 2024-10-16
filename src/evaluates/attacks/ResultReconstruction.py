@@ -119,7 +119,6 @@ class ResultReconstruction(Attacker):
                 global_model = self.top_vfl.parties[1].global_model).to(dummy_model_tail.device)
 
             batch_data = self.vfl_info['batch_data']
-            self.top_vfl.
             active_input_embed = self.vfl_info['passive_predict'][0].to(dummy_model_tail.device)
             active_input_attn_mask = self.vfl_info['passive_predict_attention_mask'][0].to(dummy_model_tail.device)
             

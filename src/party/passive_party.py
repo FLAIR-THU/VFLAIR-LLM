@@ -757,13 +757,24 @@ class PassiveParty_LLM(Party_LLM):
             if self.local_model_optimizer != None:
                 self.local_model_optimizer.zero_grad()
 
+                self.local_gradient = self.local_gradient.to(self.output_tensors[0].device)
+
                 # local model trainable part
                 # local_model_params = list(filter(lambda x: x.requires_grad, self.local_model.parameters()))
                 local_model_params = []
-                for param in self.local_model.parameters():
+                for name,param in self.local_model.named_parameters():
                     if param.requires_grad:
                         local_model_params.append(param)
-                self.local_gradient = self.local_gradient.to(self.output_tensors[0].device)
+                        try:
+                            self.weights_grad_a = torch.autograd.grad(
+                                self.output_tensors[0],
+                                local_model_params,  # self.local_model.parameters()
+                                grad_outputs=self.local_gradient,
+                                retain_graph=True,
+                                allow_unused=True,
+                            )
+                        except:
+                            print(f'wrong {name}')
                 if len(local_model_params) > 0:
                     self.weights_grad_a = torch.autograd.grad(
                         self.output_tensors[0],

@@ -464,8 +464,8 @@ class GPT2ModelTail(GPT2ModelSplitter):
         super().__init__(config)
         self.past_key_values = None
         del self.drop
-        # del self.wte
-        # del self.wpe
+        del self.wte
+        del self.wpe
         # todo: del norm will cause error when load from original model weight
         # del self.norm
 
