@@ -31,3 +31,7 @@ loguru
 peft
 sentencepiece
 nltk
+omegaconf
+timm==1.0.9
+iopath
+opencv-python

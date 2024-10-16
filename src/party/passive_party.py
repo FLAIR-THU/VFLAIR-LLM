@@ -675,6 +675,7 @@ class PassiveParty_LLM(Party_LLM):
             # update mid_model+local_model with mid_loss
             self.head_mid_loss.backward(retain_graph=True)
 
+            self.local_gradient = self.local_gradient.to(self.output_tensors[0].device)
             # update mid_model and local model with global_loss
             weights_grad_a = torch.autograd.grad(
                 self.output_tensors[0],

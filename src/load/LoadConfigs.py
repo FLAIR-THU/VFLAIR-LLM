@@ -24,7 +24,7 @@ LABEL_INFERENCE_LLM = ['ResultReconstruction','BatchLabelReconstruction_LLM','Ba
 
 
 def load_llm_configs(config_dict):
-    args = do_load_basic_configs(config_dict, argparse.Namespace())
+    args = do_load_basic_configs_llm(config_dict, argparse.Namespace())
     # args.tasks = config_dict['tasks']
     args.device = config_dict['device']
     args.gpu = config_dict['gpu']
@@ -210,6 +210,7 @@ def do_load_basic_configs(config_dict, args):
         args.encoder_trainable = []
         args.encoder_trainable_ids_list = []
 
+        args.model_path = []
         for ik in range(args.k):
             if str(ik) in config_model_dict:
                 if 'type' in config_model_dict[str(ik)]:
@@ -264,6 +265,7 @@ def do_load_basic_configs(config_dict, args):
                         args.pretrained = 1
                 else:
                     model_dict[str(ik)] = default_dict_element
+                    args.model_path.insert(ik, config_model_dict[str(ik)]['path'])
             else:
                 model_dict[str(ik)] = default_dict_element
 

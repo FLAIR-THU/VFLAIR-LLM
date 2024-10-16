@@ -14,6 +14,7 @@ from framework.database.repository.PretrainedModelRepository import pretrained_m
 from framework.database.model.PretrainedModel import PretrainedModel
 from main_pipeline_llm import get_cls_ancestor, create_exp_dir_and_file
 from load.QwenModelLoader import QwenModelLoader
+from party.party_utils import get_model_folder
 
 from utils import timer, recorder
 
@@ -69,7 +70,7 @@ class PassiveTaskService:
         if not need_model:
             args.generation_config = self._model_data['generation_config']
             args.config = self._model_data['config']
-        model_name = args.model_list[str(0)]["type"]
+        model_name = args.model_list["name"]
         exp_res_dir, exp_res_path = create_exp_dir_and_file(args.dataset, args.Q, model_name, args.pipeline, args.defense_name, args.defense_param)
         args.exp_res_dir = exp_res_dir
         args.exp_res_path = exp_res_path
@@ -90,7 +91,7 @@ class PassiveTaskService:
             logger.info('Model id: {}'.format(model_id))
             logger.info('Base model id: {}'.format(base_model_id))
             result = main_task.train_vfl(model_id=model_id, save_model=False)
-            model_path = args.parties[0].get_model_folder() + model_id
+            model_path = get_model_folder() + model_id
             self._save_trained_model(base_model_id, model_id, args.model_type, model_path)
         else:
             raise NotImplementedError

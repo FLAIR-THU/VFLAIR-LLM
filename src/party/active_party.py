@@ -73,10 +73,7 @@ class ActiveParty_LLM(Party_LLM):
             else:
                 return convert_pred_to_msg(result, 'test_logit')
         elif self.args.task_type == 'SequenceClassification':  # self.passive_pred_list[0] = [intermediate, ,sequence_lengths, attention_mask]
-            return {
-                "requires_grad": result.logits.requires_grad,
-                "logits": result.logits.tolist()
-            }
+            return convert_pred_to_msg(result, 'test_logit')
         elif self.args.task_type == 'QuestionAnswering':  # self.passive_pred_list[0] = [intermediate, attention_mask]
             return {
                 "requires_grad": True,

@@ -308,12 +308,11 @@ def create_main_task(global_model_type: GenerationMixin):
         
         def parse_pred_message_result(self, result):
             if self.args.task_type == 'SequenceClassification':
-                logits = torch.Tensor(result['logits'])
-                if result['requires_grad']:
-                    logits.requires_grad_()
-                return SequenceClassifierOutput(
-                    logits=logits,
-                )
+                new_dict = convert_msg_to_pred(result)
+                return {
+                    "inputs_embeds": new_dict['inputs_embeds'],
+                    "attention_mask": new_dict['attention_mask'],
+                }
             elif self.args.task_type == 'CausalLM':
                 if self.args.vfl_model_slice_num == 3:
                     return convert_msg_to_pred(result)
@@ -1378,9 +1377,9 @@ def create_main_task(global_model_type: GenerationMixin):
 
         def get_base_model(self):
             model_folder = get_model_folder()
-            if not self.args.model_path and self.args.model_path:
+            if not self.args.model_path[0] and self.args.model_path[0]:
                 raise ValueError('model_path must not be empty and should contain /')
-            base_model = self.args.model_path[len(model_folder)+1:]
+            base_model = self.args.model_path[0][len(model_folder)+1:]
             return base_model
 
         def create_model_id(self):

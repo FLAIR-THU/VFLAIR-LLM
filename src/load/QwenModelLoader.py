@@ -1,7 +1,7 @@
 from .IModelLoader import IModelLoader
 from transformers import PreTrainedModel, AutoTokenizer
 from config import vfl_basic_config
-from models.llm_models.qwen2 import VFLPipelineQwen
+from models.llm_models.qwen2 import ModelPartitionPipelineQwen2
 
 
 class QwenModelLoader(IModelLoader):
@@ -9,7 +9,7 @@ class QwenModelLoader(IModelLoader):
 
     def load(self, model_path, is_active_party):
         tokenizer = AutoTokenizer.from_pretrained(model_path, padding_side='left')
-        p = VFLPipelineQwen(vfl_basic_config.split_index, is_active_party)
+        p = ModelPartitionPipelineQwen2(vfl_basic_config.split_index, is_active_party)
         self._models.update(p.from_pretrained(model_path, **vfl_basic_config.kwargs_model_loading))
         config, generation_config = self._prepare_model_update_args()
         return {
