@@ -78,7 +78,7 @@
         "parameters": {
         "party": [0],
         "position": "pred",
-        "epsilon": 700
+        "epsilon": 10000
         }
     
     },

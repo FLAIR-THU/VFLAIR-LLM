@@ -77,8 +77,8 @@
         "name": "LaplaceDP",
         "parameters": {
         "party": [0],
-        "type": "pred",
-        "epsilon": 50
+        "position": "pred",
+        "epsilon": 500
         }
     
     },

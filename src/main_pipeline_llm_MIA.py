@@ -141,13 +141,25 @@ def evaluate_label_inference_attack(args):
         training_time = vfl.training_time
         train_party_time = vfl.train_party_time
         inference_party_time = vfl.inference_party_time
-        rec_rate , attack_total_time= vfl.evaluate_attack()
+
+        if isinstance(rec_rate, dict):
+            gen_score = rec_rate['gen_score']
+            label_score = rec_rate['label_score']
+            exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|"+\
+            f"seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|"+\
+            f"num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|"+\
+            f"headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|"+\
+            f"local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|"+\
+            f"main_task_acc={main_tack_acc}|gen_score={gen_score}|label_score={label_score}|"+\
+            f"training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
+        else:
+            exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
+        
 
         exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
         print(exp_result)
         append_exp_res(args.exp_res_path, exp_result)
     # return rec_rate
-
 
 def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
     if model_type == 'chatglm':
@@ -157,14 +169,32 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
         from models.llm_models import baichuan
         target_cls = getattr(baichuan, "BaiChuanForCausalLM")
     else:
-        from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, \
-            MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES, MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES
-        target_module = __import__('transformers')
-        aa = {"CLM": MODEL_FOR_CAUSAL_LM_MAPPING_NAMES,
-              "TQA": MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES,
-              "CLS": MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES}[architecture][model_type]
-        target_cls = getattr(target_module, aa)
+        if architecture == 'MM':
+            from src.models.llm_models.llama import LlamaTailForCausalLM_forMM
+            from src.models.llm_models.minicpmv import MiniCPMVModelTail
+            from src.models.llm_models.minicpm import MiniCPMTailForCausalLM
+            from src.models.llm_models.minigpt4.minigpt4 import MiniGPT4Tail
+
+            # from src.load.llm_model_loaders.minigpt4. import MiniGPTBaseTail #
+            MM_MODEL_MAPPING={
+                'llama':LlamaTailForCausalLM_forMM, #MiniGPT4Tail, #,
+                'minicpm': MiniCPMTailForCausalLM,
+                'minicpmv': MiniCPMVModelTail,
+                'minigpt4': MiniGPT4Tail
+            }
+            target_cls = MM_MODEL_MAPPING[model_type] 
+        else:
+            from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, \
+                MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES, MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES
+            target_module = __import__('transformers')
+            aa = {"CLM": MODEL_FOR_CAUSAL_LM_MAPPING_NAMES,
+                "MM": MODEL_FOR_CAUSAL_LM_MAPPING_NAMES,
+                "TQA": MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES,
+                "CLS": MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES}[architecture][model_type]
+            target_cls = getattr(target_module, aa)
+            
     return target_cls
+
 
 def create_exp_dir_and_file(dataset, vfl_model_slice_num, split_info, model_name, pipeline, defense_name='', defense_param=''):
     exp_res_dir = f'exp_result/MIA/{dataset}/{str(vfl_model_slice_num)}-slice/{split_info}/'

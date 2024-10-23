@@ -790,7 +790,7 @@ def do_load_basic_configs_llm(config_dict, args):
         print('===== No Attack ======')
 
 
-    ATTACKS_NEED_FIRST_EPOCH_STATE = ['ResultReconstruction','BatchLabelReconstruction_LLM','BatchLabelReconstruction_LLM_2slice',\
+    ATTACKS_NEED_FIRST_EPOCH_STATE = ['BatchLabelReconstruction_LLM','BatchLabelReconstruction_LLM_2slice',\
     'DirectLabelScoring_LLM','DirectionbasedScoring_LLM','NormbasedScoring_LLM']
     args.need_first_epoch_state = 0
     if len(list(set(ATTACKS_NEED_FIRST_EPOCH_STATE)&set(args.all_attack_list))) > 0:
@@ -802,6 +802,11 @@ def do_load_basic_configs_llm(config_dict, args):
     args.need_final_epoch_state = 0
     if len(list(set(ATTACKS_NEED_FINAL_EPOCH_STATE)&set(args.all_attack_list))) > 0:
         args.need_final_epoch_state = 1
+    
+    ATTACKS_NEED_GENERATION_STATE = ["ResultReconstruction"]
+    args.need_generation_state = 0
+    if len(list(set(ATTACKS_NEED_GENERATION_STATE)&set(args.all_attack_list))) > 0:
+        args.need_generation_state = 1
 
     print('Need First Epoch State:',args.need_first_epoch_state)
     print('Need First Epoch State:',args.need_final_epoch_state)

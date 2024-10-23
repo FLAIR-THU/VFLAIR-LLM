@@ -150,16 +150,16 @@ class GPT2ModelLoader(LLMModelLoader):
         print('load slice args.vfl_model_slice_num:',args.vfl_model_slice_num,' slice_index:',slice_index)
         if args.vfl_model_slice_num == 3:
             if slice_index == 0:
-                return model_partition_pipeline._load_model_head(model_path, do_split=False)
+                return model_partition_pipeline._load_model_head(model_path, do_split=True)
             elif slice_index == 1:
-                return model_partition_pipeline._load_model_body(model_path, do_split=False)
+                return model_partition_pipeline._load_model_body(model_path, do_split=True)
             else:
-                return model_partition_pipeline._load_model_tail(model_path, do_split=False)
+                return model_partition_pipeline._load_model_tail(model_path, do_split=True)
         else:
             if slice_index == 0:
-                return model_partition_pipeline._load_model_head(model_path, do_split=False)
+                return model_partition_pipeline._load_model_head(model_path, do_split=True)
             else:
-                return model_partition_pipeline._load_model_tail(model_path, do_split=False)
+                return model_partition_pipeline._load_model_tail(model_path, do_split=True)
 
 
         # return {

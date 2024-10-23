@@ -165,6 +165,41 @@ class MistralModelLoader(LLMModelLoader):
             "all_encoders_num": all_encoders_num,
             "model_dtype": model_dtype
         }
+    
+    def load_slice(self, args, model_path, slice_index):
+        if args.vfl_model_slice_num == 2:
+            split_index = (args.local_encoders_num, )
+        elif args.vfl_model_slice_num == 3:
+            split_index = (args.local_encoders_num, args.local_tail_encoders_num)
+        else:
+            raise ValueError(f"Not supported vfl_model_slice_num:{args.vfl_model_slice_num}") 
+        
+        # model_config = AutoConfig.from_pretrained(model_path) # full model config
+        # if hasattr(model_config, 'generation_config'):
+        #     generation_config = model_config.generation_config
+        # else:
+        #     generation_config = None
+        # model_architectures = model_config.architectures
+        # model_embedded_dim = model_config.hidden_size # change with model type
+        # all_encoders_num = model_config.num_hidden_layers # change with model type
+
+        model_partition_pipeline = ModelPartitionPipelineMistral(args=args, all_layer_num = args.all_encoders_num, 
+                            split_index=split_index)
+        
+        print('load slice args.vfl_model_slice_num:',args.vfl_model_slice_num,' slice_index:',slice_index)
+        if args.vfl_model_slice_num == 3:
+            if slice_index == 0:
+                return model_partition_pipeline._load_model_head(model_path, do_split=True)
+            elif slice_index == 1:
+                return model_partition_pipeline._load_model_body(model_path, do_split=True)
+            else:
+                return model_partition_pipeline._load_model_tail(model_path, do_split=True)
+        else:
+            if slice_index == 0:
+                return model_partition_pipeline._load_model_head(model_path, do_split=True)
+            else:
+                return model_partition_pipeline._load_model_tail(model_path, do_split=True)
+
 
     def _set_peft(self, model, finetune_detail_configs):
         """

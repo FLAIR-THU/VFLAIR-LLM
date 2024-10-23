@@ -71,7 +71,6 @@ class MiniCPMVModelHead(MiniCPMVModelSplitter, MiniCPMVPreTrainedModel):
                 samples = {'question':question, 'image':image}
 
         if samples != None:
-            print('sample forward')
             vllm_embedding, vision_hidden_states = self.get_vllm_embedding(samples)
             
             position_ids = samples["position_ids"]

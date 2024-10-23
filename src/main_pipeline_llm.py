@@ -148,7 +148,6 @@ def evaluate_label_inference_attack(args):
         append_exp_res(args.exp_res_path, exp_result)
     # return rec_rate
 
-
 def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
     if model_type == 'chatglm':
         from models.llm_models import chatglm
@@ -157,14 +156,49 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
         from models.llm_models import baichuan
         target_cls = getattr(baichuan, "BaiChuanForCausalLM")
     else:
-        from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, \
-            MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES, MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES
-        target_module = __import__('transformers')
-        aa = {"CLM": MODEL_FOR_CAUSAL_LM_MAPPING_NAMES,
-              "TQA": MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES,
-              "CLS": MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES}[architecture][model_type]
-        target_cls = getattr(target_module, aa)
+        if architecture == 'MM':
+            from src.models.llm_models.llama import LlamaTailForCausalLM_forMM
+            from src.models.llm_models.minicpmv import MiniCPMVModelTail
+            from src.models.llm_models.minicpm import MiniCPMTailForCausalLM
+            from src.models.llm_models.minigpt4.minigpt4 import MiniGPT4Tail
+
+            # from src.load.llm_model_loaders.minigpt4. import MiniGPTBaseTail #
+            MM_MODEL_MAPPING={
+                'llama':LlamaTailForCausalLM_forMM, #MiniGPT4Tail, #,
+                'minicpm': MiniCPMTailForCausalLM,
+                'minicpmv': MiniCPMVModelTail,
+                'minigpt4': MiniGPT4Tail
+            }
+            target_cls = MM_MODEL_MAPPING[model_type] 
+        else:
+            from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, \
+                MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES, MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES
+            target_module = __import__('transformers')
+            aa = {"CLM": MODEL_FOR_CAUSAL_LM_MAPPING_NAMES,
+                "MM": MODEL_FOR_CAUSAL_LM_MAPPING_NAMES,
+                "TQA": MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES,
+                "CLS": MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES}[architecture][model_type]
+            target_cls = getattr(target_module, aa)
+            
     return target_cls
+
+
+# def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
+#     if model_type == 'chatglm':
+#         from models.llm_models import chatglm
+#         target_cls = getattr(chatglm, "ChatGLMForConditionalGeneration")
+#     elif model_type == 'baichuan':
+#         from models.llm_models import baichuan
+#         target_cls = getattr(baichuan, "BaiChuanForCausalLM")
+#     else:
+#         from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, \
+#             MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES, MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES
+#         target_module = __import__('transformers')
+#         aa = {"CLM": MODEL_FOR_CAUSAL_LM_MAPPING_NAMES,
+#               "TQA": MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES,
+#               "CLS": MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES}[architecture][model_type]
+#         target_cls = getattr(target_module, aa)
+#     return target_cls
 
 def create_exp_dir_and_file(dataset, vfl_model_slice_num, split_info, model_name, pipeline, defense_name='', defense_param=''):
     exp_res_dir = f'exp_result/{dataset}/{str(vfl_model_slice_num)}-slice/{split_info}/'

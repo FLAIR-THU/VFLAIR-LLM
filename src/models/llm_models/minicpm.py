@@ -140,7 +140,6 @@ class MiniCPMModelHead(MiniCPMModelSplitter):
 
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids) * self.config.scale_emb
-        print('-model head inputs_embeds:',inputs_embeds[0,:5])
 
         if self._use_flash_attention_2:
             # 2d mask is passed through the layers

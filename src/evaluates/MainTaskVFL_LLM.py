@@ -79,6 +79,8 @@ warnings.filterwarnings("ignore")
 
 from models.llm_models.minigpt4.minigpt4 import MiniGPT4Tail
 from evaluates.vqa_evaluator import VQAEval
+from evaluates.gms8k_evaluator import GMS8KEval
+
 
 torch.backends.cudnn.enable = True
 torch.backends.cudnn.benchmark = True
@@ -178,7 +180,7 @@ def create_main_task(global_model_type: GenerationMixin):
             # some state of VFL throughout training process
             self.first_epoch_state = None
             self.middle_epoch_state = None
-            self.final_state = None
+            self.final_state = {}
 
             self.num_update_per_batch = args.num_update_per_batch
             self.num_batch_per_workset = args.Q  # args.num_batch_per_workset
@@ -415,32 +417,32 @@ def create_main_task(global_model_type: GenerationMixin):
                             # Label
                             batch_label.append(parties_data[party_id][bs_id][1])
                         _parties_data.append([batch_input_dicts, batch_label])
-                    parties_data = _parties_data
+                    self.parties_data = _parties_data
 
                     if self.args.model_architect == 'CLS' and self.args.num_classes > 1:  # classification
-                        gt_one_hot_label = self.label_to_one_hot(parties_data[0][1], self.args.num_classes)
+                        self.gt_one_hot_label = self.label_to_one_hot(self.parties_data[0][1], self.args.num_classes)
                     elif self.args.model_architect == 'TQA':
-                        gt_one_hot_label = list(parties_data[0][1])
+                        self.gt_one_hot_label = list(self.parties_data[0][1])
                     else:
-                        gt_one_hot_label = parties_data[0][1]
+                        self.gt_one_hot_label = self.parties_data[0][1]
                     
                     data_inputs = {}
-                    for key_name in parties_data[0][0][0].keys():
-                        if isinstance(parties_data[0][0][0][key_name], torch.Tensor):
-                            data_inputs[key_name] = torch.stack( [parties_data[0][0][i][key_name] for i in range(len(parties_data[0][0]))] )
+                    for key_name in self.parties_data[0][0][0].keys():
+                        if isinstance(self.parties_data[0][0][0][key_name], torch.Tensor):
+                            data_inputs[key_name] = torch.stack( [self.parties_data[0][0][i][key_name] for i in range(len(self.parties_data[0][0]))] )
                         else:
-                            data_inputs[key_name] =  [parties_data[0][0][i][key_name] for i in range(len(parties_data[0][0]))]
-                    if hasattr(data_inputs,'input_ids'):
+                            data_inputs[key_name] =  [self.parties_data[0][0][i][key_name] for i in range(len(self.parties_data[0][0]))]
+                    
+                    if 'input_ids' in data_inputs.keys() and data_inputs['input_ids']!=None:
                         self.seq_length = data_inputs['input_ids'].shape[-1]
                     else:
                         self.seq_length = 0
-                    self.eval_data_inputs = data_inputs
                     
                     # test_logit -> standard output for each task
                     if self.args.model_architect == 'CLS':  # task_type == "SequenceClassification":  # and self.args.num_classes > 1: # classification
                         global_output = self.forward(**data_inputs)
                         batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(global_output,
-                                                                                                   gt_one_hot_label)
+                                                                                                   self.gt_one_hot_label)
                         predict_label_list.extend(batch_predict_label)
                         actual_label_list.extend(batch_actual_label)
                         if sample_cnt is not None:
@@ -449,7 +451,7 @@ def create_main_task(global_model_type: GenerationMixin):
                     elif self.args.model_architect == 'TQA':  # task_type == "QuestionAnswering":
                         global_output = self.forward(**data_inputs)
                         feature_list = data_inputs['feature']
-                        batch_nbest, batch_gold_ans, sample_cnt = self.generate_result(global_output, gt_one_hot_label, feature_list)
+                        batch_nbest, batch_gold_ans, sample_cnt = self.generate_result(global_output, self.gt_one_hot_label, feature_list)
                         nbest_list.extend(batch_nbest)
                         gold_ans_list.extend(batch_gold_ans)
                         if sample_cnt is not None:
@@ -457,31 +459,27 @@ def create_main_task(global_model_type: GenerationMixin):
                     
                     elif self.args.model_architect=='CLM': #task_type == "CausalLM":
                         if self.args.task_type == "CausalLM":
+                            
                             if not (self.args.max_new_tokens==1):
                                 self.set_is_first_forward_epoch(1)
                                 generation_output = self.generate(**data_inputs, \
-                                        generation_config = self.generation_config,\
-                                        # temperature=0.7, top_p=1.0,
-                                        # max_new_tokens=self.args.max_new_tokens,\
-                                        # eos_token_id=2, pad_token_id=2, \
-                                                                #   **self.generation_config_dict
-                                                                  )
+                                        generation_config = self.generation_config)
                             else:  # next token prediction
                                 generation_output = self.forward(**data_inputs)
                                 if self.args.model_type.lower() == 'qwen2':
                                     self._loss += self.shift_logits_loss(generation_output.logits,
-                                                                     torch.stack(gt_one_hot_label),
+                                                                     torch.stack(self.gt_one_hot_label),
                                                                      self.args.config).item()
                             self._clear_past_key_values()
                             # print('generation_output:',type(generation_output),generation_output.keys())
-                            batch_target_word, batch_predict_word, sample_cnt = self.generate_result(generation_output, gt_one_hot_label)
+                            batch_target_word, batch_predict_word, sample_cnt = self.generate_result(generation_output, self.gt_one_hot_label)
                             target_word_list.extend(batch_target_word)
                             predict_word_list.extend(batch_predict_word)
                             if sample_cnt is not None:
                                 total_sample_cnt += sample_cnt
                         else:
                             global_output = self.forward(**data_inputs)
-                            batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(global_output, gt_one_hot_label)
+                            batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(global_output, self.gt_one_hot_label)
                             predict_label_list.extend(batch_predict_label)
                             actual_label_list.extend(batch_actual_label)
                             if sample_cnt is not None:
@@ -503,11 +501,11 @@ def create_main_task(global_model_type: GenerationMixin):
                                 assert 1>2,f'Generation Method {self.args.generation_method} not supported'
 
                         else:  # next token prediction
-                            generation_output = self.forward(samples = data_inputs, labels = gt_one_hot_label)
+                            generation_output = self.forward(samples = data_inputs, labels = self.gt_one_hot_label)
                         self._clear_past_key_values()
 
 
-                        batch_target_answer, batch_predict_answer, sample_cnt = self.generate_result(generation_output, gt_one_hot_label)
+                        batch_target_answer, batch_predict_answer, sample_cnt = self.generate_result(generation_output, self.gt_one_hot_label)
                         target_answer_list.extend(batch_target_answer)
                         predict_answer_list.extend(batch_predict_answer)
 
@@ -616,100 +614,9 @@ def create_main_task(global_model_type: GenerationMixin):
                         acc = score
                         
                         if self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
-                            def is_number(s):
-                                try:
-                                    float(s)
-                                    return True
-                                except ValueError:
-                                    pass
-                                # try:
-                                #     import unicodedata
-                                #     unicodedata.numeric(s)
-                                #     return True
-                                # except (TypeError, ValueError):
-                                #     pass
-                                return False
-
-                            def extract_answer_number(completion):
-                                text = completion.split('The answer is: ')
-                                if len(text) > 1:
-                                    extract_ans = text[-1].strip()
-                                    match = re.search(r'[\-+]?\d*[\.,/]?\d+', extract_ans)
-                                    if match:
-                                        if '/' in match.group():
-                                            denominator = match.group().split('/')[1]
-                                            numerator = match.group().split('/')[0]
-                                            if is_number(denominator) == True and is_number(numerator) == True:
-                                                if denominator == '0':
-                                                    return round(float(numerator.replace(',', '')))
-                                                else:
-                                                    frac = Fraction(match.group().replace(',', ''))
-                                                    num_numerator = frac.numerator
-                                                    num_denominator = frac.denominator
-                                                    return round(float(num_numerator / num_denominator))
-                                            else:
-                                                return None
-                                        else:
-                                            if float(match.group().replace(',', '')) == float('inf'):
-                                                return None
-                                            return round(float(match.group().replace(',', '')))
-                                    else:
-                                        return None
-                                else:
-                                    return None
-                            
-                            def wash(token_id_list, washed_ids):
-                                washed_token_id_list = []
-                                for token_ids in token_id_list:
-                                    token_ids = list(token_ids)
-                                    for washed_id in washed_ids:
-                                        while washed_id in token_ids:
-                                            token_ids.remove(washed_id)
-                                    
-                                    washed_token_id_list.append(torch.tensor(token_ids) )
-                                return washed_token_id_list
-
-                            def is_equiv(str1, str2, verbose=False):
-                                if str1 is None and str2 is None:
-                                    print("WARNING: Both None")
-                                    return True
-                                if str1 is None or str2 is None:
-                                    return False
-
-                                try:
-                                    ss1 = strip_string(str1)
-                                    ss2 = strip_string(str2)
-                                    #pdb.set_trace()
-                                    if verbose:
-                                        print(ss1, ss2)
-                                    return ss1 == ss2
-                                except Exception:
-                                    return str1 == str2
-                            
-                            washed_ids = [self.args.tokenizer.pad_token_id, self.args.tokenizer.eos_token_id, self.args.tokenizer.bos_token_id]
-                            predict_word_list = wash(predict_word_list,washed_ids )
-                            target_word_list = wash(target_word_list,washed_ids )
-
-                            predict_word_list = [
-                                self.args.tokenizer.decode(_ids)
-                                for _ids in list(predict_word_list)]
-
-                            target_word_list = [
-                                self.args.tokenizer.decode(_ids)
-                                for _ids in list(target_word_list)]
-                            
-                            results = []
-                            for i in range(len(target_word_list)):
-                                pred_ans = str(extract_answer_number(predict_word_list[i]))
-                                
-                                # print('-'*100)
-                                # print('PRED:',predict_word_list[i])
-                                # print('Extract PRED:',type(pred_ans), pred_ans)
-                                # print('GOLD:',type(target_word_list[i]),target_word_list[i])
-                                # print('SCORE:',res)
-                                res = is_equiv(pred_ans,target_word_list[i])
-                                results.append(res)
-                            acc = sum(results) / len(results)
+                            self.evaluator = GMS8KEval(self.args)
+                            acc = self.evaluator.evaluation(predict_word_list,target_word_list )
+                        
 
                         elif self.args.dataset=='MATH':
                             # print('predict_word_list:',type(predict_word_list),len(predict_word_list),predict_word_list[0].shape)
@@ -923,7 +830,6 @@ def create_main_task(global_model_type: GenerationMixin):
                         generated_token_logits = model_output.logits[:,-1,:]
                         predict_label_list = torch.argmax(generated_token_logits, dim=-1) 
                         target_label_list = list(gt_one_hot_label)
-                    
                     self.real_generation_result = predict_label_list
                     return target_label_list, predict_label_list, len(predict_label_list) 
 
@@ -1229,8 +1135,23 @@ def create_main_task(global_model_type: GenerationMixin):
 
             self.parties[0]._tensor_to_device(final_output,self.device)
 
-            if self.args.max_new_tokens > 1:
+            if self.args.max_new_tokens > 1 and self.args.need_final_epoch_state:
+                if self.args.need_generation_state:
+                    if self.is_first_forward_iter:
+                        try:
+                            del self.final_state['active_predict_list']
+                            del self.final_state['active_predict_attention_mask_list']
+                        except:
+                            pass
+                        # self.final_state.update(self.save_element('first_iter_passive_predict'))
+                        # self.final_state.update(self.save_element('first_iter_passive_predict_attention_mask'))
+                        self.final_state.update(self.save_element('active_predict_list'))
+                        self.final_state.update(self.save_element('active_predict_attention_mask_list'))
+                    else:
+                        self.final_state['active_predict_list'].append(self.dict_deepcopy(self.parties[1].output_tensors, device = 'cpu'))
+                        self.final_state['active_predict_attention_mask_list'].append(self.dict_deepcopy(self.parties[1].output_attention_mask, device = 'cpu'))
                 self.set_is_first_forward_epoch(0)
+
             return final_output
 
         def mm_chat(self, samples=None, **kwargs):
@@ -1331,7 +1252,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 exp_result, main_task_result = self.causal_lm_inference()
                 
                 if need_save_state:
-                    self.final_state = self.save_state(False)
+                    self.final_state.update(self.save_state(False))
                     self.final_state.update(self.save_party_data())
                 exp_result = f'|inference_party_time={self.inference_party_time}' + str(exp_result)
                 return exp_result, main_task_result
@@ -1350,10 +1271,11 @@ def create_main_task(global_model_type: GenerationMixin):
                         data_inputs[key_name] = torch.stack( [parties_data[0][0][i][key_name] for i in range(len(parties_data[0][0]))] )
                     else:
                         data_inputs[key_name] =  [parties_data[0][0][i][key_name] for i in range(len(parties_data[0][0]))]
+                self.batch_data = data_inputs
 
                 self.parties[ik].obtain_local_data(data_inputs)
                 self.parties[ik].gt_one_hot_label = gt_one_hot_label
-                if hasattr(data_inputs,'input_ids'):
+                if 'input_ids' in data_inputs.keys() and data_inputs['input_ids']!=None:
                     self.seq_length = data_inputs['input_ids'].shape[-1]
                 else:
                     self.seq_length = 0
@@ -1578,8 +1500,8 @@ def create_main_task(global_model_type: GenerationMixin):
 
                 if self.args.apply_adversarial:
                     print(f'global_loss={self.parties[0].global_loss} adversarial_model_loss:{self.parties[0].adversarial_model_loss.item()} adversary_attack_loss:{self.parties[0].adversary_attack_loss.item()}')
-                if self.args.apply_mid:
-                    print(f'global_loss={self.parties[0].global_loss},mid_loss={self.parties[0].mid_loss}')
+                # if self.args.apply_mid:
+                #     print(f'global_loss={self.parties[0].global_loss},head_mid_loss={self.parties[0].head_mid_loss}')
 
                 self.final_epoch = i_epoch + 1
 
@@ -1606,7 +1528,6 @@ def create_main_task(global_model_type: GenerationMixin):
             self.parties[self.k - 1].eval()
             self.eval()
             with torch.no_grad():
-                print('self.args.need_final_epoch_state:',self.args.need_final_epoch_state)
                 _exp_result, self.test_acc = self.inference(need_save_state = self.args.need_final_epoch_state)
 
                 postfix['train_loss'] = self.loss
@@ -1625,7 +1546,7 @@ def create_main_task(global_model_type: GenerationMixin):
 
 
             # if self.args.need_final_epoch_state:
-            self.final_state=self.save_state(False)
+            # self.final_state=self.save_state(False)
             self.final_state.update(self.save_party_data())
 
             # if self.args.model_type.lower() == 'qwen2':
@@ -1667,12 +1588,17 @@ def create_main_task(global_model_type: GenerationMixin):
                     self.save_defense_models()
             return exp_result, self.test_acc, total_time  # , self.stopping_iter, self.stopping_time, self.stopping_commu_cost
 
-        def dict_deepcopy(self, origin_dict):
+        def dict_deepcopy(self, origin_dict, device = None):
             new_dict = {}
+
             for _key in origin_dict.keys():
                 # print(f'{_key}:{type(origin_dict[_key])}')
                 if origin_dict[_key]!=None:
-                    new_dict[_key] = copy.deepcopy(origin_dict[_key].detach())
+                    if device == 'None':
+                        new_dict[_key] = copy.deepcopy(origin_dict[_key].detach())
+                    else:
+                        new_dict[_key] = copy.deepcopy(origin_dict[_key].detach()).to(device)
+
             return new_dict
             
         def save_state(self, BEFORE_MODEL_UPDATE=True):
@@ -1680,7 +1606,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 if BEFORE_MODEL_UPDATE:
                     # print('save:',self.parties[0].local_model_tail.head_layer.weight[0,:5])
                     return {
-                        # "local_model_head": copy.deepcopy(self.parties[0].local_model).to("cpu") if self.parties[0].local_model != None else None,
+                        "local_model_head": copy.deepcopy(self.parties[0].local_model).to("cpu") if self.parties[0].local_model != None else None,
                         "local_model_tail": copy.deepcopy(self.parties[0].local_model_tail).to("cpu") if self.parties[0].local_model_tail != None else None,
                         "active_model_body": copy.deepcopy(self.parties[1].global_model).to("cpu") if self.parties[1].global_model != None else None,
 
@@ -1724,6 +1650,31 @@ def create_main_task(global_model_type: GenerationMixin):
                         # "final_model": [copy.deepcopy(self.parties[ik].local_model) for ik in range(self.args.k)],
                         # "final_global_model": copy.deepcopy(self.parties[self.args.k - 1].global_model),
                     }
+        
+        def save_element(self, element_name):
+            if element_name == "label": 
+                return {element_name: copy.deepcopy(self.gt_one_hot_label)}
+            
+            elif element_name == "batch_data": 
+                return {element_name: copy.deepcopy(self.parties_data)}
+            
+            elif element_name == "first_iter_passive_predict": 
+                return {element_name: self.dict_deepcopy(self.parties[0].output_tensors)}
+            
+            elif element_name == "first_iter_passive_predict_attention_mask": 
+                return {element_name: self.dict_deepcopy(self.parties[0].output_attention_mask)}
+            
+            elif element_name == "active_predict_list": 
+                return {element_name: [self.dict_deepcopy(self.parties[1].output_tensors)] }
+            
+            elif element_name == "active_predict_attention_mask_list": 
+                return {element_name: [self.dict_deepcopy(self.parties[1].output_attention_mask)] }
+            
+            elif element_name == "real_generation_result": 
+                return {element_name: self.real_generation_result}
+            
+            else:
+                assert 1>2, f"{element_name} has no save method"
 
         def save_party_data(self):
             return {
@@ -1756,14 +1707,14 @@ def create_main_task(global_model_type: GenerationMixin):
             if not os.path.exists(dir_path):
                 os.makedirs(dir_path)
 
-            if self.args.apply_mid:
-                file_path = dir_path + f'{self.args.defense_name}_{self.args.defense_configs}.pkl'
-                with open(file_path, 'wb') as f:
-                    pickle.dump(self.parties[0].mid_model, f)
+            # if self.args.apply_mid:
+            #     file_path = dir_path + f'{self.args.defense_name}_{self.args.defense_configs}.pkl'
+            #     with open(file_path, 'wb') as f:
+            #         pickle.dump(self.parties[0].mid_model, f)
 
-                file_path = dir_path + f'head_{self.args.defense_name}_{self.args.defense_configs}.pkl'
-                with open(file_path, 'wb') as f:
-                        pickle.dump(self.parties[1].global_model.head_layer, f)
+            #     file_path = dir_path + f'head_{self.args.defense_name}_{self.args.defense_configs}.pkl'
+            #     with open(file_path, 'wb') as f:
+            #             pickle.dump(self.parties[1].global_model.head_layer, f)
 
             if self.args.apply_adversarial:
                 file_path = dir_path + f'{self.args.defense_name}_{self.args.defense_configs}.pkl'

@@ -167,7 +167,7 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
     return target_cls
 
 def create_exp_dir_and_file(dataset, vfl_model_slice_num, split_info, model_name, pipeline, defense_name='', defense_param=''):
-    exp_res_dir = f'exp_result/LIA/{dataset}_lr0.0001/{str(vfl_model_slice_num)}-slice/{split_info}/'
+    exp_res_dir = f'exp_result/LIA/{dataset}-onlybody_lr0.001/{str(vfl_model_slice_num)}-slice/{split_info}/'
     if not os.path.exists(exp_res_dir):
         os.makedirs(exp_res_dir)
     if pipeline == 'pretrained':
