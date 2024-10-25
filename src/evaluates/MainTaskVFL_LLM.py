@@ -615,7 +615,7 @@ def create_main_task(global_model_type: GenerationMixin):
                         
                         if self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
                             self.evaluator = GMS8KEval(self.args)
-                            acc = self.evaluator.evaluation(predict_word_list,target_word_list )
+                            acc = self.evaluator.evaluate(predict_word_list,target_word_list )
                         
 
                         elif self.args.dataset=='MATH':

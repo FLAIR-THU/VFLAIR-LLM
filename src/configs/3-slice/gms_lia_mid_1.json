@@ -45,7 +45,7 @@
       "0": {
           "path": "/home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B",
               "head":{
-                  "trainable": 0,
+                  "trainable": 1,
                   "embedding_trainable": 0,
                   "encoder_trainable": 0,
                   "encoder_trainable_ids":[]
@@ -84,7 +84,7 @@
             "party": [0],
             "mid_model_name":"MIDModel_Linear",
             "lr": 0.0001,
-            "lambda": 1e-6,
+            "lambda": 0.5,
             "mid_position": "tail",
             "current_bottleneck_scale": 1,
             "seq_length": 512,

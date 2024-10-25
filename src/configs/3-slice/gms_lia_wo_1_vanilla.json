@@ -41,7 +41,7 @@
       "0": {
           "path": "/home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B",
               "head":{
-                  "trainable": 0,
+                  "trainable": 1,
                   "embedding_trainable": 0,
                   "encoder_trainable": 0,
                   "encoder_trainable_ids":[]

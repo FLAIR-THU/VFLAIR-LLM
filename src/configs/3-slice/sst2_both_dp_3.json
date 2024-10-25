@@ -66,17 +66,12 @@
         "local_tail_encoders_num": 3
     },
     "defense": {
-        "name": "MID",
-        "parameters": {
-            "party": [0],
-            "mid_model_name":"MIDModel_Linear",
-            "lr": 0.0001,
-            "lambda": 0.01,
-            "mid_position": ["head","tail"],
-            "current_bottleneck_scale": 1,
-            "seq_length": 70,
-            "embed_dim": 768
-        }
+        "name": "LaplaceDP",
+          "parameters": {
+          "party": [0],
+          "type": ["grad","pred"],
+          "epsilon": 50
+          }
     },
     "attack_list": {
       "0":{

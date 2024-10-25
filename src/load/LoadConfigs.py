@@ -350,7 +350,7 @@ def do_load_basic_configs(config_dict, args):
             args.defense_param_name = 'lambda'
         elif args.defense_name in ["MID"]:
             mid_model_name = str(args.defense_configs['mid_model_name']) if 'mid_model_name' in args.defense_configs else 'MID'
-            mid_position = str(args.defense_configs['mid_position']) if 'mid_position' in args.defense_configs else 'out'
+            mid_position = str(args.defense_configs['mid_position']) if 'mid_position' in args.defense_configs else 'head'
             args.defense_param = mid_model_name + '_' + mid_position+ '_' + str(args.defense_configs['lambda'])
             args.defense_param_name = 'lambda'
         elif args.defense_name == "GaussianDP" or args.defense_name == "LaplaceDP":
@@ -714,8 +714,16 @@ def do_load_basic_configs_llm(config_dict, args):
             args.defense_param_name = 'lambda'
         elif args.defense_name in ["MID"]:
             mid_model_name = str(args.defense_configs['mid_model_name']) if 'mid_model_name' in args.defense_configs else 'MID'
-            mid_position = str(args.defense_configs['mid_position']) if 'mid_position' in args.defense_configs else 'head'
+            try:
+                mid_position = str('-'.join(args.defense_configs['mid_position'])) if 'mid_position' in args.defense_configs else 'head'
+            except:
+                mid_position = str(args.defense_configs['mid_position']) if 'mid_position' in args.defense_configs else 'head'
+            
             args.defense_param = mid_model_name + '_' + mid_position+ '_' + str(args.defense_configs['lambda'])
+            print('======')
+            print(args.defense_param)
+            print('======')
+
             args.defense_param_name = 'lambda'
         elif args.defense_name == "GaussianDP" or args.defense_name == "LaplaceDP":
             if 'dp_strength' in args.defense_configs:
