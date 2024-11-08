@@ -1,10 +1,10 @@
 {
   "epochs": 50,
-  "lr": 0.0001,
+  "lr": 5e-6,
   "k": 2,
-  "batch_size": 16,
+  "batch_size": 4,
   "test_batch_size": 16,
-  "early_stop_threshold": 1,
+  "early_stop_threshold": 2,
   "pipeline": "finetune",
   "model_architect":"CLM",
   "communication":{
@@ -59,7 +59,7 @@
       "1": {
               "path": "/home/DAIR/guzx/Git_FedProject/Models/mistralaiMistral-7B-Instruct-v0.2",
               "body":{
-                  "trainable": 0,
+                  "trainable": 1,
                   "encoder_trainable": 0,
                   "encoder_trainable_ids":[]
           }

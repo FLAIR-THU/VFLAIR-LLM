@@ -67,7 +67,7 @@ def evaluate_no_attack_finetune(args):
     # attack_metric_name = 'acc_loss'
 
     # # Save record 
-    exp_result = f"NoAttack|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|" \
+    exp_result = f"NoAttack|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|" \
                  + exp_result
     print(exp_result)
 
@@ -107,7 +107,7 @@ def evaluate_inversion_attack(args):
         inference_party_time = vfl.inference_party_time
         precision, recall , attack_total_time= vfl.evaluate_attack()
 
-        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|precision={precision}|recall={recall}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
+        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|precision={precision}|recall={recall}|training_time={training_time}|attack_time={attack_total_time}|"
         print(exp_result)
         append_exp_res(args.exp_res_path, exp_result)
     return precision, recall
@@ -143,34 +143,39 @@ def evaluate_label_inference_attack(args):
         inference_party_time = vfl.inference_party_time
         rec_rate , attack_total_time= vfl.evaluate_attack()
 
-        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
+        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|"
         print(exp_result)
         append_exp_res(args.exp_res_path, exp_result)
     # return rec_rate
 
 def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
-    if model_type == 'chatglm':
-        from models.llm_models import chatglm
-        target_cls = getattr(chatglm, "ChatGLMForConditionalGeneration")
-    elif model_type == 'baichuan':
-        from models.llm_models import baichuan
-        target_cls = getattr(baichuan, "BaiChuanForCausalLM")
-    else:
-        if architecture == 'MM':
-            from src.models.llm_models.llama import LlamaTailForCausalLM_forMM
-            from src.models.llm_models.minicpmv import MiniCPMVModelTail
-            from src.models.llm_models.minicpm import MiniCPMTailForCausalLM
-            from src.models.llm_models.minigpt4.minigpt4 import MiniGPT4Tail
+    if architecture == 'MM':
+        from src.models.llm_models.llama import LlamaTailForCausalLM_forMM
+        from src.models.llm_models.minicpmv import MiniCPMVModelTail
+        from src.models.llm_models.minicpm import MiniCPMTailForCausalLM
+        from src.models.llm_models.minigpt4.minigpt4 import MiniGPT4Tail
 
-            # from src.load.llm_model_loaders.minigpt4. import MiniGPTBaseTail #
-            MM_MODEL_MAPPING={
-                'llama':LlamaTailForCausalLM_forMM, #MiniGPT4Tail, #,
-                'minicpm': MiniCPMTailForCausalLM,
-                'minicpmv': MiniCPMVModelTail,
-                'minigpt4': MiniGPT4Tail
-            }
-            target_cls = MM_MODEL_MAPPING[model_type] 
+        # from src.load.llm_model_loaders.minigpt4. import MiniGPTBaseTail #
+        MM_MODEL_MAPPING={
+            'llama':LlamaTailForCausalLM_forMM, #MiniGPT4Tail, #,
+            'minicpm': MiniCPMTailForCausalLM,
+            'minicpmv': MiniCPMVModelTail,
+            'minigpt4': MiniGPT4Tail
+        }
+        target_cls = MM_MODEL_MAPPING[model_type] 
+    
+    else:
+        if model_type == 'chatglm':
+            from models.llm_models import chatglm
+            target_cls = getattr(chatglm, "ChatGLMForConditionalGeneration")
+        elif model_type == 'baichuan':
+            from models.llm_models import baichuan
+            target_cls = getattr(baichuan, "BaiChuanForCausalLM")
+        elif model_type == 'llama':
+            from models.llm_models import llama
+            target_cls = getattr(llama, "LlamaTailForCausalLM")
         else:
+            
             from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, \
                 MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES, MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES
             target_module = __import__('transformers')
@@ -179,7 +184,7 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
                 "TQA": MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES,
                 "CLS": MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES}[architecture][model_type]
             target_cls = getattr(target_module, aa)
-            
+        
     return target_cls
 
 

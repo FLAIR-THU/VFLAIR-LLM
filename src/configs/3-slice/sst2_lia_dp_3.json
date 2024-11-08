@@ -1,9 +1,9 @@
 {
     "epochs": 40,
-    "lr": 0.0001,
+    "lr": 0.001,
     "k": 2,
     "batch_size": 16,
-    "early_stop_threshold": 1,
+    "early_stop_threshold": 2,
     "pipeline": "finetune",
     "model_architect":"CLS",
     "communication":{
@@ -38,13 +38,13 @@
           "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
 
             "head":{
-                "trainable": 1,
+                "trainable": 0,
                 "embedding_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
             },
             "tail":{
-                "trainable": 1,
+                "trainable": 0,
                 "head_layer_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
@@ -83,11 +83,9 @@
         }
       },
       "1": {
-          "name": "DirectionbasedScoring_LLM",
+          "name": "NormbasedScoring_LLM",
           "parameters": {
-            "party": [1],
-            "lr": 0.1,
-            "epochs": 1000
+            "party": [1]
         }
       }
   }

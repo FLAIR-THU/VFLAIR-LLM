@@ -673,7 +673,7 @@ class ModelPartitionPipelineMiniCPM(ModelPartitionPipeline):
         # if self.args.model_architect == 'MM':
         #     model_head = MiniGPT4Head(model_head, self.args.tokenizer)
 
-        return model_head.to(self.device)
+        return model_head#.to(self.device)
 
     def _load_model_tail(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         if self.args.model_architect == 'CLM':
@@ -694,7 +694,7 @@ class ModelPartitionPipelineMiniCPM(ModelPartitionPipeline):
                 split_range = range(model_tail.config.num_hidden_layers-self.split_index[1],model_tail.config.num_hidden_layers)
             model_tail.vfl_split(split_range)
 
-        return model_tail.to(self.device)
+        return model_tail#.to(self.device)
 
     def _load_model_body(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         model_body = MiniCPMModelBody.from_pretrained(model_name_or_path, **kwargs)
@@ -705,4 +705,4 @@ class ModelPartitionPipelineMiniCPM(ModelPartitionPipeline):
         # if self.args.model_architect == 'MM':
         #     model_body = MiniGPT4Body(model_body, self.args.tokenizer)
 
-        return model_body.to(self.device)
+        return model_body#.to(self.device)

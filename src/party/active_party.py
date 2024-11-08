@@ -18,7 +18,7 @@ from config import vfl_basic_config
 
 class ActiveParty_LLM(Party_LLM):
     def __init__(self, args, index, need_data=True, need_model=True):
-        print(f'==== initialize ActiveParty_LLM : party {index}======')
+        print(f'###### initialize ActiveParty_LLM : Party {index} ######')
         logger.debug(f'running on cuda{os.getenv("CUDA_VISIBLE_DEVICES").split(",")[torch.cuda.current_device()]}')
 
         super().__init__(args, index, need_data=need_data, need_model=need_model)
@@ -150,8 +150,6 @@ class ActiveParty_LLM(Party_LLM):
         3-slice: model body backward
         2-slive: model tail backward
         '''
-        # print('=== Active Global Backward ===')
-
         if self.global_model_optimizer != None:
             # trainable layer parameters
             global_model_params = []

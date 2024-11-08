@@ -133,7 +133,7 @@ class LlamaModelLoader(LLMModelLoader):
                         self._models[_key] = MiniGPT4Tail(self._models[_key], args.tokenizer)
 
         for _key in self._models.keys():
-            self._models[_key].to(args.device)
+            # self._models[_key].to(args.device)
             print(f'final load -- model {_key}:{type(self._models[_key])}')
             # print('Device:',next(self._models[_key].parameters()).device)
 

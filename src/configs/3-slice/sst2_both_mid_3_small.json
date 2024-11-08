@@ -53,7 +53,7 @@
         "1": {
           "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
             "body":{
-                "trainable": 0,
+                "trainable": 1,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
             }
@@ -71,7 +71,7 @@
             "party": [0],
             "mid_model_name":"MIDModel_Linear",
             "lr": 0.0001,
-            "lambda": 0.01,
+            "lambda": 0.5,
             "mid_position": ["head","tail"],
             "current_bottleneck_scale": 1,
             "seq_length": 70,
@@ -110,6 +110,12 @@
       },
       "3": {
           "name": "DirectionbasedScoring_LLM",
+          "parameters": {
+            "party": [1]
+        }
+      },
+      "4": {
+          "name": "NormbasedScoring_LLM",
           "parameters": {
             "party": [1]
         }

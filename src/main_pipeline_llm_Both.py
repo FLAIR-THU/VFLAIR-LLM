@@ -161,28 +161,33 @@ def evaluate_label_inference_attack(args):
     # return rec_rate
 
 def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
-    if model_type == 'chatglm':
-        from models.llm_models import chatglm
-        target_cls = getattr(chatglm, "ChatGLMForConditionalGeneration")
-    elif model_type == 'baichuan':
-        from models.llm_models import baichuan
-        target_cls = getattr(baichuan, "BaiChuanForCausalLM")
-    else:
-        if architecture == 'MM':
-            from src.models.llm_models.llama import LlamaTailForCausalLM_forMM
-            from src.models.llm_models.minicpmv import MiniCPMVModelTail
-            from src.models.llm_models.minicpm import MiniCPMTailForCausalLM
-            from src.models.llm_models.minigpt4.minigpt4 import MiniGPT4Tail
+    if architecture == 'MM':
+        from src.models.llm_models.llama import LlamaTailForCausalLM_forMM
+        from src.models.llm_models.minicpmv import MiniCPMVModelTail
+        from src.models.llm_models.minicpm import MiniCPMTailForCausalLM
+        from src.models.llm_models.minigpt4.minigpt4 import MiniGPT4Tail
 
-            # from src.load.llm_model_loaders.minigpt4. import MiniGPTBaseTail #
-            MM_MODEL_MAPPING={
-                'llama':LlamaTailForCausalLM_forMM, #MiniGPT4Tail, #,
-                'minicpm': MiniCPMTailForCausalLM,
-                'minicpmv': MiniCPMVModelTail,
-                'minigpt4': MiniGPT4Tail
-            }
-            target_cls = MM_MODEL_MAPPING[model_type] 
+        # from src.load.llm_model_loaders.minigpt4. import MiniGPTBaseTail #
+        MM_MODEL_MAPPING={
+            'llama':LlamaTailForCausalLM_forMM, #MiniGPT4Tail, #,
+            'minicpm': MiniCPMTailForCausalLM,
+            'minicpmv': MiniCPMVModelTail,
+            'minigpt4': MiniGPT4Tail
+        }
+        target_cls = MM_MODEL_MAPPING[model_type] 
+    
+    else:
+        if model_type == 'chatglm':
+            from models.llm_models import chatglm
+            target_cls = getattr(chatglm, "ChatGLMForConditionalGeneration")
+        elif model_type == 'baichuan':
+            from models.llm_models import baichuan
+            target_cls = getattr(baichuan, "BaiChuanForCausalLM")
+        elif model_type == 'llama':
+            from models.llm_models import llama
+            target_cls = getattr(llama, "LlamaTailForCausalLM")
         else:
+            
             from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, \
                 MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES, MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES
             target_module = __import__('transformers')
@@ -191,7 +196,7 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
                 "TQA": MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES,
                 "CLS": MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES}[architecture][model_type]
             target_cls = getattr(target_module, aa)
-            
+        
     return target_cls
 
 
@@ -330,6 +335,7 @@ if __name__ == '__main__':
         # args.global_model_type = type(args.parties[-1].global_model)
         # ancestor_cls = args.global_model_type
         # todo: infer from model_type might be enough, would also work under 3-slice
+        print('-- get_cls_ancestor -- ')
         ancestor_cls = get_cls_ancestor(args.config.model_type, args.model_architect)
         MainTaskVFL_LLM = create_main_task(ancestor_cls)
 

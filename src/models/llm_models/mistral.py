@@ -68,7 +68,7 @@ class MistralModelHead(MistralModelSplitter):
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        use_cache = use_cache if use_cache is not None else self.config.use_cache
+        use_cache = False #use_cache = use_cache if use_cache is not None else self.config.use_cache
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -146,6 +146,7 @@ class MistralModelHead(MistralModelSplitter):
         hidden_states = inputs_embeds
 
         # decoder layers
+        past_key_values = None
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
@@ -211,7 +212,7 @@ class MistralModelBody(MistralModelSplitter):
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        use_cache = use_cache if use_cache is not None else self.config.use_cache
+        use_cache = False #use_cache = use_cache if use_cache is not None else self.config.use_cache
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -296,6 +297,7 @@ class MistralModelBody(MistralModelSplitter):
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
+            past_key_values = None
             if self.gradient_checkpointing and self.training:
                 layer_outputs = self._gradient_checkpointing_func(
                     decoder_layer.__call__,
@@ -354,7 +356,8 @@ class MistralModelTail(MistralModelSplitter):
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        use_cache = use_cache if use_cache is not None else self.config.use_cache
+        use_cache = False #use_cache = use_cache if use_cache is not None else self.config.use_cache
+        
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -439,6 +442,7 @@ class MistralModelTail(MistralModelSplitter):
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
+            past_key_values = None
             if self.gradient_checkpointing and self.training:
                 layer_outputs = self._gradient_checkpointing_func(
                     decoder_layer.__call__,

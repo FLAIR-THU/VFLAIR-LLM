@@ -181,6 +181,7 @@ class FalconModelHead(FalconModelSplitter):
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
 
         for i, (block, layer_past) in enumerate(zip(self.h, past_key_values)):
+            # print(f'head {i}:{hidden_states.device}')
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
@@ -351,6 +352,8 @@ class FalconModelBody(FalconModelSplitter):
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
 
         for i, (block, layer_past) in enumerate(zip(self.h, past_key_values)):
+            # print(f'body {i}:{hidden_states.device}')
+
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 

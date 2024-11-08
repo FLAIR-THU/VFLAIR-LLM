@@ -1,8 +1,8 @@
 {
-    "epochs": 5,
+    "epochs": 40,
     "lr": 0.001,
     "k": 2,
-    "batch_size": 32,
+    "batch_size": 16,
     "early_stop_threshold": 2,
     "pipeline": "finetune",
     "model_architect":"CLS",
@@ -11,7 +11,7 @@
         "iteration_per_aggregation": 1
     },
     "dataset": {
-      "dataset_name": "SST-2-test",
+      "dataset_name": "SST-2",
       "num_classes": 2
     },
     "tokenizer": {
@@ -25,12 +25,7 @@
     },
     "finetune_configs":{
         "name":"LoRA",
-        "configs":{
-          "inference_mode":false,  
-          "r":4,  
-          "lora_alpha":32, 
-          "lora_dropout":0.1
-        }
+        "configs":{}
     },
     "model_list":{
         "name": "textattackbert-base-uncased-SST-2",
@@ -68,37 +63,40 @@
         },
         "vfl_model_slice_num": 3,
         "local_encoders_num": 3,
-        "local_tail_encoders_num": 1
+        "local_tail_encoders_num": 3
     },
     "defense": {
-        "name": "MID",
+        "name": "AdversarialTraining",
         "parameters": {
             "party": [0],
-            "mid_model_name":"MIDModel_Linear",
-            "lr": 0.0001,
-            "lambda": 1e-9,
-            "mid_position": "tail",
-            "current_bottleneck_scale": 1,
+            "position":["tail"],
+
+            "adversarial_model": "Mapping_MLP3",
+            "adversarial_model_lr": 0.0001,
+            "imagined_adversary": "ImaginedAdversary_MLP3",
+            "imagined_adversary_lr": 0.0001,
+
+            "tail_imagined_adversary": "ImaginedAdversary_Tail_MLP3",
+            "tail_imagined_adversary_lr": 0.0001,
+            "lambda": 0.001,
             "seq_length": 70,
             "embed_dim": 768
         }
     },
     "attack_list": {
+      "1": {
+          "name": "NormbasedScoring_LLM",
+          "parameters": {
+            "party": [1]
+        }
+      },
       "0": {
         "name": "BatchLabelReconstruction_LLM",
         "parameters": {
           "party": [1],
-          "lr": 0.02,
-          "epochs": 300
+          "lr": 0.05,
+          "epochs": 500
+        }
       }
-    },
-    "1": {
-        "name": "DirectionbasedScoring_LLM",
-        "parameters": {
-          "party": [1],
-          "lr": 0.1,
-          "epochs": 1000
-      }
-    }
   }
 }

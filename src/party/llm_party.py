@@ -139,6 +139,11 @@ class Party(object):
         # for adversarial training
         self.adversary_loss = None
         self.mapping_distance = None
+        self.head_adversary_loss = None
+        self.head_mapping_distance = None
+        self.tail_adversary_loss = None
+        self.tail_mapping_distance = None
+
 
     def set_is_first_forward_iter(self, value):
         self.is_first_forward_iter = value
@@ -263,7 +268,7 @@ class Party(object):
         # self.lr_schedulers.update({i: scheduler})
 
     def prepare_model(self, args, index):
-        print(f'=== prepare_model for Party {index} ===')
+        print(f'---- prepare_model for party {index}')
         # Load Tokenizer
         model_path = args.model_path[index]
         self.prepare_tokenizer(args, model_path)

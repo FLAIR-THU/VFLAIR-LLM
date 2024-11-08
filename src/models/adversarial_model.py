@@ -138,15 +138,10 @@ class Mapping_MLP3(nn.Module):
 
         origin_shape = x.shape 
         origin_dtype = x.dtype
-        print('x raw:',x.shape,x.dtype)
-        print('self.seq_length:',self.seq_length)
-        # print('origin_shape:',origin_shape)
 
         # if not self.batch_first:
         if origin_shape[1] != self.seq_length:
             x = x.transpose(0,1) # should be [bs, seq_len, embed_dim]
-            print('x after:',x.shape,x.dtype)
-        # print(self.seq_length*self.embed_dim)
 
         x = torch.tensor(x,dtype=torch.float32)
         x1 = self.net1(x)

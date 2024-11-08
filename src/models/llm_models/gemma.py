@@ -115,6 +115,9 @@ class GemmaModelHead(GemmaModelSplitter):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
 
+        # for decoder_layer in self.layers:
+        #     print('## input_layernorm:',decoder_layer.input_layernorm.weight.device)
+
         for decoder_layer in self.layers:
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
@@ -228,6 +231,9 @@ class GemmaModelBody(GemmaModelSplitter):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
 
+        # for decoder_layer in self.layers:
+        #     print('## input_layernorm:',decoder_layer.input_layernorm.weight.device)
+
         for decoder_layer in self.layers:
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
@@ -245,7 +251,7 @@ class GemmaModelBody(GemmaModelSplitter):
                 )
             else:
                 layer_outputs = decoder_layer(
-                    hidden_states,
+                    hidden_states.to(decoder_layer.input_layernorm.weight.device),
                     attention_mask=causal_mask,
                     position_ids=position_ids,
                     past_key_value=past_key_values,
@@ -456,7 +462,7 @@ class ModelPartitionPipelineGemma(ModelPartitionPipeline):
             split_range = range(0, self.split_index[0])
             model_head.vfl_split(split_range)
 
-        return model_head.to(self.device)
+        return model_head#.to(self.device)
 
     def _load_model_tail(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         if self.args.model_architect == 'CLM':
@@ -476,7 +482,7 @@ class ModelPartitionPipelineGemma(ModelPartitionPipeline):
             model_tail.vfl_split(split_range)
 
 
-        return model_tail.to(self.device)
+        return model_tail#.to(self.device)
 
     def _load_model_body(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         model_body = GemmaModelBody.from_pretrained(model_name_or_path, **kwargs)
@@ -485,4 +491,4 @@ class ModelPartitionPipelineGemma(ModelPartitionPipeline):
             model_body.vfl_split(split_range)
            
         
-        return model_body.to(self.device)
+        return model_body#.to(self.device)

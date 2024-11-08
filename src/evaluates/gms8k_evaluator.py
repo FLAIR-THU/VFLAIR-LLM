@@ -6,7 +6,7 @@ from collections import namedtuple
 
 import torch
 from tqdm import tqdm
-
+from fraction import Fraction
 class GMS8KEval:
     def __init__(self,args):
         self.args = args

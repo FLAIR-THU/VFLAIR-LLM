@@ -547,7 +547,7 @@ def LaplaceDP_for_llm_pred(args, original_object):
     if args.model_type in DELTAF:
         delta_f = DELTAF[args.model_type]
     else:
-        delta_f = 100
+        delta_f = 10
 
     epsilon = args.defense_configs['epsilon']
     scale = delta_f / epsilon
@@ -577,7 +577,7 @@ def LaplaceDP_for_llm_grad(args, original_object):
     if args.model_type in DELTAF:
         delta_f = DELTAF[args.model_type]
     else:
-        delta_f = 100
+        delta_f = 10
 
     epsilon = args.defense_configs['epsilon']
     dp_strength = delta_f / epsilon

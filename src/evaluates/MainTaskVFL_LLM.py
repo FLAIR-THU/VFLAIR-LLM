@@ -92,7 +92,7 @@ STOPPING_ACC = {'mnist': 0.977, 'cifar10': 0.80, 'cifar100': 0.40, 'diabetes': 0
 
 
 def create_main_task(global_model_type: GenerationMixin):
-    print('inherited:', global_model_type)
+    print('###### inherited:', global_model_type,' ######')
 
     class MainTaskVFL_LLM(global_model_type, nn.Module):  # GenerationMixin object,
         def __init__(self, args, job_id=None):
@@ -230,7 +230,7 @@ def create_main_task(global_model_type: GenerationMixin):
         def apply_defense_on_pred_transmission(self, pred_detach):
             ########### Defense applied on pred transmit ###########
             if self.args.apply_defense == True and self.is_first_forward_iter== 1:
-                if self.args.apply_dp == True and self.args.dp_add_position == 'pred':
+                if self.args.apply_dp == True and ('pred' in self.args.dp_add_position or self.args.dp_add_position == 'pred'):
                     pred_detach = torch.stack(self.launch_defense(pred_detach, "pred"))
                     # print('after pred_detach:',type(pred_detach),pred_detach.shape) # torch.size bs,12,768 intermediate
             return pred_detach
@@ -238,10 +238,10 @@ def create_main_task(global_model_type: GenerationMixin):
         def apply_defense_on_grad_transmission(self, grad):
             ########### Defense applied on grad transmit ###########
             # print('apply_defense_on_grad_transmission')
-            # print('self.args.apply_dp:',self.args.apply_dp)
+            # print('self.args.apply_dp:',self.args.apply_dp, self.args.dp_add_position)
             # print('self.args.apply_gs:',self.args.apply_gs)
             if self.args.apply_defense == True:
-                if not (self.args.apply_dp == True and self.args.dp_add_position == 'pred'):
+                if (self.args.apply_dp == True and 'grad' in self.args.dp_add_position) or (self.args.apply_gs == True):
                     grad = self.launch_defense(grad, "gradients")
                     # print('after grad:',type(grad),grad.shape) # torch.size bs,12,768 intermediate
             return grad
@@ -367,21 +367,21 @@ def create_main_task(global_model_type: GenerationMixin):
             else:
                 global_gradient = self.parties[0].cal_global_gradient_3slice(global_loss, self.global_pred)
 
-            # Defense
+            #### Defense ####
             # Direct alter on gradients
             if self.args.apply_defense:
                 if (0 in self.args.defense_configs['party']):
                     if (not self.args.apply_mid) and (not self.args.apply_adversarial):
                         global_gradient = self.apply_defense_on_grad_transmission(global_gradient)
 
-            # update_loss_with_defense after gradient calculation
+            # Update_loss_with_defense after gradient calculation -- for ad defense at model tail
             self.parties[0].update_loss_with_defense()
 
-            self._communication.send_global_loss_and_gradients(global_gradient)  
-            
-            self.communication_cost += get_size_of(global_gradient)
-            return global_loss
 
+            self._communication.send_global_loss_and_gradients(global_gradient)  
+            self.communication_cost += get_size_of(global_gradient)
+
+            return global_loss
         
         def predict(self):
             # passive party dataloader list
@@ -1143,8 +1143,6 @@ def create_main_task(global_model_type: GenerationMixin):
                             del self.final_state['active_predict_attention_mask_list']
                         except:
                             pass
-                        # self.final_state.update(self.save_element('first_iter_passive_predict'))
-                        # self.final_state.update(self.save_element('first_iter_passive_predict_attention_mask'))
                         self.final_state.update(self.save_element('active_predict_list'))
                         self.final_state.update(self.save_element('active_predict_attention_mask_list'))
                     else:
@@ -1417,7 +1415,6 @@ def create_main_task(global_model_type: GenerationMixin):
             flag = 0
             self.current_epoch = 0
 
-            last_adversarial_model_loss = 10000
             start_time = time.time()
             optimize_step = 0
 
@@ -1498,8 +1495,8 @@ def create_main_task(global_model_type: GenerationMixin):
                 # LR decay
                 self.LR_Decay(i_epoch)
 
-                if self.args.apply_adversarial:
-                    print(f'global_loss={self.parties[0].global_loss} adversarial_model_loss:{self.parties[0].adversarial_model_loss.item()} adversary_attack_loss:{self.parties[0].adversary_attack_loss.item()}')
+                # if self.args.apply_adversarial:
+                #     print(f'global_loss={self.parties[0].global_loss} adversarial_model_loss:{self.parties[0].adversarial_model_loss.item()} adversary_attack_loss:{self.parties[0].adversary_attack_loss.item()}')
                 # if self.args.apply_mid:
                 #     print(f'global_loss={self.parties[0].global_loss},head_mid_loss={self.parties[0].head_mid_loss}')
 
@@ -1633,8 +1630,8 @@ def create_main_task(global_model_type: GenerationMixin):
                         "active_predict": self.dict_deepcopy(self.parties[1].output_tensors) ,
                         "active_predict_attention_mask": self.dict_deepcopy(self.parties[1].output_attention_mask) ,
                         
-                        "local_gradient": copy.deepcopy(self.parties[0].local_gradient),
-                        "global_gradient": copy.deepcopy(self.parties[1].global_gradient),
+                        "local_gradient": copy.deepcopy(self.parties[0].local_gradient.detach()) if self.parties[0].local_gradient!= None else None,
+                        "global_gradient": copy.deepcopy(self.parties[1].global_gradient.detach()) if self.parties[1].global_gradient!= None else None,
                         
                         # Gradient
                         "local_model_head_gradient": copy.deepcopy(self.parties[0].weights_grad_a),

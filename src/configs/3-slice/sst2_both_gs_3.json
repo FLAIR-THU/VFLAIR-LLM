@@ -1,9 +1,9 @@
 {
-    "epochs": 1,
-    "lr": 0.0,
+    "epochs": 40,
+    "lr": 0.0001,
     "k": 2,
-    "batch_size": 128,
-    "early_stop_threshold": 1,
+    "batch_size": 16,
+    "early_stop_threshold": 2,
     "pipeline": "finetune",
     "model_architect":"CLS",
     "communication":{
@@ -38,13 +38,13 @@
           "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
 
             "head":{
-                "trainable": 0,
+                "trainable": 1,
                 "embedding_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
             },
             "tail":{
-                "trainable": 0,
+                "trainable": 1,
                 "head_layer_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
@@ -63,22 +63,56 @@
         },
         "vfl_model_slice_num": 3,
         "local_encoders_num": 3,
-        "local_tail_encoders_num": 4
+        "local_tail_encoders_num": 3
+    },
+    "defense": {
+        "name": "GradientSparsification",
+      "parameters": {
+        "party": [0],
+        "gradient_sparse_rate": 100.0
+      }
     },
     "attack_list": {
-      "0": {
+      "0":{
+            "name": "VanillaModelInversion_WhiteBox",
+            "parameters": {
+                "party": [1],
+                "lr": 0.01,
+                "epochs": 100,
+                "batch_size": 32,
+                "attack_sample_num": 100
+            }
+        },
+        "1":{
+            "name": "WhiteBoxInversion",
+            "parameters": {
+                "party": [1],
+                "T": 0.05,
+                "lr": 0.005,
+                "epochs": 500,
+                "batch_size": 32,
+                "attack_sample_num": 100
+            }
+        },
+      "2": {
         "name": "BatchLabelReconstruction_LLM",
         "parameters": {
           "party": [1],
-          "lr": 0.02,
-          "epochs": 300
+          "lr": 0.05,
+          "epochs": 500
+        }
+      },
+      "3": {
+          "name": "DirectionbasedScoring_LLM",
+          "parameters": {
+            "party": [1]
+        }
+      },
+      "4": {
+          "name": "NormbasedScoring_LLM",
+          "parameters": {
+            "party": [1]
+        }
       }
-    },
-    "1": {
-        "name": "DirectionbasedScoring_LLM",
-        "parameters": {
-          "party": [1]
-      }
-    }
   }
 }

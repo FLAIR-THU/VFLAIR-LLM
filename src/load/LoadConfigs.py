@@ -350,8 +350,9 @@ def do_load_basic_configs(config_dict, args):
             args.defense_param_name = 'lambda'
         elif args.defense_name in ["MID"]:
             mid_model_name = str(args.defense_configs['mid_model_name']) if 'mid_model_name' in args.defense_configs else 'MID'
-            mid_position = str(args.defense_configs['mid_position']) if 'mid_position' in args.defense_configs else 'head'
-            args.defense_param = mid_model_name + '_' + mid_position+ '_' + str(args.defense_configs['lambda'])
+            mid_position = str(args.defense_configs['mid_position']) if 'mid_position' in args.defense_configs else ['head']
+            str_mid_position = '-'.join(mid_position)
+            args.defense_param = mid_model_name + '_' + str_mid_position+ '_' + str(args.defense_configs['lambda'])
             args.defense_param_name = 'lambda'
         elif args.defense_name == "GaussianDP" or args.defense_name == "LaplaceDP":
             if 'dp_strength' in args.defense_configs:
@@ -712,12 +713,22 @@ def do_load_basic_configs_llm(config_dict, args):
         if args.defense_name in ["CAE", "DCAE", "DistanceCorrelation", "AdversarialTraining"]:
             args.defense_param = args.defense_configs['lambda']
             args.defense_param_name = 'lambda'
+        elif args.defense_name in ["AdversarialTraining"]:
+            try:
+                ad_position = str('-'.join(args.defense_configs['position'])) if 'position' in args.defense_configs else ['head']
+            except:
+                ad_position = str(args.defense_configs['position']) if 'position' in args.defense_configs else ['head']
+            args.defense_param = ad_position+'_'+args.defense_configs['lambda']
+            print('======')
+            print(args.defense_param)
+            print('======')
+            args.defense_param_name = 'lambda'
         elif args.defense_name in ["MID"]:
             mid_model_name = str(args.defense_configs['mid_model_name']) if 'mid_model_name' in args.defense_configs else 'MID'
             try:
-                mid_position = str('-'.join(args.defense_configs['mid_position'])) if 'mid_position' in args.defense_configs else 'head'
+                mid_position = str('-'.join(args.defense_configs['mid_position'])) if 'mid_position' in args.defense_configs else ['head']
             except:
-                mid_position = str(args.defense_configs['mid_position']) if 'mid_position' in args.defense_configs else 'head'
+                mid_position = str(args.defense_configs['mid_position']) if 'mid_position' in args.defense_configs else ['head']
             
             args.defense_param = mid_model_name + '_' + mid_position+ '_' + str(args.defense_configs['lambda'])
             print('======')
@@ -733,7 +744,7 @@ def do_load_basic_configs_llm(config_dict, args):
                 args.defense_param = args.defense_configs['epsilon']
                 args.defense_param_name = 'epsilon'
                 # pred/grad
-                args.dp_add_position = str(args.defense_configs['position']) if 'position' in args.defense_configs else 'pred'
+                args.dp_add_position = str(args.defense_configs['position']) if 'position' in args.defense_configs else ['pred']
         elif args.defense_name == "GradientSparsification":
             args.defense_param = args.defense_configs['gradient_sparse_rate']
             args.defense_param_name = 'gradient_sparse_rate'

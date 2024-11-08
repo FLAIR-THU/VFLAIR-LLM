@@ -36,7 +36,7 @@
       "model_type": "Gemma",
       "max_sequence": 512,
       "kwargs_model_loading":{
-        "device_map": "auto"
+        "device_map": "balanced_low_0"
       },
       "0": {
       "path": "/home/DAIR/guzx/Git_FedProject/Models/googlegemma-2b",

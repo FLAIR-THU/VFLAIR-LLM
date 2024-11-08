@@ -69,7 +69,7 @@ def evaluate_no_attack_finetune(args):
     # # Save record 
     exp_result = f"NoAttack|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|"+\
     f"K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|"+\
-    f"epoch={args.main_epochs}|headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|"+\
+    f"epoch={args.main_epochs}|headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|"+\
     f"local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|"+\
         exp_result
 
@@ -114,10 +114,10 @@ def evaluate_inversion_attack(args):
         exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|"+\
         f"seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|"+\
         f"num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|"+\
-        f"headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|"+\
+        f"headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|"+\
         f"local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|"+\
         f"main_task_acc={main_tack_acc}|precision={precision}|recall={recall}|img_mse={img_mse}|rand_img_mse={rand_img_mse}|"+\
-        f"training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
+        f"training_time={training_time}|attack_time={attack_total_time}|"
         print(exp_result)
         append_exp_res(args.exp_res_path, exp_result)
     return precision, recall, img_mse, rand_img_mse
@@ -156,9 +156,9 @@ def evaluate_label_inference_attack(args):
         exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|"+\
         f"seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|"+\
         f"num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|"+\
-        f"headlayer={args.head_layer_trainable}|encoder={args.encoder_trainable}|embedding={args.embedding_trainable}|"+\
+        f"headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|"+\
         f"local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|"+\
-        f"main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|train_party_time={train_party_time}|inference_party_time={inference_party_time}"
+        f"main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|"
         print(exp_result)
         append_exp_res(args.exp_res_path, exp_result)
     return rec_rate

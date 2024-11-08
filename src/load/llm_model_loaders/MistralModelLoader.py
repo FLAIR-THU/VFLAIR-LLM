@@ -58,6 +58,10 @@ class MistralModelLoader(LLMModelLoader):
                             param.requires_grad = False
                 print(f'passive_model_head: encoder_trainable_ids={model_head_encoder_trainable_ids}; embedding_trainable={model_head_embedding_trainable}')
             else:
+                model_head_embedding_trainable = args.embedding_trainable
+                if not model_head_embedding_trainable: # freeze embeddings that's not needed
+                    for param in self._models[0].embed_tokens.parameters():
+                        param.requires_grad = False
                 print(f'passive_model_head: all trainable')
             self._models[0].print_trainable_parameters()
             

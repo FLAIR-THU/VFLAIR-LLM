@@ -1,10 +1,10 @@
 {
-  "epochs": 40,
-  "lr": 0.001,
-  "k": 2,
-  "batch_size": 128,
-  "early_stop_threshold": 1,
-  "pipeline": "finetune",
+    "epochs": 40,
+    "lr": 0.0001,
+    "k": 2,
+    "batch_size": 16,
+    "early_stop_threshold": 2,
+    "pipeline": "finetune",
     "model_architect":"CLS",
     "communication":{
         "communication_protocol": "FedSGD",
@@ -38,13 +38,13 @@
           "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
 
             "head":{
-                "trainable": 0,
+                "trainable": 1,
                 "embedding_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
             },
             "tail":{
-                "trainable": 0,
+                "trainable": 1,
                 "head_layer_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
@@ -63,31 +63,61 @@
         },
         "vfl_model_slice_num": 3,
         "local_encoders_num": 3,
-        "local_tail_encoders_num": 4
+        "local_tail_encoders_num": 3
     },
     "defense": {
-      "name": "GradientSparsification",
-      "parameters": {
-        "party": [0],
-        "gradient_sparse_rate": 100.0
-      }
+        "name": "AdversarialTraining",
+        "parameters": {
+            "party": [0],
+            "position":["head","tail"],
+
+            "adversarial_model": "Mapping_MLP3",
+            "adversarial_model_lr": 0.0001,
+            "imagined_adversary": "ImaginedAdversary_MLP3",
+            "imagined_adversary_lr": 0.0001,
+
+            "tail_imagined_adversary": "ImaginedAdversary_Tail_MLP3",
+            "tail_imagined_adversary_lr": 0.0001,
+            "lambda": 0.001,
+            "seq_length": 70,
+            "embed_dim": 768
+        }
     },
     "attack_list": {
-      "0": {
+      "0":{
+            "name": "VanillaModelInversion_WhiteBox",
+            "parameters": {
+                "party": [1],
+                "lr": 0.01,
+                "epochs": 100,
+                "batch_size": 32,
+                "attack_sample_num": 100
+            }
+        },
+        "1":{
+            "name": "WhiteBoxInversion",
+            "parameters": {
+                "party": [1],
+                "T": 0.05,
+                "lr": 0.005,
+                "epochs": 500,
+                "batch_size": 32,
+                "attack_sample_num": 100
+            }
+        },
+      "2": {
         "name": "BatchLabelReconstruction_LLM",
         "parameters": {
           "party": [1],
           "lr": 0.05,
           "epochs": 500
+        }
+      },
+      "3": {
+          "name": "NormbasedScoring_LLM",
+          "parameters": {
+            "party": [1]
+        }
       }
-    },
-    "1": {
-        "name": "DirectionbasedScoring_LLM",
-        "parameters": {
-          "party": [1],
-          "lr": 0.1,
-          "epochs": 1000
-      }
-    }
   }
 }

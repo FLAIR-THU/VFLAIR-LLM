@@ -36,7 +36,6 @@ class LlamaModelSplitter(LlamaModel, VFLModel):
 
     def _clear_past_key_values(self):
         self.past_key_values = None
-    
 
     
 class LlamaModelHead(LlamaModelSplitter):
@@ -72,7 +71,7 @@ class LlamaModelHead(LlamaModelSplitter):
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        use_cache = use_cache if use_cache is not None else self.config.use_cache
+        use_cache =  False #use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if (input_ids is None) ^ (inputs_embeds is not None):
@@ -115,8 +114,18 @@ class LlamaModelHead(LlamaModelSplitter):
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
+        # print('llama model head')
+        # for decoder_layer in self.layers:
+        #     print('head:',decoder_layer.input_layernorm.weight.device)
 
         for decoder_layer in self.layers:
+            # print(decoder_layer.mlp.gate_proj.weight.device)
+            # hidden_states = hidden_states.to(decoder_layer.mlp.gate_proj.weight.device)
+            
+            # print(hidden_states.device ,decoder_layer.input_layernorm.weight.device)
+            # hidden_states = hidden_states.to(decoder_layer.input_layernorm.weight.device)
+
+            
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
@@ -157,7 +166,7 @@ class LlamaModelBody(LlamaModelSplitter):
         super().__init__(config)
         self.past_key_values = None
         del self.norm
-        del self.embed_tokens
+        # del self.embed_tokens
         # todo: del norm will cause error when load from original model weight
         # del self.norm
     
@@ -179,7 +188,7 @@ class LlamaModelBody(LlamaModelSplitter):
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        use_cache = use_cache if use_cache is not None else self.config.use_cache
+        use_cache = False # use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if (input_ids is None) ^ (inputs_embeds is not None):
@@ -226,7 +235,15 @@ class LlamaModelBody(LlamaModelSplitter):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
 
+        
+        # print('llama model body')
+        # for decoder_layer in self.layers:
+        #     print('body:',decoder_layer.input_layernorm.weight.device)
+
         for decoder_layer in self.layers:
+            # hidden_states = hidden_states.to( decoder_layer.mlp.gate_proj.weight.device )
+            # print(hidden_states.device,decoder_layer.mlp.gate_proj.weight.device)
+
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
@@ -266,7 +283,7 @@ class LlamaModelTail(LlamaModelSplitter):
     def __init__(self, config: LlamaConfig):
         super().__init__(config)
         self.past_key_values = None
-        del self.embed_tokens
+        # del self.embed_tokens
         # todo: del norm will cause error when load from original model weight
         # del self.norm
     
@@ -288,7 +305,7 @@ class LlamaModelTail(LlamaModelSplitter):
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        use_cache = use_cache if use_cache is not None else self.config.use_cache
+        use_cache = False #use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if (input_ids is None) ^ (inputs_embeds is not None):
@@ -335,7 +352,17 @@ class LlamaModelTail(LlamaModelSplitter):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
 
+        # print('llama model tail')
+        # for decoder_layer in self.layers:
+        #     print('tail:',decoder_layer.input_layernorm.weight.device)
+
         for decoder_layer in self.layers:
+            # print(hidden_states.device ,decoder_layer.input_layernorm.weight.device)
+            # hidden_states = hidden_states.to(decoder_layer.input_layernorm.weight.device)
+
+            # print(decoder_layer.mlp.gate_proj.weight.device)
+            # hidden_states = hidden_states.to(decoder_layer.mlp.gate_proj.weight.device)
+
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
@@ -395,6 +422,7 @@ class LlamaModelTail(LlamaModelSplitter):
         )
 
 
+
 # Global Model Wrapper
 class LlamaTailForCausalLM(LlamaForCausalLM, VFLModel):
     def __init__(self, config: LlamaConfig, **kwargs):
@@ -412,6 +440,90 @@ class LlamaTailForCausalLM(LlamaForCausalLM, VFLModel):
     @property
     def head_layer(self):
         return self.lm_head
+    
+    def prepare_inputs_for_generation(
+        self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, cache_position=None, **kwargs
+    ):
+        # With static cache, the `past_key_values` is None
+        # TODO joao: standardize interface for the different Cache classes and remove of this if
+        has_static_cache = False
+        if past_key_values is None:
+            # past_key_values = getattr(getattr(self.model.layers[0], "self_attn", {}), "past_key_value", None)
+            past_key_values = getattr(getattr(self.parties[0].local_model.layers[0], "self_attn", {}), "past_key_value", None)
+            has_static_cache = past_key_values is not None
+
+        past_length = 0
+        if past_key_values is not None:
+            if isinstance(past_key_values, Cache):
+                past_length = cache_position[0] if cache_position is not None else past_key_values.get_seq_length()
+                max_cache_length = (
+                    torch.tensor(past_key_values.get_max_length(), device=input_ids.device)
+                    if past_key_values.get_max_length() is not None
+                    else None
+                )
+                cache_length = past_length if max_cache_length is None else torch.min(max_cache_length, past_length)
+            # TODO joao: remove this `else` after `generate` prioritizes `Cache` objects
+            else:
+                cache_length = past_length = past_key_values[0][0].shape[2]
+                max_cache_length = None
+
+            # Keep only the unprocessed tokens:
+            # 1 - If the length of the attention_mask exceeds the length of input_ids, then we are in a setting where
+            # some of the inputs are exclusively passed as part of the cache (e.g. when passing input_embeds as
+            # input)
+            if attention_mask is not None and attention_mask.shape[1] > input_ids.shape[1]:
+                input_ids = input_ids[:, -(attention_mask.shape[1] - past_length) :]
+            # 2 - If the past_length is smaller than input_ids', then input_ids holds all input tokens. We can discard
+            # input_ids based on the past_length.
+            elif past_length < input_ids.shape[1]:
+                input_ids = input_ids[:, past_length:]
+            # 3 - Otherwise (past_length >= input_ids.shape[1]), let's assume input_ids only has unprocessed tokens.
+
+            # If we are about to go beyond the maximum cache length, we need to crop the input attention mask.
+            if (
+                max_cache_length is not None
+                and attention_mask is not None
+                and cache_length + input_ids.shape[1] > max_cache_length
+            ):
+                attention_mask = attention_mask[:, -max_cache_length:]
+
+        position_ids = kwargs.get("position_ids", None)
+        if attention_mask is not None and position_ids is None:
+            # create position_ids on the fly for batch generation
+            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids.masked_fill_(attention_mask == 0, 1)
+            if past_key_values:
+                position_ids = position_ids[:, -input_ids.shape[1] :]
+
+        # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
+        if inputs_embeds is not None and past_key_values is None:
+            model_inputs = {"inputs_embeds": inputs_embeds}
+        else:
+            # The `contiguous()` here is necessary to have a static stride during decoding. torchdynamo otherwise
+            # recompiles graphs as the stride of the inputs is a guard. Ref: https://github.com/huggingface/transformers/pull/29114
+            # TODO: use `next_tokens` directly instead.
+            model_inputs = {"input_ids": input_ids.contiguous()}
+
+        input_length = position_ids.shape[-1] if position_ids is not None else input_ids.shape[-1]
+        if cache_position is None:
+            cache_position = torch.arange(past_length, past_length + input_length, device=input_ids.device)
+        else:
+            cache_position = cache_position[-input_length:]
+
+        if has_static_cache:
+            past_key_values = None
+
+        model_inputs.update(
+            {
+                "position_ids": position_ids,
+                "cache_position": cache_position,
+                "past_key_values": past_key_values,
+                "use_cache": kwargs.get("use_cache"),
+                "attention_mask": attention_mask,
+            }
+        )
+        return model_inputs
+
 
     @head_layer.setter
     def head_layer(self, lm_head):

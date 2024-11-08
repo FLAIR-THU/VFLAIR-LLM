@@ -1,10 +1,10 @@
 {
-  "epochs": 40,
-  "lr": 0.0001,
-  "k": 2,
-  "batch_size": 16,
-  "early_stop_threshold": 1,
-  "pipeline": "finetune",
+    "epochs": 40,
+    "lr": 0.001,
+    "k": 2,
+    "batch_size": 16,
+    "early_stop_threshold": 2,
+    "pipeline": "finetune",
     "model_architect":"CLS",
     "communication":{
         "communication_protocol": "FedSGD",
@@ -38,13 +38,13 @@
           "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
 
             "head":{
-                "trainable": 1,
+                "trainable": 0,
                 "embedding_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
             },
             "tail":{
-                "trainable": 1,
+                "trainable": 0,
                 "head_layer_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
@@ -73,20 +73,18 @@
       }
     },
     "attack_list": {
+      "1": {
+          "name": "NormbasedScoring_LLM",
+          "parameters": {
+            "party": [1]
+        }
+      },
       "0": {
         "name": "BatchLabelReconstruction_LLM",
         "parameters": {
           "party": [1],
           "lr": 0.05,
           "epochs": 500
-        }
-      },
-      "1": {
-          "name": "DirectionbasedScoring_LLM",
-          "parameters": {
-            "party": [1],
-            "lr": 0.1,
-            "epochs": 1000
         }
       }
   }

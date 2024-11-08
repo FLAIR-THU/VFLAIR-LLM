@@ -100,6 +100,12 @@
           "parameters": {
             "party": [1]
         }
+      },
+      "4": {
+          "name": "NormbasedScoring_LLM",
+          "parameters": {
+            "party": [1]
+        }
       }
   }
 }

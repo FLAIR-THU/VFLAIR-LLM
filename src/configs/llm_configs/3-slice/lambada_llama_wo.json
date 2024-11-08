@@ -1,8 +1,8 @@
 {
-  "epochs": 30,
+  "epochs": 1,
   "lr": 0.001,
   "k": 2,
-  "batch_size": 32,
+  "batch_size": 4,
   "test_batch_size": 1,
   "early_stop_threshold": 1,
   "pipeline": "finetune",
@@ -17,7 +17,7 @@
       }
   },
   "dataset":{
-      "dataset_name": "Lambada",
+      "dataset_name": "Lambada_test",
       "num_classes": 1,
       "use_prompt": 1
   },
@@ -26,7 +26,7 @@
       "padding_type": "outside",
       "pad_token": "[PAD]",
       "truncation": "longest_first",
-      "max_length": 512,
+      "max_length": 128,
       "padding_side": "left",
       "add_special_tokens": 1
   },
@@ -36,16 +36,18 @@
       "model_type": "Llama",
       "max_sequence": 512,
       "kwargs_model_loading":{
-        "device_map": "auto"
+        "device_map": "balanced_low_0"
       },
       "0": {
       "path": "/home/DAIR/guzx/Git_FedProject/Models/llama-2-7b",
           "head":{
+              "trainable": 1,
               "embedding_trainable": 0,
               "encoder_trainable": 0,
               "encoder_trainable_ids":[]
           },
           "tail":{
+              "trainable": 1,
               "head_layer_trainable": 1,
               "encoder_trainable": 0,
               "encoder_trainable_ids":[]
@@ -54,6 +56,7 @@
       "1": {
       "path": "/home/DAIR/guzx/Git_FedProject/Models/llama-2-7b",
           "body":{
+              "trainable": 0,
               "encoder_trainable": 0,
               "encoder_trainable_ids":[]
           }
