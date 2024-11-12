@@ -15,7 +15,7 @@ from loguru import logger
 
 # indicator whether to use the new pipeline
 _new_pipeline = False
-is_test = False
+is_test = True
 SEED=7
 # os.environ.update({'IS_TEST':is_test})
 train_output_dir = os.path.join(os.path.dirname(__file__), 'exp_result', 'dev', )

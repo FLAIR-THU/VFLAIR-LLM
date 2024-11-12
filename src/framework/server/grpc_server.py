@@ -155,6 +155,10 @@ def main(main_args):
     server = grpc.server(futures.ThreadPoolExecutor(), options=[
         ('grpc.max_send_message_length', MAX_MESSAGE_LENGTH),
         ('grpc.max_receive_message_length', MAX_MESSAGE_LENGTH),
+        ("grpc.keepalive_time_ms", 20000),
+        ("grpc.keepalive_timeout_ms", 10000),
+        ("grpc.http2.min_ping_interval_without_data_ms", 5000),
+        ("grpc.keepalive_permit_without_calls", 1),
     ], compression=compression_algorithm)
     grpc_server = GrpcServer()
     fps.add_MessageServiceServicer_to_server(grpc_server, server)

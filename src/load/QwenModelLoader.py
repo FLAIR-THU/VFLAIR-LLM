@@ -7,9 +7,9 @@ from models.llm_models.qwen2 import ModelPartitionPipelineQwen2
 class QwenModelLoader(IModelLoader):
     _models = {}  # type:dict[int,PreTrainedModel]
 
-    def load(self, model_path, is_active_party):
+    def load(self, model_path, is_active_party, args):
         tokenizer = AutoTokenizer.from_pretrained(model_path, padding_side='left')
-        p = ModelPartitionPipelineQwen2(vfl_basic_config.split_index, is_active_party)
+        p = ModelPartitionPipelineQwen2(args, vfl_basic_config.split_index, is_active_party)
         self._models.update(p.from_pretrained(model_path, **vfl_basic_config.kwargs_model_loading))
         config, generation_config = self._prepare_model_update_args()
         return {

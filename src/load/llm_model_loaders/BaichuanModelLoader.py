@@ -112,7 +112,9 @@ class BaichuanModelLoader(LLMModelLoader):
         for _key in self._models.keys():
             model_dtype = self._get_model_dtype(self._models[_key].config)
             break
+        tokenizer = AutoTokenizer.from_pretrained(model_path, padding_side='left')
         return {
+            "tokenizer": tokenizer,
             "models": self._models,
             "config": model_config,
             "generation_config": generation_config,

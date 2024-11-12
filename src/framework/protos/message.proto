@@ -49,6 +49,7 @@ message HiddenStates{
     repeated string requires_grads = 4;
     bool use_cache = 5;
     bool output_hidden_states = 6;
+    tensor_int cache_position = 7;
 }
 
 message TensorData{

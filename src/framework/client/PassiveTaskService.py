@@ -21,7 +21,7 @@ from utils import timer, recorder
 # logger = logger_util.get_logger('passive_task_service')
 from loguru import logger
 from datetime import datetime
-
+from load.LoadModels import Loader_Map
 
 class PassiveTaskService:
     _parties = {}
@@ -65,10 +65,10 @@ class PassiveTaskService:
     def _run_job(self, job_id, config, params=None):
         params = params if params else {}
         args = load_llm_configs(json.loads(config))
-        need_model = ('model_type' in args and args.model_type.lower() != 'qwen2') or args.pipeline != 'pretrained'
+        need_model = ('model_type' in args and args.model_type.lower() != 'qwen2' and args.model_type.lower() != 'llama') or args.pipeline != 'pretrained'
         args.parties = self._init_parties(args, job_id, need_model)
         if not need_model:
-            args.generation_config = self._model_data['generation_config']
+            args.generation_config = self._model_data.get('generation_config', None)
             args.config = self._model_data['config']
         model_name = args.model_list["name"]
         exp_res_dir, exp_res_path = create_exp_dir_and_file(args.dataset, args.Q, model_name, args.pipeline, args.defense_name, args.defense_param)
@@ -84,7 +84,7 @@ class PassiveTaskService:
             if not need_model:
                 for party in args.parties:
                     party.update_model_data(self._model_data)
-            result = main_task.inference(messages=params)
+            result = main_task.inference(**params)
         elif args.pipeline == 'finetune':
             model_id = main_task.create_model_id()
             base_model_id = main_task.get_base_model()
@@ -95,9 +95,10 @@ class PassiveTaskService:
             self._save_trained_model(base_model_id, model_id, args.model_type, model_path)
         else:
             raise NotImplementedError
-        self._save_job_result(job_id, result)
-
-        self._close_job(job_id)
+        if not params.get('stream'):
+            self._save_job_result(job_id, result)
+            # self._close_job(job_id)
+        return result
 
     def _save_job_result(self, job_id, result):
         job_repository.change_status(job_id, 1, result)
@@ -119,12 +120,13 @@ class PassiveTaskService:
 
     def load_model(self, data):
         model = pretrained_model_repository.get_by_model_id(data['model_id'])
-        self._send_load_model_message(model.model_type, f"{model.base_model_id}/{data['model_id']}", data['config'])
-        if model.model_type.lower() == 'qwen2':
-            loader = QwenModelLoader()  # TODO: use interface instead
-            self._model_data = loader.load(model.path, False)
-        else:
-            raise NotImplementedError
+        self._send_load_model_message(model.model_type, data['model_id'], data['config'])
+        configs = json.loads(data['config'])
+        args = load_llm_configs(configs)
+        model_folder = get_model_folder()
+        model_path = os.path.join(model_folder, data['model_id'])
+        loader = Loader_Map[args.model_type]()  # TODO: use interface instead
+        self._model_data = loader.load(args, model_path, False)
 
     def run(self, task):
         party = self._get_party(task)

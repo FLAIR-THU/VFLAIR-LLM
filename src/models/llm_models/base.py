@@ -6,7 +6,7 @@ import os
 from loguru import logger
 import torch
 from transformers import AutoTokenizer
-
+import copy
 
 class VFLModel(ABC):
     
@@ -151,3 +151,70 @@ class ModelPartitionPipeline(ABC):
     @abstractmethod
     def _load_model_body(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         pass
+
+class VFLModelIntermediate(Dict):
+
+    def prepare_for_forward(self,
+                            attention_mask=None,
+                            past_key_values=None,
+                            use_cache=None,
+                            position_ids=None,
+                            cache_position=None,
+                            labels=None):
+        """
+
+        :param attention_mask: pass to next
+        :param past_key_values: load locally
+        :param use_cache: use global setting, uniform for all model split
+        :param position_ids: pass to next
+        :param cache_position: pass to next
+        :param labels: allow for loss computation, only for model[-1]
+        :return:
+        """
+        use_cache=self.get('use_cache') or use_cache
+
+        # if attention_mask is None and (self.get('attention_mask') is None):
+        #     # default set attention_mask for CLM generation
+        #     attention_mask = torch.ones(self.get('last_hidden_state').shape[:2],
+        #                                 device=self.get('last_hidden_state').device)
+
+        ans = {'inputs_embeds': self.get('inputs_embeds'),
+               'attention_mask': self.get('attention_mask', attention_mask),
+               'use_cache': use_cache, }
+
+        if use_cache:
+            ans.update({'past_key_values': past_key_values,
+                        # 'output_hidden_states': self.output_hidden_states,
+                        'position_ids': self.get('position_ids',position_ids),
+                        'cache_position': self.get('cache_position',cache_position) })
+        if labels is not None:
+            ans.update({'labels': labels})
+        return ans
+
+    def to(self, device):
+        for v in self.__dict__.values():
+            if isinstance(v, torch.Tensor):
+                v.to(device)
+        return self
+
+    def to_json(self):
+        for k, v in self.__dict__.items():
+            if isinstance(v, torch.Tensor):
+                self.__dict__.update({k: v.tolist()})
+
+    def detach(self):
+        new_dict = {}
+        for k, v in self.__dict__.items():
+            if isinstance(v, torch.Tensor):
+                v_new = v.detach().clone()
+                v_new.requires_grad = v.requires_grad
+                new_dict.update({k: v_new})
+            else:
+                new_dict.update({k: copy.deepcopy(v)})
+        return self.__class__(**new_dict)
+
+    def get(self, key, default=None):
+        if key == 'inputs_embeds':
+            return super().get(key, super().get('last_hidden_state'))
+        return super().get(key, default)
+

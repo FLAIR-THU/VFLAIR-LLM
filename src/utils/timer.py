@@ -3,6 +3,7 @@ import time
 from loguru import logger
 from typing import Union
 import datetime
+import torch
 
 
 class Record:
@@ -74,3 +75,17 @@ def timer(recorder=recorder):
         return wrapper
 
     return decorate
+
+def register_timer(name:str,recorder=recorder, is_cuda_sync=torch.cuda.is_available()):
+    if is_cuda_sync:
+        torch.cuda.synchronize()
+    start_time = time.time()
+    yield start_time
+
+    if is_cuda_sync:
+        torch.cuda.synchronize()
+    end_time = time.time()
+    _info = {'took': f"{end_time - start_time}s", 'func_name': name}
+    _info.update({'start_time': start_time, 'end_time': end_time})
+    recorder(_info)
+    yield end_time

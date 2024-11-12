@@ -136,8 +136,9 @@ class LlamaModelLoader(LLMModelLoader):
             # self._models[_key].to(args.device)
             print(f'final load -- model {_key}:{type(self._models[_key])}')
             # print('Device:',next(self._models[_key].parameters()).device)
-
+        tokenizer = AutoTokenizer.from_pretrained(model_path)
         return {
+            "tokenizer": tokenizer,
             "models": self._models,
             "config": model_config,
             # "generation_config": generation_config,

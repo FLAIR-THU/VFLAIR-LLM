@@ -1,5 +1,5 @@
 import argparse
-from fastapi import FastAPI, Form, UploadFile
+from fastapi import FastAPI, Form, UploadFile, HTTPException
 import uvicorn
 
 from framework.client.grpc_client import GrpcClient
@@ -7,16 +7,20 @@ import framework.common.MessageUtil as mu
 import framework.protos.node_pb2 as fpn
 import framework.protos.message_pb2 as fpm
 from typing_extensions import Annotated, Optional
-import json
 from framework.common.yaml_loader import load_yaml
-import framework.common.logger_util as logger_util
 from contextlib import asynccontextmanager
 from argparse import Namespace
 import os
-from fastapi.responses import StreamingResponse
-from asyncio import sleep
+from framework.web.api_utils import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionResponseChoice, \
+    UsageInfo, FunctionCallResponse, ChatMessage, DeltaMessage, ChatCompletionResponseStreamChoice
+from loguru import logger
+from sse_starlette.sse import EventSourceResponse
+import time
 
 service = {}
+
+# Set up limit request time
+EventSourceResponse.DEFAULT_PING_INTERVAL = 1000
 
 
 @asynccontextmanager
@@ -32,8 +36,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 node = fpn.Node(node_id="web")
-
-logger = logger_util.get_logger("web_server")
 
 
 @app.get("/")
@@ -81,7 +83,7 @@ async def start_model(model_id: str, file: Optional[UploadFile] = None):
     msg.type = fpm.LOAD_MODEL
     if file:
         service['contents'] = await file.read()
-    msg.data = {"config":  service['contents'], "model_id": model_id}
+    msg.data = {"config": service['contents'], "model_id": model_id}
     service['grpc_client'].parse_message(msg)
     return {"result": "success"}
 
@@ -98,6 +100,109 @@ async def send_message(msg: Annotated[str, Form()]):
     result = service['grpc_client'].parse_message(msg)
     job_id = result['job_id']
     return {"result": "success", "job_id": job_id}
+
+
+@app.post("/v1/chat/completions", response_model=ChatCompletionResponse)
+async def create_chat_completion(request: ChatCompletionRequest):
+    if len(request.messages) < 1 or request.messages[-1].role == "assistant":
+        raise HTTPException(status_code=400, detail="Invalid request")
+
+    gen_params = dict(
+        messages=request.messages,
+        temperature=request.temperature,
+        top_p=request.top_p,
+        max_length=request.max_tokens or 1024,
+        max_new_tokens=request.max_new_tokens,
+        echo=False,
+        stream=request.stream,
+        repetition_penalty=request.repetition_penalty,
+        tools=request.tools,
+    )
+    logger.debug(f"==== request ====\n{gen_params}")
+
+    # Here is the handling of stream = False
+    msg = Namespace()
+    msg.data = {"config": service['contents'], 'kwargs': gen_params, 'stream': request.stream}
+    msg.type = fpm.CREATE_JOB
+
+    if request.stream:
+        predict_stream_generator = _predict_stream(request.model, msg)
+        return EventSourceResponse(predict_stream_generator, media_type="text/event-stream")
+    else:
+        result = service['grpc_client'].parse_message(msg)
+        response = {}
+        if result:
+            response = result['response']
+            job_id = result['job_id']
+            _close_job(job_id)
+        return _create_response(request.model, response)
+
+
+def _close_job(job_id):
+    msg = Namespace()
+    msg.data = job_id
+    msg.type = fpm.CLOSE_JOB
+    service['grpc_client'].parse_message(msg)
+    logger.info("---end---")
+
+
+def _predict_stream(model, msg):
+    job_id = 0
+    try:
+        result = service['grpc_client'].parse_message(msg)
+        job_id = result['job_id']
+        for item in result.get('response'):
+            chunk = _create_stream_response(model, item)
+            yield "{}".format(chunk.model_dump_json(exclude_unset=True))
+    finally:
+        _close_job(job_id)
+
+
+def _create_response(model: str, response: dict):
+    usage = UsageInfo()
+    function_call, finish_reason = None, "stop"
+
+    message = ChatMessage(
+        role="assistant",
+        content=response["text"],
+        function_call=function_call if isinstance(function_call, FunctionCallResponse) else None,
+    )
+
+    choice_data = ChatCompletionResponseChoice(
+        index=0,
+        message=message,
+        finish_reason=finish_reason,
+    )
+
+    return ChatCompletionResponse(
+        model=model,
+        id="",  # for open_source model, id is empty
+        choices=[choice_data],
+        object="chat.completion",
+        usage=usage
+    )
+
+
+def _create_stream_response(model_id, send_msg: str):
+    function_call, finish_reason = None, "stop"
+    message = DeltaMessage(
+        content=send_msg,
+        role="assistant",
+        function_call=function_call,
+    )
+    choice_data = ChatCompletionResponseStreamChoice(
+        index=0,
+        delta=message,
+        finish_reason=finish_reason
+    )
+    chunk = ChatCompletionResponse(
+        model=model_id,
+        id="",
+        choices=[choice_data],
+        created=int(time.time()),
+        object="chat.completion.chunk"
+    )
+    return chunk
 
 
 def init_grpc_client(args):

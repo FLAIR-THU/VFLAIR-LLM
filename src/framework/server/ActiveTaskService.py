@@ -12,7 +12,7 @@ from utils import recorder
 from party.party_utils import get_model_folder
 
 logger = logger_util.get_logger('active_task_service')
-
+from load.LoadModels import Loader_Map
 
 class ActiveTaskService(threading.Thread):
     _queues = {}
@@ -31,7 +31,7 @@ class ActiveTaskService(threading.Thread):
             return self._active_parties[key]
         elif config is not None:
             args = load_llm_configs(config)
-            need_model = args.model_type.lower() != 'qwen2' or args.pipeline != 'pretrained'
+            need_model = (args.model_type.lower() != 'qwen2' and args.model_type.lower() != 'llama') or args.pipeline != 'pretrained'
             active_party = get_class_constructor(args.active_party_class)(args, args.k - 1, need_model=need_model)
             self._active_parties[key] = active_party
             return active_party
@@ -80,18 +80,18 @@ class ActiveTaskService(threading.Thread):
         if key in self._active_parties:
             del self._active_parties[key]
             gc.collect()
+            torch.cuda.empty_cache()
             logger.info(f"current parties: {self._active_parties}")
 
     def load_model(self, model_type, model_id, config):
         model_folder = get_model_folder()
         model_path = os.path.join(model_folder, model_id)
         self._configs['inference'] = config
+        configs = json.loads(config)
+        args = load_llm_configs(configs)
         logger.info(f"Loading model: {model_type} {model_id} {model_path}")
-        if model_type.lower() == 'qwen2':
-            loader = QwenModelLoader()  # TODO: use interface instead
-            self._model_data = loader.load(model_path, True)
-        else:
-            raise NotImplementedError
+        loader = Loader_Map[model_type]()  # TODO: use interface instead
+        self._model_data = loader.load(args, model_path, True)
 
     def update_model_data(self, job_id):
         party = self._get_active_party(job_id, None)

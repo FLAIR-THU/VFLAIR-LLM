@@ -118,7 +118,7 @@ def convert_pred_to_msg(pred_list, key=None):
             data_value.hidden_states.position_ids.value.extend(position_ids[start:end])
 
         data_value.hidden_states.output_hidden_states = False
-        data_value.hidden_states.use_cache = False
+        data_value.hidden_states.use_cache = pred_list.get('use_cache', False)
         if pred_list['inputs_embeds'].requires_grad:
             data_value.hidden_states.requires_grads.append('inputs_embeds')
         if key:
@@ -185,13 +185,18 @@ def convert_msg_to_pred(pred):
         position_ids = torch.tensor(pred.position_ids.value)
         position_ids = position_ids.view(torch.Size(pred.position_ids.shape))
 
+    cache_position = None
+    if len(pred.cache_position.value) > 0:
+        cache_position = torch.tensor(pred.cache_position.value)
+        cache_position = cache_position.view(torch.Size(pred.cache_position.shape))
+
     new_dict = {
-        "past_key_values": None,
         "output_hidden_states": pred.output_hidden_states,
         "inputs_embeds": inputs_embeds,
         "attention_mask": attention_mask,
         "position_ids": position_ids,
-        "use_cache": pred.use_cache
+        "use_cache": pred.use_cache,
+        "cache_position": cache_position
     }
     return new_dict
 
@@ -204,7 +209,7 @@ class DistributedCommunication(ICommunication):
         self._client = client
         self._job_id = job_id
 
-    def send_pred_message(self, pred_list, parse_result_fn, use_cache=False, test="True"):
+    def send_pred_message(self, pred_list, parse_result_fn):
         task = Task()
         task.run = "aggregate_remote"
         task.party = "active"

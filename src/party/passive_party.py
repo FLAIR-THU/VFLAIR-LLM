@@ -27,6 +27,7 @@ from models.imagined_adversary_models import *
 from models.adversarial_model import *
 
 from models.mid_model_rapper import *
+from models.llm_models.base import VFLModelIntermediate
 from config import vfl_basic_config
 
 import time
@@ -118,7 +119,7 @@ class PassiveParty_LLM(Party_LLM):
 
                 self.adversary_crit = nn.CrossEntropyLoss()
                 self.adversary_lambda = defense_configs['lambda']
-                
+
                 # AD at model head
                 if 'head' in self.ad_position:
                     # prepare adversarial model --  for adversarial training
@@ -155,7 +156,7 @@ class PassiveParty_LLM(Party_LLM):
                     self.tail_imagined_adversary_optimizer = torch.optim.Adam(list(self.tail_imagined_adversary.parameters()),
                                                                     lr=self.imagined_adversary_lr)
 
-                
+
             elif self.args.apply_mid and (self.index in self.args.defense_configs["party"]):
                 print(f'Passive Party {self.index}: init MID Defense')
                 self.mid_lambda = self.args.defense_configs['lambda']
@@ -376,7 +377,7 @@ class PassiveParty_LLM(Party_LLM):
             ######### Defense ###########
             labels = torch.tensor(gt_one_hot_label).to(lm_logits.device)
             
-            
+
 
             if len(labels.shape) > 1:
                 # Shift so that tokens < n predict n
@@ -389,7 +390,7 @@ class PassiveParty_LLM(Party_LLM):
                 shift_labels = shift_labels.to(shift_logits.device)
                 loss_fct = CrossEntropyLoss()
                 loss = loss_fct(shift_logits, shift_labels)
-                
+
                 # # Shift so that tokens < n predict n
                 # shift_logits = lm_logits[..., :-1, :].contiguous()
                 # shift_labels = labels[..., 1:].contiguous()
@@ -567,18 +568,28 @@ class PassiveParty_LLM(Party_LLM):
     @timer()
     def give_pred(self, use_cache=False):
         self.local_data_input['use_cache'] = use_cache
+        if use_cache:
+            self.local_data_input['past_key_values'] = self.past_key_values.get(0)
         # self._tensor_to_device(self.local_data_input , self.models[0].device)
 
         # collect processed labels (only in some cases)
         # model 0 head  / model 1 body(active) / model 2 tail
-        intermediate = self.forward(model_index=0,**self.local_data_input)
-
+        intermediate = self.forward(model_index=0, **self.local_data_input)
+        if not isinstance(intermediate, VFLModelIntermediate):
+            _input = self.local_data_input
+            intermediate = VFLModelIntermediate(**intermediate).prepare_for_forward(
+                attention_mask=_input.get('attention_mask'),
+                position_ids=_input.get('position_ids'),
+                cache_position=_input.get('cache_position'),
+                use_cache=_input.get('use_cache'),
+            )
         if 'processed_labels' in intermediate.keys():
             self.processed_labels = intermediate['processed_labels']
             del(intermediate['processed_labels'])
 
         
         self.local_attention_mask = intermediate['attention_mask'] if ('attention_mask' in intermediate) else None
+
         self.local_pred_clone = self.output_tensors[0].detach().clone()
         if self.local_attention_mask != None:
             self.local_attention_mask = self.local_attention_mask.detach().clone()
@@ -618,7 +629,7 @@ class PassiveParty_LLM(Party_LLM):
 
         return self.forward(2, **resp)
 
-    def local_backward(self):  
+    def local_backward(self):
         self.num_local_updates += 1  # another update
 
         ###### Update Model Head #########
@@ -746,7 +757,7 @@ class PassiveParty_LLM(Party_LLM):
         ###### Update Model Tail #########
         if self.args.vfl_model_slice_num== 3 and self.local_model_tail_optimizer != None:
             self.local_model_tail_optimizer.zero_grad()
-            
+
             # local model tail trainable part
             local_model_tail_params = []
             for param in self.local_model_tail.parameters():

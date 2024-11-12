@@ -41,6 +41,8 @@ class GrpcClient():
         options = [
             ('grpc.max_send_message_length', MAX_MESSAGE_LENGTH),
             ('grpc.max_receive_message_length', MAX_MESSAGE_LENGTH),
+            ("grpc.keepalive_time_ms", 8000),
+            ("grpc.keepalive_permit_without_calls", 1),
         ]
         self.channel = grpc.secure_channel(f"{self.host}:{self.port}", channel_credential, options, compression=self.compression_algorithm)
         self.stub = fps.MessageServiceStub(self.channel)
@@ -61,8 +63,11 @@ class GrpcClient():
             for msg in messages:
                 yield self._create_msg(task, msg)
 
-        response_iterator = self.stub.send_batch(request_messages())
-        return merge_tensor_data(response_iterator)
+        try:
+            response_iterator = self.stub.send_batch(request_messages())
+            return merge_tensor_data(response_iterator)
+        except grpc.RpcError as rpc_error:
+            logger.exception(rpc_error)
 
     def send_stream(self, messages):
         def request_messages():
@@ -88,42 +93,45 @@ class GrpcClient():
                                     fpm.START_TASK)
         return msg
 
-    def send(self, stub, task, hidden_states=None):
+    def send(self, task, hidden_states=None):
         msg = self._create_msg(task, hidden_states)
 
-        response = stub.send(msg)
-        return response.data
+        try:
+            response = self.stub.send(msg, timeout=600)
+            return response.data
+        except grpc.RpcError as rpc_error:
+            logger.exception(rpc_error)
 
     def parse_message(self, response):
         return self._message_service.parse_message(response)
 
-    def register(self, stub):
+    def register(self):
         msg = mu.MessageUtil.create(self._node, {})
-        response_iterator = stub.register(msg)
+        response_iterator = self.stub.register(msg)
         for response in response_iterator:
             try:
                 if response.code is fpm.ERROR:
                     logger.error("received msg from server, code(%s), message: %s, please try again." % (
                     response.code, response.message))
-                    self.unregister(stub)
+                    self.unregister()
                     return
                 self._message_service.parse_message(response)
             except (grpc.RpcError, Exception) as e:
                 logger.exception(e)
 
-    def unregister(self, stub):
+    def unregister(self):
         msg = mu.MessageUtil.create(self._node, {}, fpm.UNREGISTER)
-        stub.unregister(msg)
+        self.stub.unregister(msg)
 
     def open_and_send(self, task, hidden_states=None):
         if isinstance(task, Task):
-            return self.send(self.stub, task, hidden_states=hidden_states)
+            return self.send(task, hidden_states=hidden_states)
         else:
             response = self.stub.send(task)
             return response.data
 
     def open_and_register(self):
-        self.register(self.stub)
+        self.register()
 
     def close(self):
         logger.info("Closing channel")

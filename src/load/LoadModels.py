@@ -53,6 +53,7 @@ Loader_Map = {
     'Bert': BertModelLoader,
     'GPT2': GPT2ModelLoader,
     'Llama': LlamaModelLoader,
+    'llama': LlamaModelLoader,
     'Gemma': GemmaModelLoader,
     'Falcon': FalconModelLoader,
     'Mistral': MistralModelLoader,

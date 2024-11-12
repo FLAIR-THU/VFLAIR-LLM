@@ -34,19 +34,18 @@ class PassiveMessageService:
         logger.info("received config: {}".format(data_dict))
 
         config = data_dict['config']
-        messages = data_dict['messages'] if 'messages' in data_dict else None
-
+        kwargs = data_dict.get('kwargs')
         job_id = self._create_job(config)
         if data_dict.get('async'):
-            threading.Thread(target=self._task_service.run_job, args=(job_id, config, messages)).start()
+            threading.Thread(target=self._task_service.run_job, args=(job_id, config, kwargs)).start()
             return job_id, None
-        return job_id, self._task_service.run_job(job_id, config, messages)
+        response = self._task_service.run_job(job_id, config, kwargs)
+        return {"job_id": job_id, "response": response}
 
     def parse_message(self, message):
         if message.type == fpm.CREATE_JOB:
             # start job
-            job_id = self._run_job(message.data)
-            return {"job_id": job_id}
+            return self._run_job(message.data)
         elif message.type == fpm.PLAIN:
             logger.info("received data: {}".format(message.data))
             return {}

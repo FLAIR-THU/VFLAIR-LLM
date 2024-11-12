@@ -85,7 +85,7 @@ class Party(object):
         self.models = {}  # type:dict[int,PreTrainedModel]
         self.optimizers = {}  # type:dict[int,torch.optim.Optimizer]
         self.lr_schedulers = {}  # type:dict[int,torch.optim.lr_scheduler.LinearLR]
-
+        self.past_key_values = {}
         self.is_first_forward_iter = 1
 
         # local model
@@ -161,6 +161,16 @@ class Party(object):
         for m in self.models.values():
             if m:
                 m.train(*args,**kwargs)
+
+    def update_model_data(self, model_data):
+        self.args.tokenizer = model_data['tokenizer']
+        self.models = model_data['models']
+        self.args.config = model_data['config']
+        self.args.model_architectures = self.args.config.architectures
+        self.args.model_embedded_dim = self.args.config.hidden_size
+        if model_data.get('generation_config', None):
+            self.args.generation_config = model_data['generation_config']
+        # self._set_peft()
 
     def prepare_data(self, args, index):
         (
@@ -310,7 +320,21 @@ class Party(object):
         # Load Optimizer
         self.prepare_optimizer(args)
         
-       
+    def _set_peft(self):
+        """
+        peft training or load trained peft weights
+        :return:
+        """
+        if peft_model_path := self.args.model_list[str(self.index)].get('peft_model_path'):
+            for i, m in self.models.items():
+                _model_path = os.path.join(peft_model_path, f"model_{i}")
+                if m and os.path.exists(_model_path):
+                    self.models[i] = PeftModel.from_pretrained(m, _model_path).train()
+
+        if _train_conf := vfl_basic_config.vfl_training_config:
+            if _train_conf.peft_config:
+                self._peft_model_setting()
+
     def _peft_model_setting(self):
         _train_conf = vfl_basic_config.vfl_training_config
         logger.info(f"enable peft model setting: \n{str(_train_conf.peft_config)}")
@@ -390,7 +414,7 @@ class Party(object):
 
     def obtain_local_data(self, data_input_dict, **kwargs):
         if data_input_dict:
-            self._tensor_to_device(data_input_dict,self.models[0].device)
+            self._tensor_to_device(data_input_dict, self.models[0].device)
             self.local_data_input = data_input_dict
         else:
             pass

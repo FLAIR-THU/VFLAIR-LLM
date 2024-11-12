@@ -34,20 +34,22 @@ class AggregationValue(_message.Message):
     def __init__(self, named_values: _Optional[_Mapping[str, Value]] = ...) -> None: ...
 
 class HiddenStates(_message.Message):
-    __slots__ = ["attention_mask", "inputs_embeds", "output_hidden_states", "position_ids", "requires_grads", "use_cache"]
+    __slots__ = ["attention_mask", "cache_position", "inputs_embeds", "output_hidden_states", "position_ids", "requires_grads", "use_cache"]
     ATTENTION_MASK_FIELD_NUMBER: _ClassVar[int]
+    CACHE_POSITION_FIELD_NUMBER: _ClassVar[int]
     INPUTS_EMBEDS_FIELD_NUMBER: _ClassVar[int]
     OUTPUT_HIDDEN_STATES_FIELD_NUMBER: _ClassVar[int]
     POSITION_IDS_FIELD_NUMBER: _ClassVar[int]
     REQUIRES_GRADS_FIELD_NUMBER: _ClassVar[int]
     USE_CACHE_FIELD_NUMBER: _ClassVar[int]
     attention_mask: tensor_double
+    cache_position: tensor_int
     inputs_embeds: tensor_double
     output_hidden_states: bool
     position_ids: tensor_int
     requires_grads: _containers.RepeatedScalarFieldContainer[str]
     use_cache: bool
-    def __init__(self, inputs_embeds: _Optional[_Union[tensor_double, _Mapping]] = ..., attention_mask: _Optional[_Union[tensor_double, _Mapping]] = ..., position_ids: _Optional[_Union[tensor_int, _Mapping]] = ..., requires_grads: _Optional[_Iterable[str]] = ..., use_cache: bool = ..., output_hidden_states: bool = ...) -> None: ...
+    def __init__(self, inputs_embeds: _Optional[_Union[tensor_double, _Mapping]] = ..., attention_mask: _Optional[_Union[tensor_double, _Mapping]] = ..., position_ids: _Optional[_Union[tensor_int, _Mapping]] = ..., requires_grads: _Optional[_Iterable[str]] = ..., use_cache: bool = ..., output_hidden_states: bool = ..., cache_position: _Optional[_Union[tensor_int, _Mapping]] = ...) -> None: ...
 
 class Message(_message.Message):
     __slots__ = ["code", "data", "message", "node", "type"]
