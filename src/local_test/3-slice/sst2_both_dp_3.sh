@@ -1,4 +1,4 @@
-for seed in {1,2,3,4,5}
+for seed in {60,61,62,63,64,65}
     do
     # python main_pipeline_llm_Both.py --seed $seed --configs sst2_ds_wo_3
 

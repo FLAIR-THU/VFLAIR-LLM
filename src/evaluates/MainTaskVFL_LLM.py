@@ -462,6 +462,7 @@ def create_main_task(global_model_type: GenerationMixin):
                                 self.set_is_first_forward_epoch(1)
                                 generation_output = self.generate(**data_inputs, \
                                         generation_config = self.generation_config)
+
                             else:  # next token prediction
                                 generation_output = self.forward(**data_inputs)
                                 if self.args.model_type.lower() == 'qwen2':
@@ -469,7 +470,7 @@ def create_main_task(global_model_type: GenerationMixin):
                                                                      torch.stack(self.gt_one_hot_label),
                                                                      self.args.config).item()
                             self._clear_past_key_values()
-                            # print('generation_output:',type(generation_output),generation_output.keys())
+
                             batch_target_word, batch_predict_word, sample_cnt = self.generate_result(generation_output, self.gt_one_hot_label)
                             target_word_list.extend(batch_target_word)
                             predict_word_list.extend(batch_predict_word)
@@ -578,44 +579,16 @@ def create_main_task(global_model_type: GenerationMixin):
                     predict_word_list = predict_list # bs, seq_len, vocab_size
                     target_word_list = label_list # bs, seq_len
 
-                    if len(target_word_list[0].shape)>0: # not next token prediction                 
-                        def calculate_token_precision_recall(reference_ids, candidate_ids):
-                            reference_ids = reference_ids.tolist()
-                            candidate_ids = candidate_ids.tolist()
-
-                            def wash(ids, target_token_id):
-                                while(target_token_id in ids):
-                                    ids.remove(target_token_id)
-                                return ids
-                            reference_ids = wash(reference_ids, self.args.tokenizer.pad_token_id)
-                            reference_ids = wash(reference_ids, self.args.tokenizer.eos_token_id)
-
-                            reference_tokens = [self.args.tokenizer.convert_ids_to_tokens(reference_ids)]
-                            candidate_tokens = self.args.tokenizer.convert_ids_to_tokens(candidate_ids)
-
-                            score = sentence_bleu(reference_tokens, candidate_tokens)
-
-                            # print('='*50)
-                            # print('Reference_tokens:',reference_tokens)
-                            # print('-'*25)
-                            # print('Candidate_tokens',candidate_tokens)
-                            # print('Score:',score)
-                            # print('='*50)
-
-                            return score
+                    if len(target_word_list[0].shape)>0: # not next token prediction   
+                        # print('target_word_list:',len(target_word_list),target_word_list[0].shape)
+                        # print('predict_word_list:',len(predict_word_list),predict_word_list[0].shape)
+              
                         
-                        score = 0
-                        for i in range(len(target_word_list)):
-                            _score = calculate_token_precision_recall(target_word_list[i], predict_word_list[i])
-                            score += _score
-                        score = score/len(target_word_list)
-                        acc = score
                         
                         if self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
                             self.evaluator = GMS8KEval(self.args)
                             acc = self.evaluator.evaluate(predict_word_list,target_word_list )
                         
-
                         elif self.args.dataset=='MATH':
                             # print('predict_word_list:',type(predict_word_list),len(predict_word_list),predict_word_list[0].shape)
                             
@@ -693,7 +666,43 @@ def create_main_task(global_model_type: GenerationMixin):
                                 results.append(res)
                             acc = sum(results) / len(results)
 
+                        else:
                             
+
+                            def calculate_token_precision_recall(reference_ids, candidate_ids):
+                                reference_ids = reference_ids.tolist()
+                                candidate_ids = candidate_ids.tolist()
+
+                                def wash(ids, target_token_id):
+                                    while(target_token_id in ids):
+                                        ids.remove(target_token_id)
+                                    return ids
+                                
+                                reference_ids = wash(reference_ids, self.args.tokenizer.pad_token_id)
+                                reference_ids = wash(reference_ids, self.args.tokenizer.eos_token_id)
+
+                                reference_tokens = [self.args.tokenizer.convert_ids_to_tokens(reference_ids)]
+                                candidate_tokens = self.args.tokenizer.convert_ids_to_tokens(candidate_ids)
+                                
+
+                                score = sentence_bleu(reference_tokens, candidate_tokens)
+
+                                # print('Reference_tokens:',reference_tokens)
+                                # print('-'*25)
+                                # print('Candidate_tokens',candidate_tokens)
+                                # print('Score:',score)
+                                # print('='*50)
+                                # assert 1>2
+                                return score
+                            
+
+                            score = 0
+                            for i in range(len(target_word_list)):
+                                _score = calculate_token_precision_recall(target_word_list[i], predict_word_list[i])
+                                score += _score
+                            score = score/len(target_word_list)
+                            acc = score
+                                
                     else:
                         if self.args.metric_type == "best_pred":
                             suc_cnt = 0
@@ -828,7 +837,9 @@ def create_main_task(global_model_type: GenerationMixin):
                         generated_token_logits = model_output.logits[:,-1,:]
                         predict_label_list = torch.argmax(generated_token_logits, dim=-1) 
                         target_label_list = list(gt_one_hot_label)
+                    
                     self.real_generation_result = predict_label_list
+
                     return target_label_list, predict_label_list, len(predict_label_list) 
 
                 elif self.args.task_type == "SequenceClassification":
@@ -1884,6 +1895,13 @@ def create_main_task(global_model_type: GenerationMixin):
 
         # def prepare_inputs_for_generation(self, *args, **model_kwargs):
         #     return super().prepare_inputs_for_generation(*args, **model_kwargs)
+
+        # def prepare_inputs_for_generation(self, input_ids, **model_kwargs):
+        #     if vfl_basic_config.num_of_slice == 3:
+        #         return super().prepare_inputs_for_generation(input_ids, **model_kwargs)
+        #     else:
+        #         # return self.parties[-1].global_model.prepare_inputs_for_generation(input_ids=input_ids, **model_kwargs)
+        #         return self.parties[0].local_model.prepare_inputs_for_generation(input_ids=input_ids, **model_kwargs)
 
         def _prepare_encoder_decoder_kwargs_for_generation(self, inputs_tensor: torch.Tensor, model_kwargs,
                                                            model_input_name: Optional[str] = None):

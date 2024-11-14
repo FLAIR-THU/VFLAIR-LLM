@@ -574,10 +574,16 @@ def LaplaceDP_for_llm_grad(args, original_object):
     original_object = original_object[0]
 
     assert ('epsilon' in args.defense_configs), "missing defense parameter: 'epsilon'"
-    if args.model_type in DELTAF:
-        delta_f = DELTAF[args.model_type]
+    
+    # if args.model_type in DELTAF:
+    #     delta_f = DELTAF[args.model_type]
+    # else:
+    #     delta_f = 10
+
+    if args.delta_f != None:
+        delta_f = args.delta_f
     else:
-        delta_f = 10
+        delta_f = 1e-2
 
     epsilon = args.defense_configs['epsilon']
     dp_strength = delta_f / epsilon

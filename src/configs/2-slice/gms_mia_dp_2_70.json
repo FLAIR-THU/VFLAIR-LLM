@@ -73,6 +73,15 @@
         "vfl_model_slice_num": 2,
         "local_encoders_num": 2
     },
+    "defense": {
+        "name": "LaplaceDP",
+        "parameters": {
+        "party": [0],
+        "position": "pred",
+        "epsilon": 70
+        }
+    
+    },
     "attack_list": {
         "0":{
             "name": "VanillaModelInversion_WhiteBox",

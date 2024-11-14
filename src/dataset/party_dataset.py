@@ -741,16 +741,29 @@ class AlpacaDataset_LLM(Dataset):
         def _tokenize_fn(strings: Sequence[str], tokenizer) -> Dict:
             """Tokenize a list of strings."""
 
-            tokenized_list = [
-                tokenizer(
-                    text,
-                    return_tensors="pt",
-                    padding=args.padding,  # "longest",
-                    max_length=args.max_length,  # tokenizer.model_max_length,
-                    truncation=args.truncation,  # True,
-                )
-                for text in strings
-            ]
+            if split_name == 'train':
+                tokenized_list = [
+                    tokenizer(
+                        text,
+                        return_tensors="pt",
+                        padding=args.padding,  # "longest",
+                        max_length=args.max_length,  # tokenizer.model_max_length,
+                        truncation=args.truncation,  # True,
+                    )
+                    for text in strings
+                ]
+            else:
+                tokenized_list = [
+                    tokenizer(
+                        text,
+                        return_tensors="pt",
+                        # padding=args.padding,  # "longest",
+                        # max_length=args.max_length,  # tokenizer.model_max_length,
+                        # truncation=args.truncation,  # True,
+                    )
+                    for text in strings
+                ]
+
 
             input_ids = labels = [tokenized.input_ids[0] for tokenized in tokenized_list]
             attention_mask = [tokenized.attention_mask[0] for tokenized in tokenized_list]
@@ -846,9 +859,9 @@ class GSMDataset_LLM(Dataset):
         else:
             self.input_dicts = [ self.args.tokenizer(
                                     self.qns[i],return_tensors="pt",
-                                    padding=args.padding,#"longest",
-                                    max_length=args.max_length, #tokenizer.model_max_length,
-                                    truncation=args.truncation, #True,
+                                    # padding=args.padding,#"longest",
+                                    # max_length=args.max_length, #tokenizer.model_max_length,
+                                    # truncation=args.truncation, #True,
                                 )
                 for i in range(len(self.ans))
             ]

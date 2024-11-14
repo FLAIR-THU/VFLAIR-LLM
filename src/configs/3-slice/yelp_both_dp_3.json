@@ -1,25 +1,25 @@
 {
-    "epochs": 40,
-    "lr": 0.0001,
-    "k": 2,
-    "batch_size": 16,
-    "early_stop_threshold": 2,
-    "pipeline": "finetune",
+  "epochs": 40,
+  "lr": 0.0001,
+  "k": 2,
+  "batch_size": 16,
+  "early_stop_threshold": 1,
+  "pipeline": "finetune",
     "model_architect":"CLS",
     "communication":{
         "communication_protocol": "FedSGD",
         "iteration_per_aggregation": 1
     },
     "dataset": {
-      "dataset_name": "SST-2",
-      "num_classes": 2
+      "dataset_name": "yelp-polarity",
+        "num_classes": 5
     },
     "tokenizer": {
       "padding": "max_length",
       "padding_type": "outside",
       "pad_token": "[PAD]",
       "truncation": "longest_first",
-      "max_length": 70,
+      "max_length": 384,
       "padding_side": "left",
       "add_special_tokens": 1
     },
@@ -28,14 +28,14 @@
         "configs":{}
     },
     "model_list":{
-        "name": "textattackbert-base-uncased-SST-2",
+        "name": "Shunianyelp_review_classification",
         "pretrained": 1,
         "model_type": "Bert",
         "max_sequence": 512,
         "kwargs_model_loading":{
         },
         "0": {
-          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
+          "path": "/home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification",
 
             "head":{
                 "trainable": 1,
@@ -51,7 +51,7 @@
             }
         },
         "1": {
-          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
+          "path": "/home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification",
             "body":{
                 "trainable": 1,
                 "encoder_trainable": 0,
@@ -66,7 +66,7 @@
         "local_tail_encoders_num": 3
     },
     "defense": {
-        "name": "LaplaceDP",
+      "name": "LaplaceDP",
           "parameters": {
           "party": [0],
           "position": ["grad","pred"],
@@ -99,8 +99,8 @@
         "name": "BatchLabelReconstruction_LLM",
         "parameters": {
           "party": [1],
-          "lr": 0.05,
-          "epochs": 500
+          "lr": 0.1,
+          "epochs": 200
         }
       },
       "3": {

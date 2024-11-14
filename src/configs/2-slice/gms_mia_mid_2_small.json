@@ -5,14 +5,14 @@
     "batch_size": 16,
     "test_batch_size": 1,
     "early_stop_threshold": 1,
-    "pipeline": "pretrained",
+    "pipeline": "finetune",
     "model_architect":"CLM",
     "communication":{
         "communication_protocol": "FedSGD",
         "iteration_per_aggregation": 1
     },
     "finetune_configs":{
-        "name":"LoRA",
+        "name":"Vanilla",
         "configs":{
             "inference_mode":false,  
           "r":4,  
@@ -72,6 +72,19 @@
         },
         "vfl_model_slice_num": 2,
         "local_encoders_num": 2
+    },
+    "defense": {
+        "name": "MID",
+        "parameters": {
+            "party": [0],
+            "mid_model_name":"MIDModel_Linear",
+            "lr": 0.005,
+            "lambda": 0.001,
+            "mid_position": "head",
+            "current_bottleneck_scale": 1,
+            "seq_length": 512,
+            "embed_dim": 768
+        }
     },
     "attack_list": {
         "0":{

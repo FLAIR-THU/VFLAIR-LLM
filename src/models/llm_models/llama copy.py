@@ -28,7 +28,6 @@ class LlamaModelSplitter(LlamaModel, VFLModel):
         for i, layer in enumerate(self.layers):
             if i in idx_of_layers:
                 new_layers.append(layer)
-                
         self.layers = new_layers
         # update config
         self.config.num_hidden_layers = len(new_layers)
@@ -68,8 +67,6 @@ class LlamaModelHead(LlamaModelSplitter):
         cache_position: Optional[torch.LongTensor] = None,
         **kwargs
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-        # print('local input position_ids:',position_ids)
-        
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -122,6 +119,12 @@ class LlamaModelHead(LlamaModelSplitter):
         #     print('head:',decoder_layer.input_layernorm.weight.device)
 
         for decoder_layer in self.layers:
+            # print(decoder_layer.mlp.gate_proj.weight.device)
+            # hidden_states = hidden_states.to(decoder_layer.mlp.gate_proj.weight.device)
+            
+            # print(hidden_states.device ,decoder_layer.input_layernorm.weight.device)
+            # hidden_states = hidden_states.to(decoder_layer.input_layernorm.weight.device)
+
             
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
@@ -155,11 +158,8 @@ class LlamaModelHead(LlamaModelSplitter):
 
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
-        
-        # print('local head out:',hidden_states[0,:2,:5])
-        # print('local head out position_ids:',position_ids)
 
-        return {'inputs_embeds': hidden_states,'attention_mask': causal_mask}# 'position_ids':position_ids}
+        return {'inputs_embeds': hidden_states,'attention_mask': causal_mask}
 
 class LlamaModelBody(LlamaModelSplitter):
     def __init__(self, config: LlamaConfig):
@@ -236,6 +236,10 @@ class LlamaModelBody(LlamaModelSplitter):
         next_decoder_cache = None
 
         
+        # print('llama model body')
+        # for decoder_layer in self.layers:
+        #     print('body:',decoder_layer.input_layernorm.weight.device)
+
         for decoder_layer in self.layers:
             # hidden_states = hidden_states.to( decoder_layer.mlp.gate_proj.weight.device )
             # print(hidden_states.device,decoder_layer.mlp.gate_proj.weight.device)
@@ -273,7 +277,7 @@ class LlamaModelBody(LlamaModelSplitter):
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
 
-        return {'inputs_embeds': hidden_states,'attention_mask': causal_mask}# 'position_ids': position_ids}
+        return {'inputs_embeds': hidden_states,'attention_mask': causal_mask}
 
 class LlamaModelTail(LlamaModelSplitter):
     def __init__(self, config: LlamaConfig):
@@ -336,7 +340,6 @@ class LlamaModelTail(LlamaModelSplitter):
         if position_ids is None:
             position_ids = cache_position.unsqueeze(0)
 
-        # print('local tail position_ids:',position_ids)
         # no need
         # causal_mask = self._update_causal_mask(attention_mask, inputs_embeds, cache_position, past_seen_tokens)
         causal_mask = attention_mask
@@ -349,9 +352,17 @@ class LlamaModelTail(LlamaModelSplitter):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
 
-        _i = 3
+        # print('llama model tail')
+        # for decoder_layer in self.layers:
+        #     print('tail:',decoder_layer.input_layernorm.weight.device)
+
         for decoder_layer in self.layers:
-            _i = _i + 1
+            # print(hidden_states.device ,decoder_layer.input_layernorm.weight.device)
+            # hidden_states = hidden_states.to(decoder_layer.input_layernorm.weight.device)
+
+            # print(decoder_layer.mlp.gate_proj.weight.device)
+            # hidden_states = hidden_states.to(decoder_layer.mlp.gate_proj.weight.device)
+
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
@@ -379,16 +390,12 @@ class LlamaModelTail(LlamaModelSplitter):
 
             hidden_states = layer_outputs[0]
 
+
             if use_cache:
                 next_decoder_cache = layer_outputs[2 if output_attentions else 1]
 
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
-
-            # if _i > 3 and _i <=5:
-            #     print(_i,' tail ', decoder_layer.self_attn.q_proj.weight[0,:5])
-            #     #decoder_layer.mlp.gate_proj.weight[0,:5])
-            #     print(hidden_states[0,0,:5])
 
 
         hidden_states = self.norm(hidden_states)
@@ -416,10 +423,7 @@ class LlamaModelTail(LlamaModelSplitter):
 
 
 
-
-
 # Global Model Wrapper
-
 class LlamaTailForCausalLM(LlamaForCausalLM, VFLModel):
     def __init__(self, config: LlamaConfig, **kwargs):
         super().__init__(config)
@@ -435,11 +439,11 @@ class LlamaTailForCausalLM(LlamaForCausalLM, VFLModel):
 
     @property
     def head_layer(self):
-        return self.lm_head
+        return self.model.lm_head
     
     @head_layer.setter
     def head_layer(self, lm_head):
-        self.lm_head = lm_head
+        self.model.lm_head = lm_head
     
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, cache_position=None, **kwargs
@@ -447,11 +451,10 @@ class LlamaTailForCausalLM(LlamaForCausalLM, VFLModel):
         # With static cache, the `past_key_values` is None
         # TODO joao: standardize interface for the different Cache classes and remove of this if
         has_static_cache = False
-        
-        # past_key_values == None always
-        # if past_key_values is None:
-        #     past_key_values = getattr(self.model.layers[0].self_attn, "past_key_value", None)
-        #     has_static_cache = past_key_values is not None
+        if past_key_values is None:
+            # past_key_values = getattr(getattr(self.model.layers[0], "self_attn", {}), "past_key_value", None)
+            past_key_values = getattr(getattr(self.parties[0].local_model.layers[0], "self_attn", {}), "past_key_value", None)
+            has_static_cache = past_key_values is not None
 
         past_length = 0
         if past_key_values is not None:
@@ -526,6 +529,7 @@ class LlamaTailForCausalLM(LlamaForCausalLM, VFLModel):
         return model_inputs
 
 
+    
 
 class LlamaTailForQuestionAnswering(LlamaForQuestionAnswering, VFLModel):
     def __init__(self, config: LlamaConfig, **kwargs):

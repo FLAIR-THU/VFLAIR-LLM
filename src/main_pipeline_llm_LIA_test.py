@@ -18,7 +18,7 @@ from peft.peft_model import PeftModel
 from load.LoadConfigs import *  # load_configs load_basic_configs_llm
 from load.LoadParty import load_parties, load_parties_llm
 
-from evaluates.MainTaskVFL_LLM_test import *
+from evaluates.MainTaskVFL_LLM import *
 from utils.basic_functions import append_exp_res
 from utils import recorder
 
@@ -42,7 +42,7 @@ def evaluate_no_attack_pretrained(args):
     # No Attack
     set_seed(args.current_seed)
 
-    vfl = MainTaskVFL_LLM_test(args)
+    vfl = MainTaskVFL_LLM(args)
     vfl.init_communication()
 
     exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
@@ -59,7 +59,7 @@ def evaluate_no_attack_finetune(args):
     # No Attack
     set_seed(args.current_seed)
 
-    vfl = MainTaskVFL_LLM_test(args)
+    vfl = MainTaskVFL_LLM(args)
     vfl.init_communication()
 
     exp_result, metric_val, training_time = vfl.train_vfl()
@@ -92,7 +92,7 @@ def evaluate_inversion_attack(args):
         else:
             # args.need_auxiliary = 1
             args = load_parties_llm(args)
-            vfl = MainTaskVFL_LLM_test(args)
+            vfl = MainTaskVFL_LLM(args)
             vfl.init_communication()
 
             if args.pipeline == 'finetune':
@@ -128,7 +128,7 @@ def evaluate_label_inference_attack(args):
         else:
             # args.need_auxiliary = 1
             args = load_parties_llm(args)
-            vfl = MainTaskVFL_LLM_test(args)
+            vfl = MainTaskVFL_LLM(args)
             vfl.init_communication()
 
             if args.pipeline == 'finetune':
@@ -202,7 +202,7 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
 
 
 def create_exp_dir_and_file(dataset, vfl_model_slice_num, split_info, model_name, pipeline, defense_name='', defense_param=''):
-    exp_res_dir = f'exp_result/test/{dataset}/{str(vfl_model_slice_num)}-slice/{split_info}/'
+    exp_res_dir = f'exp_result/LIA_test/{dataset}/{str(vfl_model_slice_num)}-slice/{split_info}/'
     if not os.path.exists(exp_res_dir):
         os.makedirs(exp_res_dir)
     if pipeline == 'pretrained':
@@ -304,7 +304,7 @@ if __name__ == '__main__':
         #     # ancestor_cls = args.global_model_type
         #     # todo: infer from model_type might be enough, would also work under 3-slice
         #     ancestor_cls = get_cls_ancestor(args.config.model_type, args.model_architect)
-        #     MainTaskVFL_LLM_test = create_main_task(ancestor_cls)
+        #     MainTaskVFL_LLM = create_main_task(ancestor_cls)
 
         #     # vanilla
         #     if args.pipeline == 'pretrained':
@@ -337,7 +337,7 @@ if __name__ == '__main__':
         # ancestor_cls = args.global_model_type
         # todo: infer from model_type might be enough, would also work under 3-slice
         ancestor_cls = get_cls_ancestor(args.config.model_type, args.model_architect)
-        MainTaskVFL_LLM_test = create_main_task(ancestor_cls)
+        MainTaskVFL_LLM = create_main_task(ancestor_cls)
 
         # commuinfo='== metrics:'+args.metric_type
         # append_exp_res(args.exp_res_path, commuinfo)

@@ -79,6 +79,8 @@ warnings.filterwarnings("ignore")
 
 from models.llm_models.minigpt4.minigpt4 import MiniGPT4Tail
 from evaluates.vqa_evaluator import VQAEval
+from evaluates.gms8k_evaluator import GMS8KEval
+
 
 torch.backends.cudnn.enable = True
 torch.backends.cudnn.benchmark = True
@@ -90,7 +92,7 @@ STOPPING_ACC = {'mnist': 0.977, 'cifar10': 0.80, 'cifar100': 0.40, 'diabetes': 0
 
 
 def create_main_task(global_model_type: GenerationMixin):
-    print('inherited:', global_model_type)
+    print('###### inherited:', global_model_type,' ######')
 
     class MainTaskVFL_LLM_test(global_model_type, nn.Module):  # GenerationMixin object,
         def __init__(self, args, job_id=None):
@@ -144,6 +146,7 @@ def create_main_task(global_model_type: GenerationMixin):
 
 
             ### Results 
+            self.real_generation_result = None
             self.loss = None
             self.train_acc = None
             self.flag = 1
@@ -177,7 +180,7 @@ def create_main_task(global_model_type: GenerationMixin):
             # some state of VFL throughout training process
             self.first_epoch_state = None
             self.middle_epoch_state = None
-            self.final_state = None
+            self.final_state = {}
 
             self.num_update_per_batch = args.num_update_per_batch
             self.num_batch_per_workset = args.Q  # args.num_batch_per_workset
@@ -227,7 +230,7 @@ def create_main_task(global_model_type: GenerationMixin):
         def apply_defense_on_pred_transmission(self, pred_detach):
             ########### Defense applied on pred transmit ###########
             if self.args.apply_defense == True and self.is_first_forward_iter== 1:
-                if self.args.apply_dp == True and self.args.dp_add_position == 'pred':
+                if self.args.apply_dp == True and ('pred' in self.args.dp_add_position or self.args.dp_add_position == 'pred'):
                     pred_detach = torch.stack(self.launch_defense(pred_detach, "pred"))
                     # print('after pred_detach:',type(pred_detach),pred_detach.shape) # torch.size bs,12,768 intermediate
             return pred_detach
@@ -235,9 +238,10 @@ def create_main_task(global_model_type: GenerationMixin):
         def apply_defense_on_grad_transmission(self, grad):
             ########### Defense applied on grad transmit ###########
             # print('apply_defense_on_grad_transmission')
-            if self.args.apply_defense == True and self.args.apply_mid == False and self.args.apply_adversarial == False:
-                if (self.args.apply_dp == True and self.args.dp_add_position == 'grad') or (self.args.apply_dp == False):
-                    # print('pre grad:',type(grad),grad.shape) # torch.size bs,seq_len,embeddim
+            # print('self.args.apply_dp:',self.args.apply_dp, self.args.dp_add_position)
+            # print('self.args.apply_gs:',self.args.apply_gs)
+            if self.args.apply_defense == True:
+                if (self.args.apply_dp == True and 'grad' in self.args.dp_add_position) or (self.args.apply_gs == True):
                     grad = self.launch_defense(grad, "gradients")
                     # print('after grad:',type(grad),grad.shape) # torch.size bs,12,768 intermediate
             return grad
@@ -249,14 +253,14 @@ def create_main_task(global_model_type: GenerationMixin):
                                             self.current_epoch, self.current_step).to(self.args.device)
             return pred_detach
 
-        def pred_transmit(self, use_cache=False, count_time=False):
+        def pred_transmit(self, use_cache=None, count_time=False):
             '''
             Active party gets pred from passive parties
             '''
             all_pred_list = []
             for ik in range(self.k - 1):
                 start_time = time.time()
-                result_dict = self.parties[ik].give_pred()  # use_cache=use_cache
+                result_dict = self.parties[ik].give_pred(use_cache=use_cache)  # use_cache=use_cache
 
                 pred_detach = result_dict['inputs_embeds']
 
@@ -357,25 +361,27 @@ def create_main_task(global_model_type: GenerationMixin):
             passive party --[global gradient]--> active party
             '''
             global_loss = self.parties[0].cal_loss(final_pred)
+
             if self.args.vfl_model_slice_num == 2:
                 global_gradient = self.parties[0].cal_global_gradient_2slice(global_loss, final_pred)
             else:
                 global_gradient = self.parties[0].cal_global_gradient_3slice(global_loss, self.global_pred)
 
-            # Defense
+            #### Defense ####
             # Direct alter on gradients
             if self.args.apply_defense:
                 if (0 in self.args.defense_configs['party']):
-                    global_gradient = self.apply_defense_on_grad_transmission(global_gradient)
+                    if (not self.args.apply_mid) and (not self.args.apply_adversarial):
+                        global_gradient = self.apply_defense_on_grad_transmission(global_gradient)
 
-            # update_loss_with_defense
+            # Update_loss_with_defense after gradient calculation -- for ad defense at model tail
             self.parties[0].update_loss_with_defense()
 
-            self._communication.send_global_loss_and_gradients(global_gradient)  
-            
-            self.communication_cost += get_size_of(global_gradient)
-            return global_loss
 
+            self._communication.send_global_loss_and_gradients(global_gradient)  
+            self.communication_cost += get_size_of(global_gradient)
+
+            return global_loss
         
         def predict(self):
             # passive party dataloader list
@@ -411,22 +417,23 @@ def create_main_task(global_model_type: GenerationMixin):
                             # Label
                             batch_label.append(parties_data[party_id][bs_id][1])
                         _parties_data.append([batch_input_dicts, batch_label])
-                    parties_data = _parties_data
+                    self.parties_data = _parties_data
 
                     if self.args.model_architect == 'CLS' and self.args.num_classes > 1:  # classification
-                        gt_one_hot_label = self.label_to_one_hot(parties_data[0][1], self.args.num_classes)
+                        self.gt_one_hot_label = self.label_to_one_hot(self.parties_data[0][1], self.args.num_classes)
                     elif self.args.model_architect == 'TQA':
-                        gt_one_hot_label = list(parties_data[0][1])
+                        self.gt_one_hot_label = list(self.parties_data[0][1])
                     else:
-                        gt_one_hot_label = parties_data[0][1]
+                        self.gt_one_hot_label = self.parties_data[0][1]
                     
                     data_inputs = {}
-                    for key_name in parties_data[0][0][0].keys():
-                        if isinstance(parties_data[0][0][0][key_name], torch.Tensor):
-                            data_inputs[key_name] = torch.stack( [parties_data[0][0][i][key_name] for i in range(len(parties_data[0][0]))] )
+                    for key_name in self.parties_data[0][0][0].keys():
+                        if isinstance(self.parties_data[0][0][0][key_name], torch.Tensor):
+                            data_inputs[key_name] = torch.stack( [self.parties_data[0][0][i][key_name] for i in range(len(self.parties_data[0][0]))] )
                         else:
-                            data_inputs[key_name] =  [parties_data[0][0][i][key_name] for i in range(len(parties_data[0][0]))]
-                    if hasattr(data_inputs,'input_ids'):
+                            data_inputs[key_name] =  [self.parties_data[0][0][i][key_name] for i in range(len(self.parties_data[0][0]))]
+                    
+                    if 'input_ids' in data_inputs.keys() and data_inputs['input_ids']!=None:
                         self.seq_length = data_inputs['input_ids'].shape[-1]
                     else:
                         self.seq_length = 0
@@ -435,7 +442,7 @@ def create_main_task(global_model_type: GenerationMixin):
                     if self.args.model_architect == 'CLS':  # task_type == "SequenceClassification":  # and self.args.num_classes > 1: # classification
                         global_output = self.forward(**data_inputs)
                         batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(global_output,
-                                                                                                   gt_one_hot_label)
+                                                                                                   self.gt_one_hot_label)
                         predict_label_list.extend(batch_predict_label)
                         actual_label_list.extend(batch_actual_label)
                         if sample_cnt is not None:
@@ -444,7 +451,7 @@ def create_main_task(global_model_type: GenerationMixin):
                     elif self.args.model_architect == 'TQA':  # task_type == "QuestionAnswering":
                         global_output = self.forward(**data_inputs)
                         feature_list = data_inputs['feature']
-                        batch_nbest, batch_gold_ans, sample_cnt = self.generate_result(global_output, gt_one_hot_label, feature_list)
+                        batch_nbest, batch_gold_ans, sample_cnt = self.generate_result(global_output, self.gt_one_hot_label, feature_list)
                         nbest_list.extend(batch_nbest)
                         gold_ans_list.extend(batch_gold_ans)
                         if sample_cnt is not None:
@@ -452,31 +459,28 @@ def create_main_task(global_model_type: GenerationMixin):
                     
                     elif self.args.model_architect=='CLM': #task_type == "CausalLM":
                         if self.args.task_type == "CausalLM":
+                            
                             if not (self.args.max_new_tokens==1):
                                 self.set_is_first_forward_epoch(1)
                                 generation_output = self.generate(**data_inputs, \
-                                        generation_config = self.generation_config,\
-                                        # temperature=0.7, top_p=1.0,
-                                        # max_new_tokens=self.args.max_new_tokens,\
-                                        # eos_token_id=2, pad_token_id=2, \
-                                                                #   **self.generation_config_dict
-                                                                  )
+                                        generation_config = self.generation_config)
+
                             else:  # next token prediction
                                 generation_output = self.forward(**data_inputs)
                                 if self.args.model_type.lower() == 'qwen2':
                                     self._loss += self.shift_logits_loss(generation_output.logits,
-                                                                     torch.stack(gt_one_hot_label),
+                                                                     torch.stack(self.gt_one_hot_label),
                                                                      self.args.config).item()
                             self._clear_past_key_values()
-                            # print('generation_output:',type(generation_output),generation_output.keys())
-                            batch_target_word, batch_predict_word, sample_cnt = self.generate_result(generation_output, gt_one_hot_label)
+
+                            batch_target_word, batch_predict_word, sample_cnt = self.generate_result(generation_output, self.gt_one_hot_label)
                             target_word_list.extend(batch_target_word)
                             predict_word_list.extend(batch_predict_word)
                             if sample_cnt is not None:
                                 total_sample_cnt += sample_cnt
                         else:
                             global_output = self.forward(**data_inputs)
-                            batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(global_output, gt_one_hot_label)
+                            batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(global_output, self.gt_one_hot_label)
                             predict_label_list.extend(batch_predict_label)
                             actual_label_list.extend(batch_actual_label)
                             if sample_cnt is not None:
@@ -498,11 +502,11 @@ def create_main_task(global_model_type: GenerationMixin):
                                 assert 1>2,f'Generation Method {self.args.generation_method} not supported'
 
                         else:  # next token prediction
-                            generation_output = self.forward(samples = data_inputs, labels = gt_one_hot_label)
+                            generation_output = self.forward(samples = data_inputs, labels = self.gt_one_hot_label)
                         self._clear_past_key_values()
 
 
-                        batch_target_answer, batch_predict_answer, sample_cnt = self.generate_result(generation_output, gt_one_hot_label)
+                        batch_target_answer, batch_predict_answer, sample_cnt = self.generate_result(generation_output, self.gt_one_hot_label)
                         target_answer_list.extend(batch_target_answer)
                         predict_answer_list.extend(batch_predict_answer)
 
@@ -532,8 +536,6 @@ def create_main_task(global_model_type: GenerationMixin):
                 assert 1 > 2, 'Task type not supported'
 
         def generate_assessment(self, predict_list, label_list):
-            
-                        
             if self.args.model_architect == 'TQA':
                 nbest_list = predict_list
                 gold_ans_list = label_list
@@ -575,122 +577,20 @@ def create_main_task(global_model_type: GenerationMixin):
                 return {'exact_score': exact_score, 'f1': f1}
 
             elif self.args.model_architect == 'CLM':
-                def calculate_token_precision_recall(reference_ids, candidate_ids):
-                    reference_ids = reference_ids.tolist()
-                    candidate_ids = candidate_ids.tolist()
-                    def wash(ids, target_token_id):
-                        while(target_token_id in ids):
-                            ids.remove(target_token_id)
-                        return ids
-                    reference_ids = wash(reference_ids, self.args.tokenizer.pad_token_id)
-                    reference_ids = wash(reference_ids, self.args.tokenizer.eos_token_id)
-                    reference_tokens = [self.args.tokenizer.convert_ids_to_tokens(reference_ids)]
-                    candidate_tokens = self.args.tokenizer.convert_ids_to_tokens(candidate_ids)
-                    score = sentence_bleu(reference_tokens, candidate_tokens)
-                    return score
-
                 if self.args.task_type == "CausalLM":
                     predict_word_list = predict_list # bs, seq_len, vocab_size
                     target_word_list = label_list # bs, seq_len
 
-                    if len(target_word_list[0].shape)>0: # not next token prediction                 
+                    if len(target_word_list[0].shape)>0: # not next token prediction   
+                        # print('target_word_list:',len(target_word_list),target_word_list[0].shape)
+                        # print('predict_word_list:',len(predict_word_list),predict_word_list[0].shape)
+              
+                        
                         
                         if self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
-                            def is_number(s):
-                                try:
-                                    float(s)
-                                    return True
-                                except ValueError:
-                                    pass
-                                # try:
-                                #     import unicodedata
-                                #     unicodedata.numeric(s)
-                                #     return True
-                                # except (TypeError, ValueError):
-                                #     pass
-                                return False
-
-                            def extract_answer_number(completion):
-                                text = completion.split('The answer is: ')
-                                if len(text) > 1:
-                                    extract_ans = text[-1].strip()
-                                    match = re.search(r'[\-+]?\d*[\.,/]?\d+', extract_ans)
-                                    if match:
-                                        if '/' in match.group():
-                                            denominator = match.group().split('/')[1]
-                                            numerator = match.group().split('/')[0]
-                                            if is_number(denominator) == True and is_number(numerator) == True:
-                                                if denominator == '0':
-                                                    return round(float(numerator.replace(',', '')))
-                                                else:
-                                                    frac = Fraction(match.group().replace(',', ''))
-                                                    num_numerator = frac.numerator
-                                                    num_denominator = frac.denominator
-                                                    return round(float(num_numerator / num_denominator))
-                                            else:
-                                                return None
-                                        else:
-                                            if float(match.group().replace(',', '')) == float('inf'):
-                                                return None
-                                            return round(float(match.group().replace(',', '')))
-                                    else:
-                                        return None
-                                else:
-                                    return None
-                            
-                            def wash(token_id_list, washed_ids):
-                                washed_token_id_list = []
-                                for token_ids in token_id_list:
-                                    token_ids = list(token_ids)
-                                    for washed_id in washed_ids:
-                                        while washed_id in token_ids:
-                                            token_ids.remove(washed_id)
-                                    
-                                    washed_token_id_list.append(torch.tensor(token_ids) )
-                                return washed_token_id_list
-
-                            def is_equiv(str1, str2, verbose=False):
-                                if str1 is None and str2 is None:
-                                    print("WARNING: Both None")
-                                    return True
-                                if str1 is None or str2 is None:
-                                    return False
-
-                                try:
-                                    ss1 = strip_string(str1)
-                                    ss2 = strip_string(str2)
-                                    #pdb.set_trace()
-                                    if verbose:
-                                        print(ss1, ss2)
-                                    return ss1 == ss2
-                                except Exception:
-                                    return str1 == str2
-                            
-                            washed_ids = [self.args.tokenizer.pad_token_id, self.args.tokenizer.eos_token_id, self.args.tokenizer.bos_token_id]
-                            predict_word_list = wash(predict_word_list,washed_ids )
-                            target_word_list = wash(target_word_list,washed_ids )
-
-                            predict_word_list = [
-                                self.args.tokenizer.decode(_ids)
-                                for _ids in list(predict_word_list)]
-
-                            target_word_list = [
-                                self.args.tokenizer.decode(_ids)
-                                for _ids in list(target_word_list)]
-                            
-                            results = []
-                            for i in range(len(target_word_list)):
-                                pred_ans = str(extract_answer_number(predict_word_list[i]))
-                                
-                                # print('-'*100)
-                                # print('PRED:',predict_word_list[i])
-                                # print('Extract PRED:',type(pred_ans), pred_ans)
-                                # print('GOLD:',type(target_word_list[i]),target_word_list[i])
-                                # print('SCORE:',res)
-                                res = is_equiv(pred_ans,target_word_list[i])
-                                results.append(res)
-                            acc = sum(results) / len(results)
-
+                            self.evaluator = GMS8KEval(self.args)
+                            acc = self.evaluator.evaluate(predict_word_list,target_word_list )
+                        
                         elif self.args.dataset=='MATH':
                             # print('predict_word_list:',type(predict_word_list),len(predict_word_list),predict_word_list[0].shape)
                             
@@ -769,13 +669,42 @@ def create_main_task(global_model_type: GenerationMixin):
                             acc = sum(results) / len(results)
 
                         else:
+                            
+
+                            def calculate_token_precision_recall(reference_ids, candidate_ids):
+                                reference_ids = reference_ids.tolist()
+                                candidate_ids = candidate_ids.tolist()
+
+                                def wash(ids, target_token_id):
+                                    while(target_token_id in ids):
+                                        ids.remove(target_token_id)
+                                    return ids
+                                
+                                reference_ids = wash(reference_ids, self.args.tokenizer.pad_token_id)
+                                reference_ids = wash(reference_ids, self.args.tokenizer.eos_token_id)
+
+                                reference_tokens = [self.args.tokenizer.convert_ids_to_tokens(reference_ids)]
+                                candidate_tokens = self.args.tokenizer.convert_ids_to_tokens(candidate_ids)
+                                
+
+                                score = sentence_bleu(reference_tokens, candidate_tokens)
+
+                                # print('Reference_tokens:',reference_tokens)
+                                # print('-'*25)
+                                # print('Candidate_tokens',candidate_tokens)
+                                # print('Score:',score)
+                                # print('='*50)
+                                # assert 1>2
+                                return score
+                            
+
                             score = 0
                             for i in range(len(target_word_list)):
                                 _score = calculate_token_precision_recall(target_word_list[i], predict_word_list[i])
                                 score += _score
                             score = score/len(target_word_list)
                             acc = score
-                            
+                                
                     else:
                         if self.args.metric_type == "best_pred":
                             suc_cnt = 0
@@ -805,42 +734,30 @@ def create_main_task(global_model_type: GenerationMixin):
                     return {'acc':acc, 'mcc':mcc}
 
             elif self.args.model_architect == 'MM':
-                def calculate_token_precision_recall(reference_str, candidate_str):
-                    reference_ids = self.args.tokenizer.encode(reference_str)#.input_ids.tolist()
-                    candidate_ids = self.args.tokenizer.encode(candidate_str)#.input_ids.tolist()
-                    def wash(ids, target_token_id):
-                        while(target_token_id in ids):
-                            ids.remove(target_token_id)
-                        return ids
-                    reference_ids = wash(reference_ids, self.args.tokenizer.pad_token_id)
-                    reference_ids = wash(reference_ids, self.args.tokenizer.eos_token_id)
-                    reference_tokens = [self.args.tokenizer.convert_ids_to_tokens(reference_ids)]
-                    candidate_tokens = self.args.tokenizer.convert_ids_to_tokens(candidate_ids)
-                    score = sentence_bleu(reference_tokens, candidate_tokens)
-                    return score
-
                 predict_word_list = predict_list
                 target_word_list = label_list
-                # print('--- generate_assessment ---') # list of bs * str
+                # print('--- generate_assessment ---')
                 # print('predict_word_list:',type(predict_word_list),len(predict_word_list),predict_word_list)
                 # print('target_word_list:',type(target_word_list),len(target_word_list),target_word_list)
                
                 total_accuracy = 0
                 num = 0
+                # Entry = collections.namedtuple('Entry', ['text', 'bbox'])
                 for idx in range(len(predict_word_list)):
                     answer = predict_word_list[idx] #item['gt_answers']
                     gt_answers = target_word_list[idx] #item['answer']
                     
-                    if self.args.dataset == 'TextVQA' or self.args.dataset == 'TextVQA-test' :
-                        self.evaluator = VQAEval()
-                        accuracy = self.evaluator.evaluate_vqa_human(answer, gt_answers)
-                    else:
-                        accuracy = calculate_token_precision_recall(gt_answers, answer)
+                    self.evaluator = VQAEval()
+                    accuracy = self.evaluator.evaluate_vqa_human(answer, gt_answers)
+                   
+                    # item['accuracy'] = accuracy
+
                     total_accuracy += accuracy
                     num += 1
                     # print(f'{idx} gt_answers:',gt_answers)
                     # print(f'{idx} answer:',answer)
                     # print(f'{idx} accuracy:',accuracy)
+
                 average_accuracy = total_accuracy / num
                 print('-- average_accuracy:',average_accuracy)
                 return {'acc':average_accuracy}
@@ -897,12 +814,10 @@ def create_main_task(global_model_type: GenerationMixin):
                     result_text = []
                     for result in result_ids:
                         result = result[result != 0]
-                        if hasattr(tokenizer,'bos_id'):
-                            if result[0] == tokenizer.bos_id:
-                                result = result[1:]
-                        if hasattr(tokenizer,'eos_id'):
-                            if result[-1] == tokenizer.eos_id:
-                                result = result[:-1]
+                        if result[0] == tokenizer.bos_id:
+                            result = result[1:]
+                        if result[-1] == tokenizer.eos_id:
+                            result = result[:-1]
                         result_text.append(tokenizer.decode(result).strip())
                     return result_text
                 
@@ -913,14 +828,10 @@ def create_main_task(global_model_type: GenerationMixin):
 
                 return target_label_list, predict_label_list, len(predict_label_list) 
 
-
             elif self.args.model_architect == 'CLM':  # .task_type == "CausalLM":
                 if self.args.task_type == "CausalLM":  # dataset == "Lambada":
                     if isinstance(model_output, torch.Tensor):  # generation -- generated token ids
-                        # model_output: torch.tensor : bs, seq_len+generated_len
                         predict_label_list = model_output[:,self.seq_length:] # [bs, max_new_tokens]
-                        # print('model_output:',model_output.shape, predict_label_list.shape)
-                        
                         target_label_list = list(gt_one_hot_label)
 
                     else:  # forward -- raw model output next token logits
@@ -928,7 +839,8 @@ def create_main_task(global_model_type: GenerationMixin):
                         generated_token_logits = model_output.logits[:,-1,:]
                         predict_label_list = torch.argmax(generated_token_logits, dim=-1) 
                         target_label_list = list(gt_one_hot_label)
-                        
+                    
+                    self.real_generation_result = predict_label_list
 
                     return target_label_list, predict_label_list, len(predict_label_list) 
 
@@ -985,7 +897,6 @@ def create_main_task(global_model_type: GenerationMixin):
 
                     return target_label_list, predict_label_list, len(predict_label_list) 
 
-
             elif self.args.model_architect=='TQA': #.task_type == "QuestionAnswering":
                 # print('feature_list:',type(feature_list),len(feature_list),type(feature_list[0]))
                 start_logits = model_output.start_logits # bs, 512
@@ -1009,10 +920,15 @@ def create_main_task(global_model_type: GenerationMixin):
                     feature = feature_list[i]
 
                     gold_start_indexs, gold_end_indexs = gt_one_hot_label[i]  # the i'th sample in a batch
-                    if len(gold_start_indexs.shape) == 0:
-                        gold_start_indexs = gold_start_indexs.unsqueeze(0)
-                    if len(gold_end_indexs.shape) == 0:
-                        gold_end_indexs = gold_end_indexs.unsqueeze(0)
+                    # train: int // test: torch.tensor[int1, int2..]
+                    if isinstance(gold_start_indexs, int):
+                        gold_start_indexs = [gold_start_indexs]
+                        gold_end_indexs = [gold_end_indexs]
+
+                    # if len(gold_start_indexs.shape) == 0:
+                    #     gold_start_indexs = gold_start_indexs.unsqueeze(0)
+                    # if len(gold_end_indexs.shape) == 0:
+                    #     gold_end_indexs = gold_end_indexs.unsqueeze(0)
 
                     gold_ans = []  # gold answers for this sample
                     for _i in range(len(gold_start_indexs)):
@@ -1210,11 +1126,6 @@ def create_main_task(global_model_type: GenerationMixin):
             return exp_result, self.test_acc
 
         def forward(self, **kwargs):
-            # print('--vfl forward:',kwargs.keys())
-            # use_cache not supported
-            kwargs['use_cache'] = False
-            kwargs['past_key_values'] = None
-
             self.parties[0].obtain_local_data(kwargs)
 
             # passive party do local pred
@@ -1229,16 +1140,27 @@ def create_main_task(global_model_type: GenerationMixin):
 
                 p = self.parties[0]
                 p._tensor_to_device(resp, p.models[2].device)
-
-                
                 final_output = p.give_final_pred(resp) 
             else:
                 final_output = resp
 
             self.parties[0]._tensor_to_device(final_output,self.device)
 
-            if self.args.max_new_tokens > 1:
+            if self.args.max_new_tokens > 1 and self.args.need_final_epoch_state:
+                if self.args.need_generation_state:
+                    if self.is_first_forward_iter:
+                        try:
+                            del self.final_state['active_predict_list']
+                            del self.final_state['active_predict_attention_mask_list']
+                        except:
+                            pass
+                        self.final_state.update(self.save_element('active_predict_list'))
+                        self.final_state.update(self.save_element('active_predict_attention_mask_list'))
+                    else:
+                        self.final_state['active_predict_list'].append(self.dict_deepcopy(self.parties[1].output_tensors, device = 'cpu'))
+                        self.final_state['active_predict_attention_mask_list'].append(self.dict_deepcopy(self.parties[1].output_attention_mask, device = 'cpu'))
                 self.set_is_first_forward_epoch(0)
+
             return final_output
 
         def mm_chat(self, samples=None, **kwargs):
@@ -1288,6 +1210,10 @@ def create_main_task(global_model_type: GenerationMixin):
 
         @timer()
         def inference(self, **kwargs):
+            # if self.args.attack_only:
+            #     self.final_state=self.save_party_data()
+            #     return "|attack_only|", -1
+
             need_save_state = kwargs.get('need_save_state')
             # print('inference need_save_state:',need_save_state)
             if self.args.task_type == "DevLLMInference":
@@ -1318,7 +1244,6 @@ def create_main_task(global_model_type: GenerationMixin):
                 exp_result, main_task_result = self.qa_inference()
                 if need_save_state:
                     self.final_state = self.save_state(False)
-                    # self.final_state.update(self.save_state(False))
                     self.final_state.update(self.save_party_data())
                 exp_result = f'|inference_party_time={self.inference_party_time}' + exp_result
                 return exp_result, main_task_result
@@ -1336,7 +1261,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 exp_result, main_task_result = self.causal_lm_inference()
                 
                 if need_save_state:
-                    self.final_state = self.save_state(False)
+                    self.final_state.update(self.save_state(False))
                     self.final_state.update(self.save_party_data())
                 exp_result = f'|inference_party_time={self.inference_party_time}' + str(exp_result)
                 return exp_result, main_task_result
@@ -1355,10 +1280,11 @@ def create_main_task(global_model_type: GenerationMixin):
                         data_inputs[key_name] = torch.stack( [parties_data[0][0][i][key_name] for i in range(len(parties_data[0][0]))] )
                     else:
                         data_inputs[key_name] =  [parties_data[0][0][i][key_name] for i in range(len(parties_data[0][0]))]
+                self.batch_data = data_inputs
 
                 self.parties[ik].obtain_local_data(data_inputs)
                 self.parties[ik].gt_one_hot_label = gt_one_hot_label
-                if hasattr(data_inputs,'input_ids'):
+                if 'input_ids' in data_inputs.keys() and data_inputs['input_ids']!=None:
                     self.seq_length = data_inputs['input_ids'].shape[-1]
                 else:
                     self.seq_length = 0
@@ -1500,7 +1426,6 @@ def create_main_task(global_model_type: GenerationMixin):
             flag = 0
             self.current_epoch = 0
 
-            last_adversarial_model_loss = 10000
             start_time = time.time()
             optimize_step = 0
 
@@ -1562,15 +1487,8 @@ def create_main_task(global_model_type: GenerationMixin):
 
                     if self.args.need_first_epoch_state and i == 0 and i_epoch == 0:
                         self.first_epoch_state.update(self.save_state(False))
-                    # print('1-real_active_model_body_pred',self.first_epoch_state['active_predict'][1][0,:2,:5])
-                    # print('1-real_passive_model_head_pred',self.first_epoch_state['passive_predict'][0][0,:2,:5])
-
-                    # self.loss, self.train_acc = self.train_batch(self.parties_data, self.gt_one_hot_label)
-                    # print('2-real_active_model_body_pred',self.parties[1].output_tensors[1][0,:2,:5])
-                    # print('2-real_passive_model_head_pred',self.parties[0].output_tensors[0][0,:2,:5])
-
-                    # assert 1>2
-
+                    
+                    
                     # ====== train batch (end) ======
                     
                     total_time += (exit_time - enter_time)
@@ -1582,13 +1500,16 @@ def create_main_task(global_model_type: GenerationMixin):
 
                     del (parties_data)
 
+                    if self.epochs == 1 :
+                        break
+
                 # LR decay
                 self.LR_Decay(i_epoch)
 
-                if self.args.apply_adversarial:
-                    print(f'global_loss={self.parties[0].global_loss} adversarial_model_loss:{self.parties[0].adversarial_model_loss.item()} adversary_attack_loss:{self.parties[0].adversary_attack_loss.item()}')
-                if self.args.apply_mid:
-                    print(f'global_loss={self.parties[0].global_loss},mid_loss={self.parties[0].mid_loss}')
+                # if self.args.apply_adversarial:
+                #     print(f'global_loss={self.parties[0].global_loss} adversarial_model_loss:{self.parties[0].adversarial_model_loss.item()} adversary_attack_loss:{self.parties[0].adversary_attack_loss.item()}')
+                # if self.args.apply_mid:
+                #     print(f'global_loss={self.parties[0].global_loss},head_mid_loss={self.parties[0].head_mid_loss}')
 
                 self.final_epoch = i_epoch + 1
 
@@ -1615,8 +1536,7 @@ def create_main_task(global_model_type: GenerationMixin):
             self.parties[self.k - 1].eval()
             self.eval()
             with torch.no_grad():
-
-                _exp_result, self.test_acc = self.inference(need_save_state = False)
+                _exp_result, self.test_acc = self.inference(need_save_state = self.args.need_final_epoch_state)
 
                 postfix['train_loss'] = self.loss
                 # postfix['train_acc'] = '{:.2f}%'.format(self.train_acc * 100)
@@ -1633,10 +1553,9 @@ def create_main_task(global_model_type: GenerationMixin):
                 print(exp_result)
 
 
-            if self.args.need_final_epoch_state:
-                # self.final_state = self.save_state()
-                self.final_state = self.save_state(False)
-                self.final_state.update(self.save_party_data())
+            # if self.args.need_final_epoch_state:
+            # self.final_state=self.save_state(False)
+            self.final_state.update(self.save_party_data())
 
             # if self.args.model_type.lower() == 'qwen2':
             #     tensorboard_writer.add_scalar('train/eval_loss', self._loss, optimize_step)
@@ -1677,12 +1596,17 @@ def create_main_task(global_model_type: GenerationMixin):
                     self.save_defense_models()
             return exp_result, self.test_acc, total_time  # , self.stopping_iter, self.stopping_time, self.stopping_commu_cost
 
-        def dict_deepcopy(self, origin_dict):
+        def dict_deepcopy(self, origin_dict, device = None):
             new_dict = {}
+
             for _key in origin_dict.keys():
                 # print(f'{_key}:{type(origin_dict[_key])}')
                 if origin_dict[_key]!=None:
-                    new_dict[_key] = copy.deepcopy(origin_dict[_key].detach())
+                    if device == 'None':
+                        new_dict[_key] = copy.deepcopy(origin_dict[_key].detach())
+                    else:
+                        new_dict[_key] = copy.deepcopy(origin_dict[_key].detach()).to(device)
+
             return new_dict
             
         def save_state(self, BEFORE_MODEL_UPDATE=True):
@@ -1690,11 +1614,11 @@ def create_main_task(global_model_type: GenerationMixin):
                 if BEFORE_MODEL_UPDATE:
                     # print('save:',self.parties[0].local_model_tail.head_layer.weight[0,:5])
                     return {
-                        "local_model_head": copy.deepcopy(self.parties[0].local_model) if self.parties[0].local_model != None else None,
-                        "local_model_tail": copy.deepcopy(self.parties[0].local_model_tail) if self.parties[0].local_model_tail != None else None,
-                        "active_model_body": copy.deepcopy(self.parties[1].global_model) if self.parties[1].global_model != None else None,
+                        "local_model_head": copy.deepcopy(self.parties[0].local_model).to("cpu") if self.parties[0].local_model != None else None,
+                        "local_model_tail": copy.deepcopy(self.parties[0].local_model_tail).to("cpu") if self.parties[0].local_model_tail != None else None,
+                        "active_model_body": copy.deepcopy(self.parties[1].global_model).to("cpu") if self.parties[1].global_model != None else None,
 
-                        "vis_processors": copy.deepcopy(self.parties[0].vis_processors) if self.parties[0].vis_processors != {} else None,
+                        # "vis_processors": copy.deepcopy(self.parties[0].vis_processors) if self.parties[0].vis_processors != {} else None,
 
                         # "global_model": copy.deepcopy(self.parties[self.args.k - 1].global_model),
                         "model_names": [str(type(self.parties[ik].local_model)).split('.')[-1].split('\'')[-2] for ik in
@@ -1708,7 +1632,7 @@ def create_main_task(global_model_type: GenerationMixin):
                         # Batch Label
                         "label": copy.deepcopy(self.gt_one_hot_label),
                         # Batch Data
-                        "batch_data": copy.deepcopy(self.parties_data), #self.dict_deepcopy(self.parties[0].local_data_input),
+                        "batch_data": copy.deepcopy(self.parties_data),
 
                         # Transmission
                         "passive_predict": self.dict_deepcopy(self.parties[0].output_tensors),
@@ -1717,8 +1641,8 @@ def create_main_task(global_model_type: GenerationMixin):
                         "active_predict": self.dict_deepcopy(self.parties[1].output_tensors) ,
                         "active_predict_attention_mask": self.dict_deepcopy(self.parties[1].output_attention_mask) ,
                         
-                        "local_gradient": copy.deepcopy(self.parties[0].local_gradient),
-                        "global_gradient": copy.deepcopy(self.parties[1].global_gradient),
+                        "local_gradient": copy.deepcopy(self.parties[0].local_gradient.detach()) if self.parties[0].local_gradient!= None else None,
+                        "global_gradient": copy.deepcopy(self.parties[1].global_gradient.detach()) if self.parties[1].global_gradient!= None else None,
                         
                         # Gradient
                         "local_model_head_gradient": copy.deepcopy(self.parties[0].weights_grad_a),
@@ -1726,6 +1650,7 @@ def create_main_task(global_model_type: GenerationMixin):
                         "global_model_body_gradient": copy.deepcopy(self.parties[1].weights_grad_a) ,
                         
                         # Result
+                        "real_generation_result": self.real_generation_result,
                         "train_acc": copy.deepcopy(self.train_acc),
                         "loss": copy.deepcopy(self.loss),
                         
@@ -1733,6 +1658,31 @@ def create_main_task(global_model_type: GenerationMixin):
                         # "final_model": [copy.deepcopy(self.parties[ik].local_model) for ik in range(self.args.k)],
                         # "final_global_model": copy.deepcopy(self.parties[self.args.k - 1].global_model),
                     }
+        
+        def save_element(self, element_name):
+            if element_name == "label": 
+                return {element_name: copy.deepcopy(self.gt_one_hot_label)}
+            
+            elif element_name == "batch_data": 
+                return {element_name: copy.deepcopy(self.parties_data)}
+            
+            elif element_name == "first_iter_passive_predict": 
+                return {element_name: self.dict_deepcopy(self.parties[0].output_tensors)}
+            
+            elif element_name == "first_iter_passive_predict_attention_mask": 
+                return {element_name: self.dict_deepcopy(self.parties[0].output_attention_mask)}
+            
+            elif element_name == "active_predict_list": 
+                return {element_name: [self.dict_deepcopy(self.parties[1].output_tensors)] }
+            
+            elif element_name == "active_predict_attention_mask_list": 
+                return {element_name: [self.dict_deepcopy(self.parties[1].output_attention_mask)] }
+            
+            elif element_name == "real_generation_result": 
+                return {element_name: self.real_generation_result}
+            
+            else:
+                assert 1>2, f"{element_name} has no save method"
 
         def save_party_data(self):
             return {
@@ -1765,14 +1715,14 @@ def create_main_task(global_model_type: GenerationMixin):
             if not os.path.exists(dir_path):
                 os.makedirs(dir_path)
 
-            if self.args.apply_mid:
-                file_path = dir_path + f'{self.args.defense_name}_{self.args.defense_configs}.pkl'
-                with open(file_path, 'wb') as f:
-                    pickle.dump(self.parties[0].mid_model, f)
+            # if self.args.apply_mid:
+            #     file_path = dir_path + f'{self.args.defense_name}_{self.args.defense_configs}.pkl'
+            #     with open(file_path, 'wb') as f:
+            #         pickle.dump(self.parties[0].mid_model, f)
 
-                file_path = dir_path + f'head_{self.args.defense_name}_{self.args.defense_configs}.pkl'
-                with open(file_path, 'wb') as f:
-                        pickle.dump(self.parties[1].global_model.head_layer, f)
+            #     file_path = dir_path + f'head_{self.args.defense_name}_{self.args.defense_configs}.pkl'
+            #     with open(file_path, 'wb') as f:
+            #             pickle.dump(self.parties[1].global_model.head_layer, f)
 
             if self.args.apply_adversarial:
                 file_path = dir_path + f'{self.args.defense_name}_{self.args.defense_configs}.pkl'
@@ -1852,6 +1802,13 @@ def create_main_task(global_model_type: GenerationMixin):
 
         # def prepare_inputs_for_generation(self, *args, **model_kwargs):
         #     return super().prepare_inputs_for_generation(*args, **model_kwargs)
+
+        # def prepare_inputs_for_generation(self, input_ids, **model_kwargs):
+        #     if vfl_basic_config.num_of_slice == 3:
+        #         return super().prepare_inputs_for_generation(input_ids, **model_kwargs)
+        #     else:
+        #         # return self.parties[-1].global_model.prepare_inputs_for_generation(input_ids=input_ids, **model_kwargs)
+        #         return self.parties[0].local_model.prepare_inputs_for_generation(input_ids=input_ids, **model_kwargs)
 
         def _prepare_encoder_decoder_kwargs_for_generation(self, inputs_tensor: torch.Tensor, model_kwargs,
                                                            model_input_name: Optional[str] = None):

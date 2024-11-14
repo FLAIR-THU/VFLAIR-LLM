@@ -580,8 +580,6 @@ def do_load_basic_configs_llm(config_dict, args):
             args.vis_processor_config = args.task_dict['vis_processor'] if('vis_processor' in args.task_dict) else {}
             args.text_processor_config = args.task_dict['text_processor'] if('text_processor' in args.task_dict) else {}
             args.vit_encoder_config = args.task_dict['vit_encoder'] if('vit_encoder' in args.task_dict) else {}
-            print('args.vit_encoder_config:',args.vit_encoder_config)
-
         else:
             args.task_type = None
             args.generation_config_dict = None
@@ -711,6 +709,8 @@ def do_load_basic_configs_llm(config_dict, args):
         args.defense_configs = None
         print('===== No Defense ======')
     # get Info: args.defense_param  args.defense_param_name
+
+    args.delta_f = None
     if args.apply_defense == True:
         if args.defense_name in ["CAE", "DCAE", "DistanceCorrelation", "AdversarialTraining"]:
             args.defense_param = args.defense_configs['lambda']
@@ -747,6 +747,8 @@ def do_load_basic_configs_llm(config_dict, args):
                 args.defense_param_name = 'epsilon'
                 # pred/grad
                 args.dp_add_position = str(args.defense_configs['position']) if 'position' in args.defense_configs else ['pred']
+                args.delta_f = args.defense_configs['delta_f'] if 'delta_f' in args.defense_configs else None
+
         elif args.defense_name == "GradientSparsification":
             args.defense_param = args.defense_configs['gradient_sparse_rate']
             args.defense_param_name = 'gradient_sparse_rate'
