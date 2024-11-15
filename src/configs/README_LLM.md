@@ -13,13 +13,10 @@ Figure below demonstrates all the main functions supported by VFLAIR-LLM, includ
 
 - **Vertical Federated LLM Scenario**: In VFLAIR-LLM, we propose a vertical federated LLM scenario describing 2 parties jointly train a LLM. The Active Party holds the global part of the model, representing model provider with abundant computational resources. The Passive Party holds the local part of LLM, representing companys or institutes with limited resources. In VFLAIR-LLM, two model partition setting is provided. Detailed scenario description, including model forward and backward calculation, is demonstrated in the following figure.
 <div align=center>
-<embed src="../../usage_guidance/figures/2_slice_architect.png" width="50%">
-</div>
-<div align=center>
-<embed src="../../usage_guidance/figures/3_slice_architect.png" type="application/pdf" width="50%">
-</div>
+<img src="../../usage_guidance/figures/2_slice_architect.png" width="40%">                           
 
-
+<img src="../../usage_guidance/figures/3_slice_architect.png" width="40%">
+</div>
 
 - **Model Split for LLM**: 
 
