@@ -11,9 +11,12 @@ In VFLAIR-LLM, we additionally provide support for **Large Language Models (LLM)
 Figure below demonstrates all the main functions supported by VFLAIR-LLM, including model split, LLM models, tasks and datasets, attack and defense strategies.
  ![LLM_overview](../../usage_guidance/figures/VFLAIR_LLM.png)
 
-- **Vertical Federated LLM Scenario**: In VFLAIR-LLM, we propose a vertical federated LLM scenario describing 2 parties jointly train a LLM. The Active Party holds the global part of the model, representing model provider with abundant computational resources. The Passive Party holds the local part of LLM, representing companys or institutes with limited resources. Detailed scenario description, including model forward and backward calculation, is demonstrated in the following figure.
+- **Vertical Federated LLM Scenario**: In VFLAIR-LLM, we propose a vertical federated LLM scenario describing 2 parties jointly train a LLM. The Active Party holds the global part of the model, representing model provider with abundant computational resources. The Passive Party holds the local part of LLM, representing companys or institutes with limited resources. In VFLAIR-LLM, two model partition setting is provided. Detailed scenario description, including model forward and backward calculation, is demonstrated in the following figure.
 <div align=center>
-<img src="../../usage_guidance/figures/LLM_scenario.png" width="50%">
+<embed src="../../usage_guidance/figures/2_slice_architect.png" width="50%">
+</div>
+<div align=center>
+<embed src="../../usage_guidance/figures/3_slice_architect.png" type="application/pdf" width="50%">
 </div>
 
 
