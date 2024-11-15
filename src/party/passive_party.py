@@ -575,14 +575,16 @@ class PassiveParty_LLM(Party_LLM):
         # collect processed labels (only in some cases)
         # model 0 head  / model 1 body(active) / model 2 tail
         intermediate = self.forward(model_index=0, **self.local_data_input)
-        if not isinstance(intermediate, VFLModelIntermediate):
-            _input = self.local_data_input
-            intermediate = VFLModelIntermediate(**intermediate).prepare_for_forward(
-                attention_mask=_input.get('attention_mask'),
-                position_ids=_input.get('position_ids'),
-                cache_position=_input.get('cache_position'),
-                use_cache=_input.get('use_cache'),
-            )
+        
+        # if not isinstance(intermediate, VFLModelIntermediate):
+        #     _input = self.local_data_input
+        #     intermediate = VFLModelIntermediate(**intermediate).prepare_for_forward(
+        #         attention_mask=_input.get('attention_mask'),
+        #         position_ids=_input.get('position_ids'),
+        #         cache_position=_input.get('cache_position'),
+        #         use_cache=_input.get('use_cache'),
+        #     )
+
         if 'processed_labels' in intermediate.keys():
             self.processed_labels = intermediate['processed_labels']
             del(intermediate['processed_labels'])

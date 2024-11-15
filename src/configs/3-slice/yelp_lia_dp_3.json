@@ -69,7 +69,7 @@
       "name": "LaplaceDP",
           "parameters": {
           "party": [0],
-          "position": "grad",
+          "position": ["grad"],
           "epsilon": 50
           }
     },

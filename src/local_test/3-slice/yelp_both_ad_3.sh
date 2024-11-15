@@ -3,9 +3,16 @@
 #SBATCH --gres gpu:a100:2                # 每个子任务都用一张 A100 GPU
 #SBATCH --time 4-1:00:00                    # 子任务 1 天 1 小时就能跑完
 #SBATCH --output exp_result/yelp_both_ad_3.out
+#SBATCH --qos high
+
+# 5
+sed -i 's/"lambda": 0.001/"lambda": 5.0/g' ./configs/3-slice/yelp_both_ad_3.json
+python main_pipeline_llm_Both.py --seed 60 --configs 3-slice/yelp_both_ad_3
 
 
-for seed in {60,61,62,63,64,65}
+sed -i 's/"lambda": 5.0/"lambda": 0.001/g' ./configs/3-slice/yelp_both_ad_3.json
+
+for seed in {61,62,63,64,65}
     do
 
     # 0.001

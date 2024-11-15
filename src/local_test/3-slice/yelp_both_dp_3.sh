@@ -3,8 +3,9 @@
 #SBATCH --gres gpu:a100:2                # 每个子任务都用一张 A100 GPU
 #SBATCH --time 4-1:00:00                    # 子任务 1 天 1 小时就能跑完
 #SBATCH --output exp_result/yelp_both_dp_3.out
+#SBATCH --qos high
 
-for seed in {1,2,3,4,5}
+for seed in {60,61,62,63,64,65}
     do
     # python main_pipeline_llm_Both.py --seed $seed --configs yelp_both_wo_3
 

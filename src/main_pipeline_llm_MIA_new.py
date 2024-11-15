@@ -357,4 +357,4 @@ if __name__ == '__main__':
 
         append_exp_res(args.exp_res_path, f'\n')
         
-        logger.info(recorder)
+        # logger.info(recorder)

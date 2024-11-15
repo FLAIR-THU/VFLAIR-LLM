@@ -4,7 +4,7 @@
 #SBATCH --time 4-1:00:00                    # 子任务 1 天 1 小时就能跑完
 #SBATCH --output exp_result/yelp_both_mid_3_small.out
 
-for seed in {60,61,62,63,64,65,1,2,3}
+for seed in {61,62,63,64,65,1,2,3}
     do
   
     # 0.01

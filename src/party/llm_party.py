@@ -382,7 +382,7 @@ class Party(object):
 
     @timer()
     def forward(self, model_index, **kwargs):
-        logger.debug(f"model_{model_index} forward")
+        # logger.debug(f"model_{model_index} forward")
 
         self.input_tensors[model_index] = kwargs.get('inputs_embeds')
         

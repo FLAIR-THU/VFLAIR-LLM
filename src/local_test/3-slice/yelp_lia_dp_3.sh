@@ -1,45 +1,35 @@
 #!/bin/bash
-#SBATCH --job-name yelp_dp_lia_3           # 任务名叫 example
+#SBATCH --job-name yelp_lia_dp_3           # 任务名叫 example
 #SBATCH --gres gpu:a100:2                # 每个子任务都用一张 A100 GPU
 #SBATCH --time 4-1:00:00                    # 子任务 1 天 1 小时就能跑完
-#SBATCH --output exp_result/yelp_dp_lia_3.out
+#SBATCH --output exp_result/yelp_lia_dp_3.out
+#SBATCH --qos high
 
-# 1e9
-sed -i 's/"epsilon": 50/"epsilon": 1e9/g' ./configs/3-slice/yelp_lia_dp_3.json
-python main_pipeline_llm_LIA.py --seed 62 --configs 3-slice/yelp_lia_dp_3
-
-sed -i 's/"epsilon": 1e9/"epsilon": 50/g' ./configs/3-slice/yelp_lia_dp_3.json
-
-
-for seed in {63,64,65}
+for seed in {60,61,62,63,64,65}
     do
-    python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/yelp_lia_wo_3
+    # python main_pipeline_llm_LIA.py --seed $seed --configs yelp_both_wo_3
 
-    # 1e5
-    sed -i 's/"epsilon": 50/"epsilon": 1e5/g' ./configs/3-slice/yelp_lia_dp_3.json
+    # 50
     python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/yelp_lia_dp_3
 
-    # 1e6
-    sed -i 's/"epsilon": 1e5/"epsilon": 1e6/g' ./configs/3-slice/yelp_lia_dp_3.json
+    # 70
+    sed -i 's/"epsilon": 50/"epsilon": 70/g' ./configs/3-slice/yelp_lia_dp_3.json
     python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/yelp_lia_dp_3
 
-    # 1e7
-    sed -i 's/"epsilon": 1e6/"epsilon": 1e7/g' ./configs/3-slice/yelp_lia_dp_3.json
+    # 80
+    sed -i 's/"epsilon": 70/"epsilon": 80/g' ./configs/3-slice/yelp_lia_dp_3.json
+    # python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/yelp_lia_dp_3
+
+    
+
+    # 100
+    sed -i 's/"epsilon": 80/"epsilon": 100/g' ./configs/3-slice/yelp_lia_dp_3.json
     python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/yelp_lia_dp_3
 
-    # 1e8
-    sed -i 's/"epsilon": 1e7/"epsilon": 1e8/g' ./configs/3-slice/yelp_lia_dp_3.json
+    # 500
+    sed -i 's/"epsilon": 100/"epsilon": 500/g' ./configs/3-slice/yelp_lia_dp_3.json
     python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/yelp_lia_dp_3
 
-    # 1e9
-    sed -i 's/"epsilon": 1e8/"epsilon": 1e9/g' ./configs/3-slice/yelp_lia_dp_3.json
-    python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/yelp_lia_dp_3
+    sed -i 's/"epsilon": 500/"epsilon": 50/g' ./configs/3-slice/yelp_lia_dp_3.json
 
-    sed -i 's/"epsilon": 1e9/"epsilon": 50/g' ./configs/3-slice/yelp_lia_dp_3.json
-
-done
-
-for seed in {10,11,12,13}
-    do
-    python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/yelp_lia_wo_3
 done

@@ -101,18 +101,21 @@ class ActiveParty_LLM(Party_LLM):
         # self.passive_pred_list[0].update({'use_cache':use_cache})
         self._tensor_to_device(self.passive_pred_list[0], self.device)
 
-        _input = VFLModelIntermediate(**self.passive_pred_list[0]).prepare_for_forward(
-            past_key_values=self.past_key_values.get(1))
-        intermediate = self.forward(model_index=1, **_input)  # use_cache = use_cache,return_dict=True
+        # _input = VFLModelIntermediate(**self.passive_pred_list[0]).prepare_for_forward(
+        #     past_key_values=self.past_key_values.get(1))
+        
+        intermediate = self.forward(model_index=1, **self.passive_pred_list[0])  # use_cache = use_cache,return_dict=True
         self.global_output = intermediate
-        if _input.get("use_cache") and intermediate.get('past_key_values'):
-            self.past_key_values.update({1: intermediate['past_key_values']})
-        if not isinstance(intermediate, VFLModelIntermediate):
-            self.global_output = VFLModelIntermediate(**intermediate).prepare_for_forward(
-                attention_mask=_input.get('attention_mask'),
-                position_ids=_input.get('position_ids'),
-                cache_position=_input.get('cache_position'),
-                use_cache=_input.get('use_cache'), )
+        
+        # if _input.get("use_cache") and intermediate.get('past_key_values'):
+        #     self.past_key_values.update({1: intermediate['past_key_values']})
+        # if not isinstance(intermediate, VFLModelIntermediate):
+        #     self.global_output = VFLModelIntermediate(**intermediate).prepare_for_forward(
+        #         attention_mask=_input.get('attention_mask'),
+        #         position_ids=_input.get('position_ids'),
+        #         cache_position=_input.get('cache_position'),
+        #         use_cache=_input.get('use_cache'), )
+
         return self._detach_tensor(self.global_output)
 
     def receive_loss_and_gradients_remote(self, data):

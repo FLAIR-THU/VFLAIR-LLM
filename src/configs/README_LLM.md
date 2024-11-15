@@ -16,26 +16,37 @@ Figure below demonstrates all the main functions supported by VFLAIR-LLM, includ
 <img src="../../usage_guidance/figures/LLM_scenario.png" width="50%">
 </div>
 
-- **Model Split for LLM**: Defaultly we split the LLM between the first and second layer(encoder or decoder), which can be user-defined through config files.
-  - Local Model: Embedding Layer + $n_local$ encoder/decoders
-  - Global Model: the rest $n_{global}$ encoder/decoders + Head Layers for down-stream tasks
+
+
+- **Model Split for LLM**: 
+
+  - **2-slice Partition**: In this setting, we split a full LLM into Model Head(at passive party) and Model Tail(at active party). Defaultly , the LLM between the first and second layer(encoder or decoder), which can be user-defined through config files.
+
+    - Model Head: Embedding Layer + $n_1$ encoder/decoders
+    - Model Tail: the rest $n_{2}$ encoder/decoders + Head Layers for down-stream tasks
+  - **3-slice Partition**: In this setting, we split a full LLM into 3 parts: Model Head(at passive party), Model Body(at active party) and Model Tail(at passive party). 
+    - Model Head: Embedding Layer + $n_1$ encoder/decoders
+    - Model Body: the middle $n_{2}$ encoder/decoders
+    - Model Tail: the rest $n_{3}$ encoder/decoders + Head Layers for down-stream tasks
   - For detailed implementation of LLM model split, please refer to [Detailed Tutorial] section for further guidance.
   - Figure below describes the LLM model partition method.
+
 <div align=center>
 <img src="../../usage_guidance/figures/model_partition.png" width="30%">
 </div>
 
-- **Three Model Architects and corresponding task types**: Currently VFLAIR supported the following model architect. Each model architect can be used in its corresponding downstream tasks and datasets.
+- **Four Model Architects and corresponding task types**: Currently VFLAIR supported the following model architect. Each model architect can be used in its corresponding downstream tasks and datasets.
   - **CLS models** output probability vectors for the classification, which is used in normal Classification tasks. When the number of classes is reduced to 1, the model only output a single value which can be used in Regression tasks.
   - **TQA model**s output the starting and ending positions of the answer texts, which can be used in Text-span based Question Answering datasets like SQuAD. (Note that different from Generation-based QA tasks, TQA provides a piece of text for the model to find the answer in while GQA is a proper generation task)
   - **CLM models** output a word vector representing the probability of each token in the next position, which can be used in Next Token Prediction tasks like Lambada. When the model is called recursively to continuously generate the next word, the model can be used for a wider range of generative tasks like Text Generation/Code Generation/Math Problem Solving etc.
+  - **MM models** acts similar to CLM models but accepts multi-modal data as inputs, which can be used in various MM tasks like VQA. 
 
 | Model Architect                             | Corresponding Transformer Class                              | Task Type                                                    | Dataset                                      |
 | ------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | -------------------------------------------- |
 | CLS<br>(Classification)                     | XXXforSequenceClassification<br>e.g. transformer.BertforSequenceClassification | Sequence Classification<br>Regression                        | GLUE Benchmark<br>Yelp                       |
 | TQA<br>(Text-span based Question Answering) | XXXforQuestionAnswering<br/>e.g. transformer.BertforQuestionAnswering | Text-span based Question Answering                           | SQuAD                                        |
 | CLM<br>(Causal LM - generation)             | XXXforCausalLM<br/>e.g. transformer.GPTLMhead                | Next Token Prediction<br>Text Generation<br>Code Generation<br>Math Problem Answering | Lambada/<br>Alpaca/CodeAlpaca/<br>MATH/GMS8K |
-
+| MM<br>(MultiModality - generation)             | /                | Visual Question Answering | TextVQA |
 
 
 - **Multiple Model Base**: The following LLMs are supported in VFLAIR.
@@ -77,11 +88,18 @@ VFLAIR-LLM is developed under the VFLAIR framework, sharing the same framework s
       - LoRA algorithm is also provided for fine-tuning
   - **Attack&Defense**: 
     - Attacks：
-      - VanillaModelInversion - WhiteBox([paper]([Model Inversion Attacks that Exploit Confidence Information and Basic Countermeasures | Proceedings of the 22nd ACM SIGSAC Conference on Computer and Communications Security](https://dl.acm.org/doi/10.1145/2810103.2813677))) 
-      - Relaxation-based White Box Inversion([paper]([2004.00053\] Information Leakage in Embedding Models (arxiv.org)](https://arxiv.org/abs/2004.00053)))
+      - Model Inversion Attacks:
+        - VanillaModelInversion - WhiteBox([paper]([Model Inversion Attacks that Exploit Confidence Information and Basic Countermeasures | Proceedings of the 22nd ACM SIGSAC Conference on Computer and Communications Security](https://dl.acm.org/doi/10.1145/2810103.2813677))) 
+        - Relaxation-based White Box Inversion([paper]([2004.00053\] Information Leakage in Embedding Models (arxiv.org)](https://arxiv.org/abs/2004.00053)))
+      - Label Inference Attacks
+        - Batch-level Label Inference ([paper](https://ieeexplore.ieee.org/abstract/document/9833321/))
+        - Norm-based Scoring (NS) ([paper]([[2102.08504\] Label Leakage and Protection in Two-party Split Learning (arxiv.org)](https://arxiv.org/abs/2102.08504)))
+
     - Defense：
       - Laplace Differential Privacy([paper]([Privacy Risks of General-Purpose Language Models | IEEE Conference Publication | IEEE Xplore](https://ieeexplore.ieee.org/document/9152761))) 
-      - Adversarial Training - Privacy Preserving Mapping([paper]([Privacy Risks of General-Purpose Language Models | IEEE Conference Publication | IEEE Xplore](https://ieeexplore.ieee.org/document/9152761))) 
+      - Adversarial Training - Privacy Preserving Mapping([paper]([Privacy Risks of General-Purpose Language Models | IEEE Conference Publication | IEEE Xplore](https://ieeexplore.ieee.org/document/9152761)))
+      - Gradient Sparsification([paper](https://openreview.net/forum?id=SkhQHMW0W))
+
   - **Communication**: currently we only provide FedSGD for VFL_LLM communication.
 
 - **Metrics Module**: we provide the following metris for each task type
@@ -124,9 +142,9 @@ In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can e
 "batch_size": 1,
 "pipeline": "finetune",
 ```
-
 - "pipeline": finetune/pretrained
   - whether the pipeline is to finetune a base model/another pretrained model checkpoint or using a pretrained model directly for inference
+
 
 #### Tokenizer
 
@@ -183,18 +201,20 @@ In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can e
 - "configs": detailed configuration for LoRA algorithms, name of the parameters is the same as in PEFT framwork.
 
 #### Dataset
-
 ```json
 "dataset":{
     "dataset_name": "SQuAD",
     "num_classes": 1,
     "n_shot": 1
 }
+"dataset": {
+      "dataset_name": "yelp-polarity",
+        "num_classes": 5
+}
 ```
-
 - "dataset": the dataset for experiments
   - "dataset_name": name of the dataset
-  - "num_classes": number of classes for experiments
+  - "num_classes": number of classes for classification experiments. defaultly set to 1 for other tasks.
   - "n_shot": Prompt generation method can be user-defined through this parameter. n_shot represents the number of shots needed for prompt generation
     - e.g n_shot=0[zero-shot]  n_shot=1[one-shot]
 
@@ -204,43 +224,59 @@ In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can e
 
 ```json
 "model_list":{
+    "name": "textattackbert-base-uncased-SST-2",
+    "model_type": "Bert",
+    "max_sequence": 512,
+    "kwargs_model_loading":{
+    },
     "0": {
-            "type": "textattackbert-base-uncased-SST-2",
-            "pretrained": 1,
-            "encoder_trainable": 1,
-            "embedding_trainable": 1,
-            "encoder_trainable_ids":[0],
-            "output_dim": 2,
-            "model_type": "Bert",
-            "max_sequence": 512,
-            "path": ""
-        },
-        "1": {
-            "type": "textattackbert-base-uncased-SST-2",
-            "pretrained": 1,
-            "head_layer_trainable": 1,
-            "encoder_trainable": 0,
-            "encoder_trainable_ids":[],
-            "output_dim": 2,
-            "model_type": "Bert",
-            "max_sequence": 512,
-            "path": ""
-        },
-    "task":{
-            "task_type": "SequenceClassification"
-        }
-```
+      "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
 
-- "model":
-  - "pretrained": represents model loading method
-    - define whether the model is loaded from a pretrained third-party model with full trained head layer(pretrained = 1) or a base model with randomly-initialized head layer.
-  - "head_layer_trainable": define whether we shall freeze the head layer paramaters or leave it open for finetuning
-  - "encoder_trainable": define whether we shall freeze the encoder/decoder paramaters or leave it open for finetuning. Detailed number of encoder that's trainable is defined in "encoder_trainable_ids".
-  - "embedding_trainable": define whether we shall freeze the embedding layer paramaters or leave it open for finetuning
-  - "max_sequence": max length of input acceptable for the model.
+        "head":{
+            "trainable": 1,
+            "embedding_trainable": 0,
+            "encoder_trainable": 0,
+            "encoder_trainable_ids":[]
+        },
+        "tail":{
+            "trainable": 1,
+            "head_layer_trainable": 0,
+            "encoder_trainable": 0,
+            "encoder_trainable_ids":[]
+        }
+    },
+    "1": {
+      "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
+        "body":{
+            "trainable": 1,
+            "encoder_trainable": 0,
+            "encoder_trainable_ids":[]
+        }
+    },
+    "task":{
+        "task_type": "SequenceClassification"
+    },
+    "vfl_model_slice_num": 3,
+    "local_encoders_num": 3,
+    "local_tail_encoders_num": 3
+}
+```
+- "0"/"1": mark party id, "0" refers to passive party while 1 refers to active party.
+- "head"/"body"/"tail": mark specifications for each model slice.
+  - "trainable": whether this model slice is trainable or frozen during training.
+    - Detailed trainable parameter settings can be specified through "head_layer_trainable"/"encoder_trainable" etc. However this is generally not needed.
+    - "head_layer_trainable": define whether we shall freeze the head layer paramaters or leave it open for finetuning
+    - "encoder_trainable": define whether we shall freeze the encoder/decoder paramaters or leave it open for finetuning. Detailed number of encoder that's trainable is defined in "encoder_trainable_ids".
+    - "embedding_trainable": define whether we shall freeze the embedding layer paramaters or leave it open for finetuning
+- "path": model path
+- "kwargs_model_loading": Other configurations for model loading , specified as same as transformers' `from_pretrained()` function. For example, you can set 'device_map' here.
+- "max_sequence": max length of input acceptable for the model.
 - "task": Definition of task type
   - "task_type": name of the task type(SequenceClassification...)
- - "output_dim": dimension of the model output, relevant with downstream tasks.
+- **model partition params**:
+  - "vfl_model_slice_num": number of partitioned model slices, 2 or 3
+  - "local_encoders_num": number of encoders/decoders allocated to model head
+  - "vfl_model_slice_num": only specified under 3-slice settings to mark the number of encoders/decoders allocated to model tail(at passive party)
 
 #### Attack
 
@@ -257,7 +293,6 @@ In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can e
         }
 }
 ```
-
 - "name": the name for the attack
 - "party": attacker party id, currently we only support 1
 
@@ -278,7 +313,6 @@ In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can e
         }
 }
 ```
-
 - "lambda": a hyper-parameter for trade-off between privacy and accuracy in adversarial loss function
 - "adversarial_model": adversarial model used by the defense party
 - "imagined_adversary": imagined adversary used by the defense party

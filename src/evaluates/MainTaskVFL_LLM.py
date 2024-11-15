@@ -1219,19 +1219,25 @@ def create_main_task(global_model_type: GenerationMixin):
             if self.args.vfl_model_slice_num > 2:
                 
                 self.global_pred = resp['inputs_embeds']#.to(self.device)
-                from models.llm_models.base import VFLModelIntermediate
                 p = self.parties[0]
                 p._tensor_to_device(resp, p.models[2].device)
-                _input= VFLModelIntermediate(resp).prepare_for_forward(past_key_values=p.past_key_values.get(2))
-                final_output = p.give_final_pred(_input)
-                if _input.get("use_cache") and final_output.get('past_key_values'):
-                    p.past_key_values.update({2: final_output['past_key_values']})
+
+                # from models.llm_models.base import VFLModelIntermediate
+                # _input= VFLModelIntermediate(resp).prepare_for_forward(past_key_values=p.past_key_values.get(2))
+                
+                final_output = p.give_final_pred(resp)
+
+                # if _input.get("use_cache") and final_output.get('past_key_values'):
+                #     p.past_key_values.update({2: final_output['past_key_values']})
             else:
                 final_output = resp
 
-            if not kwargs.get('use_cache'):
-                final_output.past_key_values = None
-                final_output['past_key_values'] = None
+            # if not kwargs.get('use_cache'):
+            #     try:
+            #         final_output.past_key_values = None
+            #         final_output['past_key_values'] = None
+            #     except:
+            #         pass
 
             self.parties[0]._tensor_to_device(final_output,self.device)
 

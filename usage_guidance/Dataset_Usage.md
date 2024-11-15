@@ -33,6 +33,9 @@ In VFLAIR_LLM, we defaultly provide several dataset that are oftenly used for LL
           - Data is downloaded from [hendrycks/math: The MATH Dataset](https://github.com/hendrycks/math/)and arranged into  `../../share_dataset/MATH/`. 
        5. GMS8K
           - Data is downloaded from [GMS8KDataset](https://github.com/openai/grade-school-math) and arranged into  `../../share_dataset/GMS8K/`. 
+  3. Multi-Modality(VQA) Datasets
+       1. TextVQA
+          - Data is downloaded from [hendrycks/math: The MATH Dataset](https://github.com/hendrycks/math/)and arranged into  `../../share_dataset/TextVQA/`. 
 
 Detailed data loading and processing can be found in `src/load/LoadDataset.py`. You can alter the code in function [load_dataset_per_party_llm] to suit your need.
 
