@@ -16,14 +16,8 @@ for seed in {60,61,62,63,64,65}
     sed -i 's/"epsilon": 50/"epsilon": 70/g' ./configs/3-slice/yelp_lia_dp_3.json
     python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/yelp_lia_dp_3
 
-    # 80
-    sed -i 's/"epsilon": 70/"epsilon": 80/g' ./configs/3-slice/yelp_lia_dp_3.json
-    # python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/yelp_lia_dp_3
-
-    
-
     # 100
-    sed -i 's/"epsilon": 80/"epsilon": 100/g' ./configs/3-slice/yelp_lia_dp_3.json
+    sed -i 's/"epsilon": 70/"epsilon": 100/g' ./configs/3-slice/yelp_lia_dp_3.json
     python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/yelp_lia_dp_3
 
     # 500

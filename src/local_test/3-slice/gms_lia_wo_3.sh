@@ -4,7 +4,15 @@
 #SBATCH --time 4-1:00:00                    # 子任务 1 天 1 小时就能跑完
 #SBATCH --output exp_result/gms_lia_wo_3.out
 
-for seed in {60,61}
-    do
-    python main_pipeline_llm_LIA.py --seed $seed --configs 3-slice/gms_lia_wo_3 
-done
+
+# head +  tail
+# python main_pipeline_llm_LIA.py --seed 60 --configs 3-slice/gms_lia_wo_3 
+
+sed -i 's/"lr": 5e-6/"lr": 1e-5/g' ./configs/3-slice/gms_lia_wo_3.json
+python main_pipeline_llm_LIA.py --seed 60 --configs 3-slice/gms_lia_wo_3
+
+sed -i 's/"lr": 1e-5/"lr": 5e-5/g' ./configs/3-slice/gms_lia_wo_3.json
+python main_pipeline_llm_LIA.py --seed 60 --configs 3-slice/gms_lia_wo_3
+
+sed -i 's/"lr": 5e-5/"lr": 5e-6/g' ./configs/3-slice/gms_lia_wo_3.json
+

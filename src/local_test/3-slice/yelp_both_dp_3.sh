@@ -7,7 +7,6 @@
 
 for seed in {60,61,62,63,64,65}
     do
-    # python main_pipeline_llm_Both.py --seed $seed --configs yelp_both_wo_3
 
     # 50
     python main_pipeline_llm_Both.py --seed $seed --configs 3-slice/yelp_both_dp_3
@@ -16,14 +15,9 @@ for seed in {60,61,62,63,64,65}
     sed -i 's/"epsilon": 50/"epsilon": 70/g' ./configs/3-slice/yelp_both_dp_3.json
     python main_pipeline_llm_Both.py --seed $seed --configs 3-slice/yelp_both_dp_3
 
-    # 80
-    sed -i 's/"epsilon": 70/"epsilon": 80/g' ./configs/3-slice/yelp_both_dp_3.json
-    # python main_pipeline_llm_Both.py --seed $seed --configs 3-slice/yelp_both_dp_3
-
-    
 
     # 100
-    sed -i 's/"epsilon": 80/"epsilon": 100/g' ./configs/3-slice/yelp_both_dp_3.json
+    sed -i 's/"epsilon": 70/"epsilon": 100/g' ./configs/3-slice/yelp_both_dp_3.json
     python main_pipeline_llm_Both.py --seed $seed --configs 3-slice/yelp_both_dp_3
 
     # 500

@@ -50,7 +50,9 @@ from utils.cora_utils import *
 from utils.graph_functions import load_data1, split_graph
 
 # DATA_PATH ='./load/share_dataset/'  #'../../../share_dataset/'
-DATA_PATH = '../../../share_dataset/'
+# DATA_PATH = '.../shared/data/'
+DATA_PATH = '/shared/data/'
+
 IMAGE_DATA = ['mnist', 'cifar10', 'cifar100', 'cifar20', 'utkface', 'facescrub', 'places365']
 TABULAR_DATA = ['breast_cancer_diagnose', 'diabetes', 'adult_income', 'criteo', 'credit', 'nursery', 'avazu']
 GRAPH_DATA = ['cora']
@@ -1491,8 +1493,12 @@ def load_dataset_per_party_llm(args, index):
         test_dst = (X_test, y_test)
 
     elif args.dataset == 'yelp-polarity':
-        train_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/train.csv'
-        test_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/test.csv'
+        # train_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/train.csv'
+        # test_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/test.csv'
+
+        train_set_file = DATA_PATH + '/yelp_review_full_csv/train.csv'
+        test_set_file = DATA_PATH + '/yelp_review_full_csv/test.csv'
+
 
         df = pd.read_csv(train_set_file, delimiter=',', header=None,
                          names=['label', 'sentence'])#[:200]
@@ -2378,7 +2384,7 @@ def load_dataset_per_party_llm(args, index):
         y_train = np.array([ _ex['answer'] for _ex in train_examples])
 
         ##### Test #####
-        test_examples = get_examples(data_path, 'test')[:20] # list of [  {'quesion':... , 'answer':...} ...]
+        test_examples = get_examples(data_path, 'test')[:6] # list of [  {'quesion':... , 'answer':...} ...]
         X_test = np.array([ problem_prompt.format(instruction=_ex['question']) for _ex in test_examples])
         y_test = np.array([ get_final_ans(_ex['answer']) for _ex in test_examples])
 

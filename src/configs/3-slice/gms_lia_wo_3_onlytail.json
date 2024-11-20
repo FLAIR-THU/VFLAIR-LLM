@@ -45,7 +45,7 @@
         "0": {
             "path": "/shared/model/meta-math/MetaMath-Mistral-7B",
                 "head":{
-                    "trainable": 1,
+                    "trainable": 0,
                     "embedding_trainable": 0,
                     "encoder_trainable": 0,
                     "encoder_trainable_ids":[]

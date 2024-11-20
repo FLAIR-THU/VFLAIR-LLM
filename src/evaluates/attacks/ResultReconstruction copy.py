@@ -31,8 +31,7 @@ class ResultReconstruction(Attacker):
         # get information for launching BLI attack
         self.top_vfl = top_vfl
         self.vfl_info = top_vfl.final_state
-        self.attack_sample_num = args.attack_sample_num
-        self.test_sample_state_list = top_vfl.test_sample_state_list[:self.attack_sample_num]
+        self.test_sample_state_list = top_vfl.test_sample_state_list
 
         # prepare parameters
         self.device = args.device
@@ -94,87 +93,93 @@ class ResultReconstruction(Attacker):
             ####### collect necessary information #######
             dummy_model_tail = load_llm_slice(args=self.args,slice_index = 2).to(self.args.device)
             # dummy_model_head = load_llm_slice(args=self.args,slice_index = 0).to(self.args.device)
-            
+            # del self.vfl_info
+
             enter_time = time.time()
             ############ Begin Attack ###############
             # for each sample state:
-            sample_num = len(self.test_sample_state_list)
-            print(f'Result Reconstruction on {sample_num} test batch samples')
-            
+            bs = len(self.test_sample_state_list)
+            print(f'Result Reconstruction on {bs} test samples')
+            batch_label = []
+            batch_label_text = []
+            real_generate_result = []
+            real_generated_text = []
+            tail_input_embed_list = []
+            tail_input_attn_mask_list = []
             gen_mean_score = 0
             label_mean_score = 0
-            total_sample_count = 0
-            id = 0
             for sample_info in self.test_sample_state_list:
-                id = id+1
+                # batch_label=sample_info['label']
+                # batch_label_text.append(self.args.tokenizer.batch_decode(batch_label))
+
+                # real_generate_result.append(sample_info['real_generation_result'])
+                # real_generated_text.append(self.args.tokenizer.batch_decode(real_generate_result))
+
+                # tail_input_embed_list.append( active_predict[1].to(dummy_model_tail.device) for active_predict in sample_info['active_predict_list'])
+                # tail_input_attn_mask_list.append( active_predict_attention_mask[1].to(dummy_model_tail.device) for active_predict_attention_mask in sample_info['active_predict_attention_mask_list'])
             
-                batch_label = sample_info['label']  # print(self.args.tokenizer.batch_decode(batch_label))
-                batch_label_text = self.args.tokenizer.batch_decode(batch_label)
+                batch_label = sample_info['label']
+                batch_label_text = self.args.tokenizer.decode(batch_label)
+                print('batch_label:',len(batch_label))
+                print(batch_label_text)
 
-                real_generate_result = sample_info['real_generation_result']
-                real_generated_text = self.args.tokenizer.batch_decode(real_generate_result)
+                real_generate_result=sample_info['real_generation_result']
+                print('real_generate_result:',real_generate_result.shape)
 
-                # real_output_logits = self.vfl_info['passive_predict'][2]
+                real_generated_text=self.args.tokenizer.decode(real_generate_result)
+                print(real_generated_text)
 
-                bs = len(real_generated_text)
-                # attainable intermediate results
                 tail_input_embed_list = [ active_predict[1].to(dummy_model_tail.device) for active_predict in sample_info['active_predict_list']]
-                tail_input_attn_mask_list = [ active_predict_attention_mask[1].to(dummy_model_tail.device) \
-                if active_predict_attention_mask[1] is not None else None \
-                for active_predict_attention_mask in sample_info['active_predict_attention_mask_list'] ]
+                tail_input_attn_mask_list = [ active_predict_attention_mask[1].to(dummy_model_tail.device) for active_predict_attention_mask in sample_info['active_predict_attention_mask_list']]
+                print('tail_input_embed_list:',len(tail_input_embed_list),tail_input_embed_list[0].shape)
 
-
-                dummy_generated_token_ids = [[] for _i in range(bs)]
+                dummy_generated_token_ids = [] #[[] for _i in range(bs)]
                 for (tail_input_embed,tail_input_attn_mask) in zip(tail_input_embed_list,tail_input_attn_mask_list):
-                    tail_input_attn_mask = tail_input_attn_mask.to(dummy_model_tail.device) if tail_input_attn_mask!= None else None
+
                     dummy_output_logits = dummy_model_tail(inputs_embeds = tail_input_embed.to(dummy_model_tail.device), \
-                            attention_mask = tail_input_attn_mask)['logits'] # bs seq_len, vocab_dim
+                            attention_mask = tail_input_attn_mask.to(dummy_model_tail.device))['logits'] # bs seq_len, vocab_dim
                     del tail_input_embed
                     del tail_input_attn_mask
-
+                    print('dummy_output_logits:',dummy_output_logits.shape)
                     dummy_next_token_id = torch.argmax(dummy_output_logits, dim=-1)[:,-1]
-
-                    for _i in range(bs):
-                        dummy_generated_token_ids[_i].append(dummy_next_token_id[_i].item())
-                dummy_generated_tokens = self.args.tokenizer.batch_decode(dummy_generated_token_ids)
+                    print('dummy_next_token_id:',dummy_next_token_id.shape)
+                    
+                    dummy_generated_token_ids.append(dummy_next_token_id[0].item())
+                dummy_generated_tokens = self.args.tokenizer.decode(dummy_generated_token_ids)
                 
 
+            
+            # for _i in range(bs):
+                def wash(ids, target_token_id):
+                    print('ids:',type(ids),len(ids))
+                    print('target_token_id:',target_token_id)
+                    while(target_token_id in ids):
+                        ids.remove(target_token_id)
+                    return ids
                 
-                for _i in range(bs):
-                    def wash(ids, target_token_id):
-                        while(target_token_id in ids):
-                            ids.remove(target_token_id)
-                        return ids
-                    
-                    def get_result(token_ids, washed_ids_list, tokenizer):
-                        for washed_ids in washed_ids_list:
-                            token_ids = wash(token_ids,washed_ids)
-                        return tokenizer.convert_ids_to_tokens(token_ids)
-                    
-                    wash_list = [self.args.tokenizer.pad_token_id, self.args.tokenizer.eos_token_id, self.args.tokenizer.bos_token_id]
-                    dummy = get_result(dummy_generated_token_ids[_i], wash_list, self.args.tokenizer)
-                    real_gen = [ get_result(real_generate_result[_i].tolist(), wash_list, self.args.tokenizer) ]
-                    
-                    real_label = [ self.args.tokenizer.convert_ids_to_tokens(batch_label[_i].tolist()) ]
-                    
-                    # dummy = self.args.tokenizer.convert_ids_to_tokens(dummy_generated_token_ids[_i])
-                    # real_gen = [ self.args.tokenizer.convert_ids_to_tokens(real_generate_result[_i].tolist()) ]
-                    # real_label = [ self.args.tokenizer.convert_ids_to_tokens(batch_label[_i].tolist()) ]
-                    
-                    gen_score = sentence_bleu(real_gen, dummy)
-                    label_score = sentence_bleu(real_label, dummy)
+                def get_result(token_ids, washed_ids_list, tokenizer):
+                    for washed_ids in washed_ids_list:
+                        token_ids = wash(token_ids,washed_ids)
+                    return tokenizer.convert_ids_to_tokens(token_ids)
+                
+                wash_list = [self.args.tokenizer.pad_token_id, self.args.tokenizer.eos_token_id, self.args.tokenizer.bos_token_id]
+                dummy = get_result(dummy_generated_token_ids, wash_list, self.args.tokenizer)
+                real_gen = [ get_result(real_generate_result.tolist(), wash_list, self.args.tokenizer) ]
+                real_label = [ self.args.tokenizer.convert_ids_to_tokens(batch_label.tolist()) ]
+                
+                gen_score = sentence_bleu(real_gen, dummy)
+                label_score = sentence_bleu(real_label, dummy)
 
-                    # print('dummy:',dummy_generated_tokens[_i])
-                    # print('real:',real_generated_text[_i])
-                    # print('label:',batch_label_text[_i])
-                    # print('gen_score:',gen_score,' label_score:',label_score)
-                    gen_mean_score += gen_score
-                    label_mean_score += label_score
+                print('dummy:',dummy_generated_tokens)
+                print('real:',real_generated_text)
+                print('label:',batch_label_text)
+                print('gen_score:',gen_score,' label_score:',label_score)
+                gen_mean_score += gen_score
+                label_mean_score += label_score
 
-                total_sample_count += bs
-            gen_mean_score = gen_mean_score/total_sample_count
-            label_mean_score = label_mean_score/total_sample_count
-
+            gen_mean_score = gen_mean_score/bs
+            label_mean_score = label_mean_score/bs
+        
             exit_time = time.time()
 
             attack_total_time = exit_time - enter_time

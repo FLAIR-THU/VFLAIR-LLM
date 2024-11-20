@@ -35,7 +35,7 @@
         "kwargs_model_loading":{
         },
         "0": {
-          "path": "/home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification",
+          "path": "/shared/model/Shunianyelp_review_classification",
 
             "head":{
                 "trainable": 1,
@@ -51,7 +51,7 @@
             }
         },
         "1": {
-          "path": "/home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification",
+          "path": "/shared/model/Shunianyelp_review_classification",
             "body":{
                 "trainable": 1,
                 "encoder_trainable": 0,
@@ -71,7 +71,7 @@
             "party": [0],
             "mid_model_name":"MIDModel_Linear",
             "lr": 0.0001,
-            "lambda": 0.1,
+            "lambda": 0.5,
             "mid_position": ["head","tail"],
             "current_bottleneck_scale": 1,
             "seq_length": 384,

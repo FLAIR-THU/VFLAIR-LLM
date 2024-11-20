@@ -4,8 +4,12 @@
 #SBATCH --time 4-1:00:00                    # 子任务 1 天 1 小时就能跑完
 #SBATCH --output exp_result/yelp_both_mid_3_big.out
 
+# 0.1
+sed -i 's/"lambda": 0.5/"lambda": 0.1/g' ./configs/3-slice/yelp_both_mid_3_big.json
+python main_pipeline_llm_Both.py --seed 61 --configs 3-slice/yelp_both_mid_3_big
+sed -i 's/"lambda": 0.1/"lambda": 0.5/g' ./configs/3-slice/yelp_both_mid_3_big.json
 
-for seed in {60,61,62,63,64,65,1,2,3}
+for seed in {62,63,64,65}
     do
     # 0.5
     python main_pipeline_llm_Both.py --seed $seed --configs 3-slice/yelp_both_mid_3_big

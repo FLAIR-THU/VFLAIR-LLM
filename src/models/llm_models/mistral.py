@@ -182,7 +182,6 @@ class MistralModelHead(MistralModelSplitter):
 
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
-
         return {'inputs_embeds': hidden_states,
                 'attention_mask': attention_mask
                 }

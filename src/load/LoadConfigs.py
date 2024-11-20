@@ -826,6 +826,12 @@ def do_load_basic_configs_llm(config_dict, args):
     if len(list(set(ATTACKS_NEED_FINAL_EPOCH_STATE)&set(args.all_attack_list))) > 0:
         args.need_final_epoch_state = 1
     
+    ATTACKS_NEED_TEST_SAMPLE_STATES = ["ResultReconstruction"]
+    args.need_test_sample_states = 0
+    if len(list(set(ATTACKS_NEED_TEST_SAMPLE_STATES)&set(args.all_attack_list))) > 0:
+        args.need_test_sample_states = 1
+    
+    
     ATTACKS_NEED_GENERATION_STATE = ["ResultReconstruction"]
     args.need_generation_state = 0
     if len(list(set(ATTACKS_NEED_GENERATION_STATE)&set(args.all_attack_list))) > 0:
@@ -883,10 +889,15 @@ def load_attack_configs(config_file_name, args, index):
     attack_config_dict = config_dict['attack_list'][str(index)]
 
     args.attaker_id = attack_config_dict['party'] if ('party' in attack_config_dict) else []
-
+    
     if 'name' in attack_config_dict:
         args.attack_name = attack_config_dict['name']
         args.attack_configs = attack_config_dict['parameters'] if ('parameters' in attack_config_dict) else None
+        print('args.attack_configs:',args.attack_configs)
+        args.attack_sample_num = args.attack_configs['attack_sample_num'] if ('attack_sample_num' in args.attack_configs) else 0
+        if args.need_final_epoch_state:
+            args.needed_test_sample_states = args.attack_sample_num
+        print('args.needed_test_sample_states:',args.needed_test_sample_states)
 
         if args.attack_name in TARGETED_BACKDOOR:
             args.attack_type = 'targeted_backdoor'
