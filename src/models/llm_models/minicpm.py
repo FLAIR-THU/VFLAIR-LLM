@@ -56,14 +56,6 @@ class MiniCPMModelHead(MiniCPMModelSplitter):
     def get_input_embeddings(self):
         return self.embed_tokens
 
-    def __init__(self, config: MiniCPMConfig):
-        super().__init__(config)
-        self.past_key_values = None
-        self.embedding_output = None
-        del self.norm
-        # todo: del norm will cause error when load from original model weight
-        # del self.norm
-
     def _clear_past_key_values(self):
         self.past_key_values = None
 
@@ -359,7 +351,7 @@ class MiniCPMModelTail(MiniCPMModelSplitter):
     def __init__(self, config: MiniCPMConfig):
         super().__init__(config)
         self.past_key_values = None
-        del self.embed_tokens
+        # del self.embed_tokens
         # todo: del norm will cause error when load from original model weight
         # del self.norm
     

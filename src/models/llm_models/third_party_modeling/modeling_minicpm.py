@@ -1508,6 +1508,7 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
                 "attention_mask": attention_mask,
             }
         )
+
         return model_inputs
 
     @staticmethod
@@ -1565,6 +1566,7 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
             history, tokenize=False, add_generation_prompt=False
         )
         inputs = tokenizer(history_str, return_tensors="pt").to(self.device)
+
         outputs = self.generate(**inputs, **gen_kwargs)
         outputs = outputs.tolist()[0][len(inputs["input_ids"][0]) : -1]
         response = tokenizer.decode(outputs)

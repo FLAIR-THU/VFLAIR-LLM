@@ -28,12 +28,12 @@ import inspect
 from typing import List, Optional, Tuple, Union, Dict, Any
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
-from collections import namedtuple
+from threading import Thread
 import warnings
 from typing import List, Optional, Tuple, Union
 
 from transformers import Qwen2ForCausalLM
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, GenerationConfig, TextIteratorStreamer
 from transformers.generation import GenerationMixin
 from transformers.models.auto import (
     MODEL_FOR_CAUSAL_IMAGE_MODELING_MAPPING,
@@ -56,7 +56,7 @@ from utils.basic_functions import cross_entropy_for_onehot, append_exp_res, mult
 from utils.communication_protocol_funcs import get_size_of,get_total_size
 from party.party_utils import get_model_folder
 # from evaluates.attacks.attack_api import apply_attack
-from utils import timer
+from utils import timer,register_timer
 from utils.constants import *
 import utils.constants as shared_var
 from utils.marvell_functions import KL_gradient_perturb
@@ -181,6 +181,8 @@ def create_main_task(global_model_type: GenerationMixin):
             self.first_epoch_state = None
             self.middle_epoch_state = None
             self.final_state = {}
+            self.sample_state = {}
+            self.test_sample_state_list = []
 
             self.num_update_per_batch = args.num_update_per_batch
             self.num_batch_per_workset = args.Q  # args.num_batch_per_workset
@@ -296,8 +298,7 @@ def create_main_task(global_model_type: GenerationMixin):
         @timer()
         def global_pred_transmit(self, pred_list, use_cache=None, count_time=False):
             start_time = time.time()
-            global_pred = self._communication.send_pred_message(pred_list, self.parse_pred_message_result,
-                                                                use_cache=use_cache)  #
+            global_pred = self._communication.send_pred_message(pred_list, self.parse_pred_message_result)
             get_total_size(global_pred)
             end_time = time.time()
             if count_time == 'train':
@@ -308,13 +309,12 @@ def create_main_task(global_model_type: GenerationMixin):
         
         def parse_pred_message_result(self, result):
             if self.args.task_type == 'SequenceClassification':
-                logits = torch.Tensor(result['logits'])
-                if result['requires_grad']:
-                    logits.requires_grad_()
-                return SequenceClassifierOutput(
-                    logits=logits,
-                )
-            elif self.args.task_type == 'CausalLM':
+                new_dict = convert_msg_to_pred(result)
+                return {
+                    "inputs_embeds": new_dict['inputs_embeds'],
+                    "attention_mask": new_dict['attention_mask'],
+                }
+            elif not self.args.task_type or self.args.task_type == 'CausalLM':
                 if self.args.vfl_model_slice_num == 3:
                     return convert_msg_to_pred(result)
                 logits = convert_msg_to_tensor(result)
@@ -383,7 +383,7 @@ def create_main_task(global_model_type: GenerationMixin):
 
             return global_loss
         
-        def predict(self):
+        def predict(self, needed_test_sample_states = 0):
             # passive party dataloader list
             data_loader_list = [self.parties[ik].test_loader for ik in range(self.args.k - 1)]
 
@@ -438,6 +438,7 @@ def create_main_task(global_model_type: GenerationMixin):
                     else:
                         self.seq_length = 0
                     
+                    # test_logit -> standard output for each task
                     if self.args.model_architect == 'CLS':  # task_type == "SequenceClassification":  # and self.args.num_classes > 1: # classification
                         global_output = self.forward(**data_inputs)
                         batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(global_output,
@@ -489,7 +490,6 @@ def create_main_task(global_model_type: GenerationMixin):
                         if not (self.args.max_new_tokens==1):
                             self.set_is_first_forward_epoch(1)
                             if self.args.generation_method == 'chat':
-                                # print('generation_config_dict:',self.generation_config_dict)
                                 generation_output = self.mm_chat(samples = data_inputs, # 
                                                                     **self.generation_config_dict
                                                                     )
@@ -515,7 +515,15 @@ def create_main_task(global_model_type: GenerationMixin):
                     else:
                         assert 1 > 2, 'Task type not supported'
 
+
+                    if self.args.need_test_sample_states and \
+                        (len(self.test_sample_state_list) < 100):
+                        self.sample_state.update(self.save_state(False))
+                        self.test_sample_state_list.append(self.sample_state)
+                        self.sample_state = {}
+                    
                     del parties_data
+
             
             if self._loss:
                 self._loss = self._loss / _batch_cnt
@@ -1060,6 +1068,34 @@ def create_main_task(global_model_type: GenerationMixin):
                     base_dict.update({k: kwargs.get(k)})
             return base_dict
 
+        def _stream_chat(self, messages: List[str] = [],**kwargs):
+            gen_kwargs = self._format_generate_kwargs(messages=messages, **kwargs)
+            streamer = TextIteratorStreamer(self.args.tokenizer, skip_prompt=True, skip_special_tokens=True)
+            gen_kwargs.update(dict(streamer=streamer))
+            thread = Thread(target=self.generate, kwargs=gen_kwargs)
+            first_token_timer=register_timer('first_token')
+            next(first_token_timer)
+            thread.start()
+            generated_text = ""
+            for i, new_text in enumerate(streamer):
+                if i==0:
+                    next(first_token_timer)
+                yield new_text
+                logger.debug(new_text)
+                generated_text += new_text
+            logger.debug(f"input token len: {len(gen_kwargs['inputs'][0])}")
+            logger.debug(f"generate length: {i + 1}")
+            gc.collect()
+            torch.cuda.empty_cache()
+
+        def _chat(self, messages: List[str] = [], **kwargs):
+            resp_stream = self._stream_chat(messages,**kwargs)
+            generated_text = ""
+            for i, new_text in enumerate(resp_stream):
+                generated_text += new_text
+            logger.info(f"chat resp:\n{generated_text}")
+            return {'text': generated_text}
+
         def mm_inference(self):
             self.eval()
             predict_word_list, target_word_list, total_sample_cnt = self.predict()
@@ -1071,6 +1107,63 @@ def create_main_task(global_model_type: GenerationMixin):
             return exp_result, self.test_acc
             # except:
             #     return '',0
+
+        def _format_generate_kwargs(self, messages, **kwargs):
+            if not messages:
+                messages = [
+                    {"role": "system", "content": "你是ClozedAi开发的人工智能助手"},
+                    {"role": "user", "content": "你是谁？"}
+                ]
+            tokenizer = self.args.tokenizer
+            input_ids = tokenizer.apply_chat_template(
+                messages,
+                tokenize=True,
+                add_generation_prompt=True,
+                return_tensors="pt"
+            )
+            # inputs = tokenizer([text], return_tensors="pt")
+
+            generating_args = copy.deepcopy(self.generation_config.to_dict())
+
+            for k, v in kwargs.items():
+                if k in ['do_sample', 'temperature', 'top_p', 'top_k', 'repetition_penalty', 'length_penalty']:
+                    generating_args.update({k: v})
+            generating_args.update(
+                # num_return_sequences=num_return_sequences,
+                dict(eos_token_id=[tokenizer.eos_token_id] + tokenizer.additional_special_tokens_ids,
+                     pad_token_id=tokenizer.pad_token_id,
+                     )
+            )
+
+            # if isinstance(num_return_sequences, int) and num_return_sequences > 1:  # do_sample needs temperature > 0
+            #     generating_args["do_sample"] = True
+            #     generating_args["temperature"] = generating_args["temperature"] or 1.0
+
+            if not generating_args["temperature"]:
+                generating_args["do_sample"] = False
+
+            if not generating_args["do_sample"]:
+                generating_args.pop("temperature", None)
+                generating_args.pop("top_p", None)
+
+            if v := kwargs.get('max_length'):
+                generating_args.pop("max_new_tokens", None)
+                generating_args["max_length"] = v
+
+            if v := kwargs.get('max_new_tokens'):
+                generating_args.pop("max_length", None)
+                generating_args["max_new_tokens"] = v
+
+            gen_kwargs = dict(
+                inputs=input_ids.to(self.device),
+                # attention_mask=attention_mask,
+                generation_config=GenerationConfig.from_dict(generating_args),
+                # logits_processor=get_logits_processor(),
+                # stopping_criteria=StoppingCriteriaList([StoppingCriteriaSub(
+                #     stops=[tokenizer.eos_token_id, tokenizer.convert_tokens_to_ids("<|eot_id|>"), ])])
+                past_key_values=kwargs.get('past_key_values'),
+            )
+            return gen_kwargs
 
         def seq_inference(self):
             # SequenceClassification / Regression
@@ -1124,40 +1217,56 @@ def create_main_task(global_model_type: GenerationMixin):
             print(exp_result)
             return exp_result, self.test_acc
 
-        def forward(self, **kwargs):
-            self.parties[0].obtain_local_data(kwargs)
-
+        def forward(self, attention_mask=None, **kwargs):
+            self.parties[0].obtain_local_data(dict(**kwargs, attention_mask=attention_mask))
             # passive party do local pred
-            pred_list = self.pred_transmit(use_cache=False)
+            pred_list = self.pred_transmit(use_cache=True)
 
             # passive party inform active party to do global pred
-            resp = self.global_pred_transmit(pred_list, use_cache=False)
+            resp = self.global_pred_transmit(pred_list, use_cache=True)
 
             if self.args.vfl_model_slice_num > 2:
                 
                 self.global_pred = resp['inputs_embeds']#.to(self.device)
-
                 p = self.parties[0]
                 p._tensor_to_device(resp, p.models[2].device)
-                final_output = p.give_final_pred(resp) 
+
+                # from models.llm_models.base import VFLModelIntermediate
+                # _input= VFLModelIntermediate(resp).prepare_for_forward(past_key_values=p.past_key_values.get(2))
+                
+                final_output = p.give_final_pred(resp)
+
+                # if _input.get("use_cache") and final_output.get('past_key_values'):
+                #     p.past_key_values.update({2: final_output['past_key_values']})
             else:
                 final_output = resp
 
+            # if not kwargs.get('use_cache'):
+            #     try:
+            #         final_output.past_key_values = None
+            #         final_output['past_key_values'] = None
+            #     except:
+            #         pass
+
             self.parties[0]._tensor_to_device(final_output,self.device)
 
-            if self.args.max_new_tokens > 1 and self.args.need_final_epoch_state:
+            if self.args.max_new_tokens > 1 and \
+                (self.args.need_final_epoch_state or self.args.need_test_sample_states):
                 if self.args.need_generation_state:
                     if self.is_first_forward_iter:
-                        try:
-                            del self.final_state['active_predict_list']
-                            del self.final_state['active_predict_attention_mask_list']
-                        except:
-                            pass
                         self.final_state.update(self.save_element('active_predict_list'))
                         self.final_state.update(self.save_element('active_predict_attention_mask_list'))
+                        self.sample_state.update(self.save_element('active_predict_list'))
+                        self.sample_state.update(self.save_element('active_predict_attention_mask_list'))
+                    
                     else:
                         self.final_state['active_predict_list'].append(self.dict_deepcopy(self.parties[1].output_tensors, device = 'cpu'))
                         self.final_state['active_predict_attention_mask_list'].append(self.dict_deepcopy(self.parties[1].output_attention_mask, device = 'cpu'))
+                        self.sample_state['active_predict_list'].append(self.dict_deepcopy(self.parties[1].output_tensors, device = 'cpu'))
+                        self.sample_state['active_predict_attention_mask_list'].append(self.dict_deepcopy(self.parties[1].output_attention_mask, device = 'cpu'))
+                        
+                        # print('update element:',self.dict_deepcopy(self.parties[1].output_attention_mask).keys() )
+
                 self.set_is_first_forward_epoch(0)
 
             return final_output
@@ -1215,7 +1324,11 @@ def create_main_task(global_model_type: GenerationMixin):
 
             need_save_state = kwargs.get('need_save_state')
             # print('inference need_save_state:',need_save_state)
-            if self.args.task_type == "DevLLMInference":
+            if not self.args.task_type:
+                if kwargs.get('stream'):
+                    return self._stream_chat(**kwargs)
+                return self._chat(**kwargs)
+            elif self.args.task_type == "DevLLMInference":
                 # LLM推理入口，兼容forward格式入参
                 for i in range(20):
                     result = self._llm_inference(**kwargs)
@@ -1388,9 +1501,9 @@ def create_main_task(global_model_type: GenerationMixin):
 
         def get_base_model(self):
             model_folder = get_model_folder()
-            if not self.args.model_path and self.args.model_path:
+            if not self.args.model_path[0] and self.args.model_path[0]:
                 raise ValueError('model_path must not be empty and should contain /')
-            base_model = self.args.model_path[len(model_folder)+1:]
+            base_model = self.args.model_path[0][len(model_folder)+1:]
             return base_model
 
         def create_model_id(self):
@@ -1605,6 +1718,8 @@ def create_main_task(global_model_type: GenerationMixin):
                         new_dict[_key] = copy.deepcopy(origin_dict[_key].detach())
                     else:
                         new_dict[_key] = copy.deepcopy(origin_dict[_key].detach()).to(device)
+                else:
+                    new_dict[_key] = None
 
             return new_dict
             
@@ -1831,6 +1946,10 @@ def create_main_task(global_model_type: GenerationMixin):
         @property
         def passive_party(self):
             return self.parties[0]
+
+        @property
+        def model(self):
+            return self.passive_party.models[0]
 
         def gen(self, prompt: str = '你是谁',
                 prompt_system: str = "现在你要扮演皇帝身边的女人--甄嬛"):

@@ -84,7 +84,6 @@ class MiniCPMVModelHead(MiniCPMVModelSplitter, MiniCPMVPreTrainedModel):
                 **kwargs
             )
         else:
-            print('direct forward model head')
             return self.llm(
                 **kwargs
             )
@@ -93,10 +92,16 @@ class MiniCPMVModelHead(MiniCPMVModelSplitter, MiniCPMVPreTrainedModel):
         res = []
 
         try:
-            dtype = self.llm.lm_head.weight.dtype # for MiniCPMForCausalLM
+            try:
+                dtype = self.llm.lm_head.weight.dtype # for MiniCPMForCausalLM
+            except:
+                dtype = self.llm.model.layers[0].mlp.gate_proj.weight.dtype # for MiniCPMModelHead
         except:
-            dtype = self.llm.model.layers[0].mlp.gate_proj.weight.dtype # for MiniCPMModelHead
-        
+            try:
+                dtype = self.model.llm.lm_head.weight.dtype # for MiniCPMForCausalLM
+            except:
+                dtype = self.model.llm.model.layers[0].mlp.gate_proj.weight.dtype # for MiniCPMModelHead
+
         def process_each_pixel(pixel_value, dtype, config, vpm, resampler):
             H, W = pixel_value.shape[-2:]
             target_size = (math.ceil(H / config.patch_size), math.ceil(W / config.patch_size))
@@ -112,9 +117,6 @@ class MiniCPMVModelHead(MiniCPMVModelSplitter, MiniCPMVPreTrainedModel):
         return torch.vstack(res)
 
     def get_vllm_embedding(self, data):
-        # print('pixel_values:',len(data['pixel_values']) )
-        # print('image_bound:',len(data['image_bound']),data['image_bound'][0].shape )
-
         if "vision_hidden_states" not in data:
             pixel_values_list = data["pixel_values"]
             # pixel_values_list: list of bs [[tensor 3, 1024, 973], [tensor],.. ] 3, 1024, 973
@@ -141,13 +143,13 @@ class MiniCPMVModelHead(MiniCPMVModelSplitter, MiniCPMVPreTrainedModel):
             vllm_embedding = (
                 data['vllm_embedding'] * self.llm.config.scale_emb
             )# 4, 160, 2304 
-            print('-model head vllm_embedding:',vllm_embedding[0,:5])
 
         else:
             vllm_embedding = (
                 self.llm.model.embed_tokens(data["input_ids"]) * self.llm.config.scale_emb
                 # self.llm.embed_tokens(data["input_ids"]) * self.llm.config.scale_emb
             )# 4, 160, 2304
+        
 
         vision_hidden_states = [
             i.type(vllm_embedding.dtype) if isinstance(i, torch.Tensor) else i
@@ -327,7 +329,7 @@ class MiniCPMVModelBody(MiniCPMVModelSplitter, MiniCPMVPreTrainedModel):
             **kwargs
         )
 
-class MiniCPMVModelTail(MiniCPMVModelSplitter,MiniCPMForCausalLM, MiniCPMVPreTrainedModel):
+class MiniCPMVModelTail(MiniCPMVModelSplitter, MiniCPMForCausalLM, MiniCPMVPreTrainedModel): # MiniCPMForCausalLM
     def __init__(self, config):
         super(MiniCPMVPreTrainedModel,self).__init__(config)
         self.llm = MiniCPMTailForCausalLM(config) #MiniCPMForCausalLM(config)
@@ -356,7 +358,7 @@ class MiniCPMVModelTail(MiniCPMVModelSplitter,MiniCPMForCausalLM, MiniCPMVPreTra
         return_vision_hidden_states=False,
         llm=None,
         **kwargs
-    ):
+    ):  
         if data_list != None: # normal generation: do MiniCPMVModelHead.pre_generation(input align) first
             aligned_input = self.pre_generation(data_list=data_list,
                         img_list=img_list,
@@ -395,7 +397,6 @@ class MiniCPMVModelTail(MiniCPMVModelSplitter,MiniCPMForCausalLM, MiniCPMVPreTra
         max_inp_length=2048,
         **kwargs
     ):  
-
         # already done in model_head.pre_chat
         # final_input, images, generation_config = self.pre_chat(image, msgs, context, tokenizer,
         #     vision_hidden_states, max_new_tokens,

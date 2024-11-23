@@ -5,14 +5,11 @@
 #SBATCH --output exp_result/gms_lia_wo_3.out
 
 
-# head +  tail
-# python main_pipeline_llm_LIA.py --seed 60 --configs 3-slice/gms_lia_wo_3 
-
-sed -i 's/"lr": 5e-6/"lr": 1e-5/g' ./configs/3-slice/gms_lia_wo_3.json
+# 1e-5
 python main_pipeline_llm_LIA.py --seed 60 --configs 3-slice/gms_lia_wo_3
 
 sed -i 's/"lr": 1e-5/"lr": 5e-5/g' ./configs/3-slice/gms_lia_wo_3.json
 python main_pipeline_llm_LIA.py --seed 60 --configs 3-slice/gms_lia_wo_3
 
-sed -i 's/"lr": 5e-5/"lr": 5e-6/g' ./configs/3-slice/gms_lia_wo_3.json
+sed -i 's/"lr": 5e-5/"lr": 1e-5/g' ./configs/3-slice/gms_lia_wo_3.json
 
