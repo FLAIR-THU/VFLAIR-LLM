@@ -181,6 +181,8 @@ def create_main_task(global_model_type: GenerationMixin):
             self.first_epoch_state = None
             self.middle_epoch_state = None
             self.final_state = {}
+            self.sample_state = {}
+            self.test_sample_state_list = []
 
             self.num_update_per_batch = args.num_update_per_batch
             self.num_batch_per_workset = args.Q  # args.num_batch_per_workset
@@ -514,6 +516,11 @@ def create_main_task(global_model_type: GenerationMixin):
                         
                     else:
                         assert 1 > 2, 'Task type not supported'
+
+                    if self.args.need_test_sample_states and (len(self.test_sample_state_list) < 100):
+                        self.sample_state.update(self.save_state(False))
+                        self.test_sample_state_list.append(self.sample_state)
+                        self.sample_state = {}
 
                     del parties_data
             
@@ -1145,19 +1152,21 @@ def create_main_task(global_model_type: GenerationMixin):
 
             self.parties[0]._tensor_to_device(final_output,self.device)
 
-            if self.args.max_new_tokens > 1 and self.args.need_final_epoch_state:
+            if self.args.max_new_tokens > 1 and \
+                (self.args.need_final_epoch_state or self.args.need_test_sample_states):
                 if self.args.need_generation_state:
                     if self.is_first_forward_iter:
-                        try:
-                            del self.final_state['active_predict_list']
-                            del self.final_state['active_predict_attention_mask_list']
-                        except:
-                            pass
                         self.final_state.update(self.save_element('active_predict_list'))
                         self.final_state.update(self.save_element('active_predict_attention_mask_list'))
+                        self.sample_state.update(self.save_element('active_predict_list'))
+                        self.sample_state.update(self.save_element('active_predict_attention_mask_list'))
+                    
                     else:
                         self.final_state['active_predict_list'].append(self.dict_deepcopy(self.parties[1].output_tensors, device = 'cpu'))
                         self.final_state['active_predict_attention_mask_list'].append(self.dict_deepcopy(self.parties[1].output_attention_mask, device = 'cpu'))
+                        self.sample_state['active_predict_list'].append(self.dict_deepcopy(self.parties[1].output_tensors, device = 'cpu'))
+                        self.sample_state['active_predict_attention_mask_list'].append(self.dict_deepcopy(self.parties[1].output_attention_mask, device = 'cpu'))
+                      
                 self.set_is_first_forward_epoch(0)
 
             return final_output
@@ -1605,6 +1614,8 @@ def create_main_task(global_model_type: GenerationMixin):
                         new_dict[_key] = copy.deepcopy(origin_dict[_key].detach())
                     else:
                         new_dict[_key] = copy.deepcopy(origin_dict[_key].detach()).to(device)
+                else:
+                    new_dict[_key] = None
 
             return new_dict
             

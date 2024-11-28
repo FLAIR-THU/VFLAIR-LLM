@@ -2153,9 +2153,13 @@ def load_dataset_per_party_llm(args, index):
     
     elif args.dataset == 'SQuAD':
         train_set_file, test_set_file = get_dataset_path(args.model_list[str(index)])
+
         if train_set_file is None or test_set_file is None:
-            train_set_file = DATA_PATH + '/SQuAD/data/train-v1.1.json'
-            test_set_file = DATA_PATH + '/SQuAD/data/dev-v1.1.json'
+            # train_set_file = DATA_PATH + '/SQuAD/data/train-v1.1.json'
+            # test_set_file = DATA_PATH + '/SQuAD/data/dev-v1.1.json'
+
+            train_set_file = DATA_PATH + '/SQuAD/train-v1.1.json'
+            test_set_file = DATA_PATH + '/SQuAD/dev-v1.1.json'
 
         max_seq_length = args.max_seq_length
         doc_stride = args.doc_stride

@@ -161,40 +161,42 @@ class ActiveParty_LLM(Party_LLM):
         if self.global_model_optimizer != None:
             # trainable layer parameters
             global_model_params = []
-            for param in self.models[1].parameters():
-                if param.requires_grad:
-                    global_model_params.append(param)
-            
-            # global_model_params_name = []
-            # for name,param in self.models[1].named_parameters():
+            # for param in self.models[1].parameters():
             #     if param.requires_grad:
             #         global_model_params.append(param)
-            #         global_model_params_name.append(name)
-            # print('global_model_params:',len(global_model_params))
+            
+            global_model_params_name = []
+            for name,param in self.models[1].named_parameters():
+                if param.requires_grad:
+                    global_model_params.append(param)
+                    global_model_params_name.append(name)
+            print('global_model_params:',len(global_model_params))
 
 
             if self.args.vfl_model_slice_num==2 and self.args.model_architect == 'TQA':
                 # update global model
                 self.global_model_optimizer.zero_grad()
 
-                # for i in range(len(global_model_params)):
-                #     try:
-                #         weights_grad_a_start = torch.autograd.grad(self.global_output.start_logits,
-                #                                             [global_model_params[i]], #self.global_model.head_layer.parameters(),
-                #                                             grad_outputs=self.global_gradient, retain_graph=True)
-                #     except:
-                #         print(f'wrong {global_model_params_name[i]}')
+                for i in range(len(global_model_params)):
+                    try:
+                        weights_grad_a_start = torch.autograd.grad(self.global_output.start_logits,
+                                                            [global_model_params[i]], #self.global_model.head_layer.parameters(),
+                                                            grad_outputs=self.global_gradient, retain_graph=True)
+                    except:
+                        print(f'wrong {global_model_params_name[i]}')
                 # load grads into parameters
                 weights_grad_a_start = torch.autograd.grad(self.global_output.start_logits,
-                                                           global_model_params, #self.global_model.head_layer.parameters(),
-                                                           grad_outputs=self.global_gradient, retain_graph=True)
+                                                           global_model_params, 
+                                                           grad_outputs=self.global_gradient, 
+                                                           retain_graph=True,allow_unused=True)
                 weights_grad_a_end = torch.autograd.grad(self.global_output.end_logits,
-                                                         global_model_params, #self.global_model.head_layer.parameters(),
-                                                         grad_outputs=self.global_gradient, retain_graph=True)
+                                                         global_model_params, 
+                                                         grad_outputs=self.global_gradient, 
+                                                         retain_graph=True,allow_unused=True)
 
                 self.weights_grad_a = []
                 for _i in range(len(weights_grad_a_start)):
-                    self.weights_grad_a.append(weights_grad_a_start[_i] + weights_grad_a_end[_i])
+                    self.weights_grad_a.append(weights_grad_a_start[_i] + weights_grad_a_end[_i] if weights_grad_a_start[_i]!= None else None)
                 self.weights_grad_a = tuple(self.weights_grad_a)
 
             else:

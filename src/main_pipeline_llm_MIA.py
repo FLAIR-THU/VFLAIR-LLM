@@ -142,6 +142,8 @@ def evaluate_label_inference_attack(args):
         train_party_time = vfl.train_party_time
         inference_party_time = vfl.inference_party_time
 
+
+        rec_rate , attack_total_time= vfl.evaluate_attack()
         if isinstance(rec_rate, dict):
             gen_score = rec_rate['gen_score']
             label_score = rec_rate['label_score']

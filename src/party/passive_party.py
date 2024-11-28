@@ -819,7 +819,7 @@ class PassiveParty_LLM(Party_LLM):
                     allow_unused=True,
                 )
                 for w, g in zip(local_model_tail_params, weights_grad_a):
-                    if w.requires_grad:
+                    if w.requires_grad and g != None:
                         if w.grad != None:
                             w.grad += g.detach()
                         else:

@@ -32,7 +32,10 @@ class ResultReconstruction(Attacker):
         self.top_vfl = top_vfl
         self.vfl_info = top_vfl.final_state
         self.attack_sample_num = args.attack_sample_num
-        self.test_sample_state_list = top_vfl.test_sample_state_list[:self.attack_sample_num]
+        if len(top_vfl.test_sample_state_list) >= self.attack_sample_num:
+            self.test_sample_state_list = top_vfl.test_sample_state_list[:self.attack_sample_num]
+        else:
+            self.test_sample_state_list = top_vfl.test_sample_state_list
 
         # prepare parameters
         self.device = args.device
@@ -104,6 +107,7 @@ class ResultReconstruction(Attacker):
             gen_mean_score = 0
             label_mean_score = 0
             total_sample_count = 0
+            
             id = 0
             for sample_info in self.test_sample_state_list:
                 id = id+1
@@ -120,8 +124,8 @@ class ResultReconstruction(Attacker):
                 # attainable intermediate results
                 tail_input_embed_list = [ active_predict[1].to(dummy_model_tail.device) for active_predict in sample_info['active_predict_list']]
                 tail_input_attn_mask_list = [ active_predict_attention_mask[1].to(dummy_model_tail.device) \
-                if active_predict_attention_mask[1] is not None else None \
-                for active_predict_attention_mask in sample_info['active_predict_attention_mask_list'] ]
+                    if active_predict_attention_mask[1] is not None else None \
+                        for active_predict_attention_mask in sample_info['active_predict_attention_mask_list'] ]
 
 
                 dummy_generated_token_ids = [[] for _i in range(bs)]
@@ -180,7 +184,6 @@ class ResultReconstruction(Attacker):
             attack_total_time = exit_time - enter_time
 
             print('gen_mean_score:',gen_mean_score,'  label_mean_score:',label_mean_score)
-
 
         return {"gen_score":gen_mean_score, "label_score":label_mean_score}, attack_total_time
         # return recovery_history

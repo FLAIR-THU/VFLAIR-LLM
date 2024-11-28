@@ -5,7 +5,7 @@
     "batch_size": 16,
     "test_batch_size": 1,
     "early_stop_threshold": 1,
-    "pipeline": "finetune",
+    "pipeline": "pretrained",
     "finetune_configs":{
         "name":"Vanilla",
         "configs":{
@@ -43,7 +43,10 @@
           "path": "/shared/model/openbmb/MiniCPM-V-2",
             "head":{
                 "trainable": 1,
-                "vision_processor_trainable": 0
+                "vision_processor_trainable": 0,
+                "embedding_trainable": 0,
+                "encoder_trainable": 0,
+                "encoder_trainable_ids":[]
             }
             
         },

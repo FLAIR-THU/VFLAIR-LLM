@@ -309,7 +309,7 @@ class MiniCPMVModelBody(MiniCPMVModelSplitter, MiniCPMVPreTrainedModel):
     def __init__(self, config):
         super(MiniCPMVPreTrainedModel,self).__init__(config)
 
-        self.llm = MiniCPMTailForCausalLM(config) #MiniCPMForCausalLM(config)
+        self.llm = MiniCPMModelBody(config) #MiniCPMForCausalLM(config)
         # self.vpm = self.init_vision_module()
         # self.vision_dim = self.vpm.embed_dim
         # self.embed_dim = self.llm.config.hidden_size

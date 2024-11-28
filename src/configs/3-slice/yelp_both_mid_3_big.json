@@ -71,7 +71,7 @@
             "party": [0],
             "mid_model_name":"MIDModel_Linear",
             "lr": 0.0001,
-            "lambda": 0.1,
+            "lambda": 0.5,
             "mid_position": ["head","tail"],
             "current_bottleneck_scale": 1,
             "seq_length": 384,
@@ -106,12 +106,6 @@
           "party": [1],
           "lr": 0.1,
           "epochs": 200
-        }
-      },
-      "3": {
-          "name": "NormbasedScoring_LLM",
-          "parameters": {
-            "party": [1]
         }
       }
   }

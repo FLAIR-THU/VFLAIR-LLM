@@ -185,8 +185,8 @@ class TextVQADataset_test(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        prompt = "Answer the question directly with single word or phrase." + '\n'
-        # prompt = "Answer the question directly." + '\n'
+        # prompt = "Answer the question directly with single word." + '\n'
+        prompt = "Answer the question directly with single short sentence." + '\n'
         
         data_input = self.data[idx]
         answer = self.labels[idx]

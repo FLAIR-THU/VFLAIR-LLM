@@ -28,6 +28,7 @@ from peft import LoraConfig, TaskType, get_peft_model, PeftModel, PeftModelForCa
 
 
 from .llm_model_loaders.BertModelLoader import *
+from .llm_model_loaders.RobertaModelLoader import *
 from .llm_model_loaders.GPT2ModelLoader import *
 from .llm_model_loaders.LlamaModelLoader import *
 from .llm_model_loaders.GemmaModelLoader import *
@@ -50,6 +51,7 @@ from utils.optimizers import MaliciousSGD, MaliciousAdam
 from config import vfl_basic_config
 
 Loader_Map = {
+    'Roberta': RobertaModelLoader,
     'Bert': BertModelLoader,
     'GPT2': GPT2ModelLoader,
     'Llama': LlamaModelLoader,

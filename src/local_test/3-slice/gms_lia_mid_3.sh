@@ -6,14 +6,13 @@
 
 
 
-# only tail
+# head+tail lr = 0.0001
 python main_pipeline_llm_LIA.py --seed 60 --configs 3-slice/gms_lia_mid_3 
 
-sed -i 's/"lr": 5e-6/"lr": 1e-5/g' ./configs/3-slice/gms_lia_mid_3.json
-python main_pipeline_llm_LIA.py --seed 60 --configs 3-slice/gms_lia_mid_3
+sed -i 's/"lambda": 1e-5/"lambda": 0.5/g' ./configs/3-slice/gms_lia_mid_3.json
+python main_pipeline_llm_LIA.py --seed 60 --configs 3-slice/gms_lia_mid_3 
 
-sed -i 's/"lr": 1e-5/"lr": 5e-5/g' ./configs/3-slice/gms_lia_mid_3.json
-python main_pipeline_llm_LIA.py --seed 60 --configs 3-slice/gms_lia_mid_3
+sed -i 's/"lambda": 0.5/"lambda": 1e-3/g' ./configs/3-slice/gms_lia_mid_3.json
+python main_pipeline_llm_LIA.py --seed 60 --configs 3-slice/gms_lia_mid_3 
 
-sed -i 's/"lr": 5e-5/"lr": 5e-6/g' ./configs/3-slice/gms_lia_mid_3.json
-
+sed -i 's/"lambda": 1e-3/"lambda": 1e-5/g' ./configs/3-slice/gms_lia_mid_3.json

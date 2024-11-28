@@ -895,10 +895,11 @@ def load_attack_configs(config_file_name, args, index):
         args.attack_configs = attack_config_dict['parameters'] if ('parameters' in attack_config_dict) else None
         print('args.attack_configs:',args.attack_configs)
         args.attack_sample_num = args.attack_configs['attack_sample_num'] if ('attack_sample_num' in args.attack_configs) else 0
-        if args.need_final_epoch_state:
+        if args.need_test_sample_states:
             args.needed_test_sample_states = args.attack_sample_num
-        print('args.needed_test_sample_states:',args.needed_test_sample_states)
-
+        else:
+            args.needed_test_sample_states =0
+                        
         if args.attack_name in TARGETED_BACKDOOR:
             args.attack_type = 'targeted_backdoor'
             if 'backdoor' in args.attack_name.casefold():
