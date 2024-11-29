@@ -591,6 +591,7 @@ def LaplaceDP_for_llm_grad(args, original_object):
             scale = dp_strength
             # clip 2-norm per sample
             # print("norm of gradients:", torch.norm(original_object[ik], dim=1), torch.max(torch.norm(original_object[ik], dim=1)))
+            original_object = original_object.to(args.device) # compatible with distributed version
             norm_factor_a = torch.div(torch.max(torch.norm(original_object, dim=1)),
                                         threshold + 1e-6).clamp(min=1.0)
             # add laplace noise

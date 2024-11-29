@@ -125,7 +125,7 @@ class PassiveTaskService:
         args = load_llm_configs(configs)
         model_folder = get_model_folder()
         model_path = os.path.join(model_folder, data['model_id'])
-        loader = Loader_Map[args.model_type]()  # TODO: use interface instead
+        loader = Loader_Map[model.model_type]()  # TODO: use interface instead
         self._model_data = loader.load(args, model_path, False)
 
     def run(self, task):

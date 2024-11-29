@@ -92,6 +92,38 @@ Interface API: localhost:5000/job/upload
 
 For more configuration files, refer to [Configuration File Directory](../configs/test_configs)
 
+### Start the service using script
+In addition to using docker deployment, we also support starting services using scripts.
+
+- Start grpc server
+````
+export CUDA_VISIBLE_DEVICES=0
+export MODEL_FOLDER=/model/foler # setting the path for model
+python src/framework/server/grpc_server.py --config=./src/framework/server/server_config.yml
+````
+- Start web client
+
+first edit /etc/hosts file
+```shell
+vi /etc/hosts
+```
+Save after adding domain name mapping
+```shell
+127.0.0.1 vflair-server.com
+```
+then, start web client
+````
+export CUDA_VISIBLE_DEVICES=0
+export MYSQL_HOST=localhost
+export MYSQL_PASSWORD=xxxxx # your mysql pass
+export MODEL_FOLDER=/model/foler # setting the path for model
+python src/framework/web/main.py --config=./src/framework/web/web_config.yml
+````
+- test
+```
+curl localhost:5000/job/upload -F "file=@/Users/test/Downloads/basic_config_cola.json" -v
+```
+
 ### Custom Algorithm Steps
 Refer to [Add New Algorithms](../../usage_guidance/Add_New_Algorithm.md) After implementing the new algorithm, use the docker build command to build the images separately, and then install and recreate the container.
 

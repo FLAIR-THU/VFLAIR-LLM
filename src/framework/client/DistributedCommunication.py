@@ -1,4 +1,5 @@
 import json
+import pickle
 
 import torch
 from loguru import logger
@@ -10,6 +11,16 @@ from utils import timer, get_total_size
 import math
 
 SPLIT_SIZE = 100
+
+def convert_to_tensor(bytes_data):
+    result = pickle.loads(bytes_data)
+    return result
+
+def convert_to_msg(tensor):
+    result = pickle.dumps(tensor)
+    data_value = Value()
+    data_value.bytes = result
+    return data_value
 
 
 @timer()
@@ -118,7 +129,8 @@ def convert_pred_to_msg(pred_list, key=None):
             data_value.hidden_states.position_ids.value.extend(position_ids[start:end])
 
         data_value.hidden_states.output_hidden_states = False
-        data_value.hidden_states.use_cache = pred_list.get('use_cache', False)
+        use_cache = pred_list.get('use_cache', False)
+        data_value.hidden_states.use_cache = False if use_cache is None else use_cache
         if pred_list['inputs_embeds'].requires_grad:
             data_value.hidden_states.requires_grads.append('inputs_embeds')
         if key:
@@ -194,9 +206,7 @@ def convert_msg_to_pred(pred):
         "output_hidden_states": pred.output_hidden_states,
         "inputs_embeds": inputs_embeds,
         "attention_mask": attention_mask,
-        "position_ids": position_ids,
-        "use_cache": pred.use_cache,
-        "cache_position": cache_position
+        "position_ids": position_ids
     }
     return new_dict
 
@@ -275,3 +285,11 @@ class DistributedCommunication(ICommunication):
         task.job_id = self._job_id
 
         response = self._client.open_and_send(task)
+
+    def send_save_model_body_message(self):
+        task = Task()
+        task.run = "save_model_body"
+        task.party = "active"
+        task.job_id = self._job_id
+
+        self._client.open_and_send(task)

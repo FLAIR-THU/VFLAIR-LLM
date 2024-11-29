@@ -117,17 +117,22 @@ class GrpcServer(fps.MessageServiceServicer):
                 data = {**request.data.named_values}
             data_segments.append(request.data.named_values['data'])
         data['data'] = merge_data(data_segments)
-        result = self._message_service.start_task(data['task'].string, data['data'])
-        if result is None:
-            response = mu.MessageUtil.create(self._node, {})
-            yield response
-        elif isinstance(result, dict):
-            response = mu.MessageUtil.create(self._node, result)
-            yield response
-        else:
-            for item in result:
-                response = mu.MessageUtil.create(self._node, item)
+        try:
+            result = self._message_service.start_task(data['task'].string, data['data'])
+            if result is None:
+                response = mu.MessageUtil.create(self._node, {})
                 yield response
+            elif isinstance(result, dict):
+                response = mu.MessageUtil.create(self._node, result)
+                yield response
+            else:
+                for item in result:
+                    response = mu.MessageUtil.create(self._node, item)
+                    yield response
+        except Exception as e:
+            logger.exception(f"Exception occurred: {e}")
+            response = mu.MessageUtil.error(self._node, e.__str__())
+            yield response
 
 
 def main(main_args):

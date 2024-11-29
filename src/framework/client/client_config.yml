@@ -1,5 +1,5 @@
 database:
-  url: mysql+mysqldb://${MYSQL_USER:root}:${MYSQL_PASSWORD:abcd1234}@${MYSQL_HOST:localhost}:${MYSQL_PORT:3316}/${MYSQL_DB:vflair}?charset=utf8mb4
+  url: mysql+pymysql://${MYSQL_USER:root}:${MYSQL_PASSWORD:abcd1234}@${MYSQL_HOST:localhost}:${MYSQL_PORT:3316}/${MYSQL_DB:vflair}?charset=utf8mb4
 
 server:
   host: ${GRPC_SERVER:localhost}

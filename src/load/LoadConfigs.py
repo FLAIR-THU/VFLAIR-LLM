@@ -25,7 +25,6 @@ LABEL_INFERENCE_LLM = ['ResultReconstruction','BatchLabelReconstruction_LLM','Ba
 
 def load_llm_configs(config_dict):
     args = do_load_basic_configs_llm(config_dict, argparse.Namespace())
-    # args.tasks = config_dict['tasks']
     args.device = config_dict['device']
     args.gpu = config_dict['gpu']
     args.fl_type = config_dict['fl_type']

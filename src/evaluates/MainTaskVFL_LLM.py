@@ -267,14 +267,14 @@ def create_main_task(global_model_type: GenerationMixin):
             for ik in range(self.k - 1):
                 start_time = time.time()
                 result_dict = self.parties[ik].give_pred(use_cache=use_cache)  # use_cache=use_cache
-                
+
                 if not ('encoder_outputs' in result_dict.keys()): #self.args.model_config.is_encoder_decoder:
                     pred_detach = result_dict['inputs_embeds']
                     # Defense
                     if self.args.apply_defense:
                         if (ik in self.args.defense_configs['party']):
                             pred_detach = self.apply_defense_on_pred_transmission(pred_detach)
-                    
+
                     # Communication Process
                     pred_detach = self.apply_communication_protocol_on_transmission(pred_detach)
                     pred_clone = torch.autograd.Variable(pred_detach, requires_grad=True).to(self.args.device)
@@ -283,7 +283,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 else: # inference process of encoder-decoder LLMs
                     pred_clone = result_dict['encoder_outputs']['last_hidden_state']
 
-               
+
                 pred_list = result_dict
                 get_total_size(pred_list)
                 self.parties[self.k - 1].receive_pred(pred_list, ik)
@@ -303,8 +303,7 @@ def create_main_task(global_model_type: GenerationMixin):
         @timer()
         def global_pred_transmit(self, pred_list, use_cache=None, count_time=False):
             start_time = time.time()
-            global_pred = self._communication.send_pred_message(pred_list, self.parse_pred_message_result,
-                                                                use_cache=use_cache)  #
+            global_pred = self._communication.send_pred_message(pred_list, self.parse_pred_message_result)
             get_total_size(global_pred)
             end_time = time.time()
             if count_time == 'train':
@@ -315,13 +314,12 @@ def create_main_task(global_model_type: GenerationMixin):
         
         def parse_pred_message_result(self, result):
             if self.args.task_type == 'SequenceClassification':
-                logits = torch.Tensor(result['logits'])
-                if result['requires_grad']:
-                    logits.requires_grad_()
-                return SequenceClassifierOutput(
-                    logits=logits,
-                )
-            elif self.args.task_type == 'CausalLM':
+                new_dict = convert_msg_to_pred(result)
+                return {
+                    "inputs_embeds": new_dict['inputs_embeds'],
+                    "attention_mask": new_dict['attention_mask'],
+                }
+            elif not self.args.task_type or self.args.task_type == 'CausalLM':
                 if self.args.vfl_model_slice_num == 3:
                     return convert_msg_to_pred(result)
                 logits = convert_msg_to_tensor(result)
@@ -329,18 +327,7 @@ def create_main_task(global_model_type: GenerationMixin):
                     logits=logits,
                 )
             elif self.args.task_type == 'QuestionAnswering':
-                start_logits = torch.Tensor(result['start_logits'])
-                end_logits = torch.Tensor(result['end_logits'])
-                if result['requires_grad']:
-                    start_logits.requires_grad_()
-                    end_logits.requires_grad_()
-                return QuestionAnsweringModelOutput(
-                    loss=None,
-                    start_logits=start_logits.to(self.args.device),
-                    end_logits=end_logits.to(self.args.device),
-                    hidden_states=None,
-                    attentions=None,
-                )
+                return convert_msg_to_pred(result)
             elif self.args.task_type == 'DevLLMInference':
                 return convert_msg_to_pred(result)
             else:
@@ -444,7 +431,7 @@ def create_main_task(global_model_type: GenerationMixin):
                         self.seq_length = data_inputs['input_ids'].shape[-1]
                     else:
                         self.seq_length = 0
-                    
+
                     if self.args.model_architect == 'CLS':  # task_type == "SequenceClassification":  # and self.args.num_classes > 1: # classification
                         global_output = self.forward(**data_inputs)
                         batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(global_output,
@@ -469,7 +456,7 @@ def create_main_task(global_model_type: GenerationMixin):
                                 self.set_is_first_forward_epoch(1)
                                 generation_output = self.generate(**data_inputs, \
                                         generation_config = self.generation_config)
-                                
+
                             else:  # next token prediction
                                 # print(data_inputs)
                                 generation_output = self.forward(**data_inputs)
@@ -592,14 +579,14 @@ def create_main_task(global_model_type: GenerationMixin):
                     predict_word_list = predict_list # bs, seq_len, vocab_size
                     target_word_list = label_list # bs, seq_len
 
-                    if len(target_word_list[0].shape)>0: # long text generation, not next token prediction   
+                    if len(target_word_list[0].shape)>0: # long text generation, not next token prediction
                         # print('target_word_list:',len(target_word_list),target_word_list[0].shape)
                         # print('predict_word_list:',len(predict_word_list),predict_word_list[0].shape)
-                        
+
                         if self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
                             self.evaluator = GMS8KEval(self.args)
                             acc = self.evaluator.evaluate(predict_word_list,target_word_list )
-                        
+
                         elif self.args.dataset=='MATH':
                             # print('predict_word_list:',type(predict_word_list),len(predict_word_list),predict_word_list[0].shape)
                             
@@ -678,7 +665,7 @@ def create_main_task(global_model_type: GenerationMixin):
                             acc = sum(results) / len(results)
 
                         else:
-                            
+
                             def calculate_token_precision_recall(reference_ids, candidate_ids):
                                 reference_ids = reference_ids.tolist()
                                 candidate_ids = candidate_ids.tolist()
@@ -687,13 +674,13 @@ def create_main_task(global_model_type: GenerationMixin):
                                     while(target_token_id in ids):
                                         ids.remove(target_token_id)
                                     return ids
-                                
+
                                 reference_ids = wash(reference_ids, self.args.tokenizer.pad_token_id)
                                 reference_ids = wash(reference_ids, self.args.tokenizer.eos_token_id)
 
                                 reference_tokens = [self.args.tokenizer.convert_ids_to_tokens(reference_ids)]
                                 candidate_tokens = self.args.tokenizer.convert_ids_to_tokens(candidate_ids)
-                                
+
 
                                 score = sentence_bleu(reference_tokens, candidate_tokens)
 
@@ -704,7 +691,7 @@ def create_main_task(global_model_type: GenerationMixin):
                                 print('='*50)
                                 assert 1>2
                                 return score
-                            
+
 
                             score = 0
                             for i in range(len(target_word_list)):
@@ -712,7 +699,7 @@ def create_main_task(global_model_type: GenerationMixin):
                                 score += _score
                             score = score/len(target_word_list)
                             acc = score
-                                
+
                     else:
                         if self.args.metric_type == "best_pred":
                             suc_cnt = 0
@@ -847,10 +834,10 @@ def create_main_task(global_model_type: GenerationMixin):
                         generated_token_logits = model_output.logits[:,-1,:]
                         predict_label_list = torch.argmax(generated_token_logits, dim=-1) 
                         target_label_list = list(gt_one_hot_label)
-                    
+
                     self.real_generation_result = predict_label_list
 
-                    return target_label_list, predict_label_list, len(predict_label_list) 
+                    return target_label_list, predict_label_list, len(predict_label_list)
 
                 elif self.args.task_type == "SequenceClassification":
                     # print('gt_one_hot_label:',gt_one_hot_label)
@@ -1148,7 +1135,7 @@ def create_main_task(global_model_type: GenerationMixin):
 
                 p = self.parties[0]
                 p._tensor_to_device(resp, p.models[2].device)
-                final_output = p.give_final_pred(resp) 
+                final_output = p.give_final_pred(resp)
             else:
                 final_output = resp
 
@@ -1162,13 +1149,13 @@ def create_main_task(global_model_type: GenerationMixin):
                         self.final_state.update(self.save_element('active_predict_attention_mask_list'))
                         self.sample_state.update(self.save_element('active_predict_list'))
                         self.sample_state.update(self.save_element('active_predict_attention_mask_list'))
-                    
+
                     else:
                         self.final_state['active_predict_list'].append(self.dict_deepcopy(self.parties[1].output_tensors, device = 'cpu'))
                         self.final_state['active_predict_attention_mask_list'].append(self.dict_deepcopy(self.parties[1].output_attention_mask, device = 'cpu'))
                         self.sample_state['active_predict_list'].append(self.dict_deepcopy(self.parties[1].output_tensors, device = 'cpu'))
                         self.sample_state['active_predict_attention_mask_list'].append(self.dict_deepcopy(self.parties[1].output_attention_mask, device = 'cpu'))
-                      
+
                 self.set_is_first_forward_epoch(0)
 
             return final_output
@@ -1399,9 +1386,9 @@ def create_main_task(global_model_type: GenerationMixin):
 
         def get_base_model(self):
             model_folder = get_model_folder()
-            if not self.args.model_path and self.args.model_path:
+            if not self.args.model_path[0] and self.args.model_path[0]:
                 raise ValueError('model_path must not be empty and should contain /')
-            base_model = self.args.model_path[len(model_folder)+1:]
+            base_model = self.args.model_path[0][len(model_folder)+1:]
             return base_model
 
         def create_model_id(self):
@@ -1625,10 +1612,11 @@ def create_main_task(global_model_type: GenerationMixin):
             if self.args.need_save_state:
                 if BEFORE_MODEL_UPDATE:
                     # print('save:',self.parties[0].local_model_tail.head_layer.weight[0,:5])
+                    self._communication.send_save_model_body_message()
                     return {
                         "local_model_head": copy.deepcopy(self.parties[0].local_model).to("cpu") if self.parties[0].local_model != None else None,
                         "local_model_tail": copy.deepcopy(self.parties[0].local_model_tail).to("cpu") if self.parties[0].local_model_tail != None else None,
-                        "active_model_body": copy.deepcopy(self.parties[1].global_model).to("cpu") if self.parties[1].global_model != None else None,
+                        "active_model_body": self.parties[1].get_global_model(),
 
                         # "vis_processors": copy.deepcopy(self.parties[0].vis_processors) if self.parties[0].vis_processors != {} else None,
 
@@ -1844,6 +1832,10 @@ def create_main_task(global_model_type: GenerationMixin):
         @property
         def passive_party(self):
             return self.parties[0]
+
+        @property
+        def model(self):
+            return self.passive_party.models[0]
 
         def gen(self, prompt: str = '你是谁',
                 prompt_system: str = "现在你要扮演皇帝身边的女人--甄嬛"):
