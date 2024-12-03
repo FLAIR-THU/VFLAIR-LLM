@@ -677,6 +677,7 @@ def do_load_basic_configs_llm(config_dict, args):
     args.apply_adversarial = False  # adversarial
     args.bin_size = [None for _ in range(args.k)]  # for discrete bins
     args.gradients_res_a = None #[None for _ in range(args.k)]  # for gradient sparsification
+    args.pred_res_a = None #[None for _ in range(args.k)]  # for pred sparsification
     args.apply_dcor = False  # distance corrilation
     if 'defense' in config_dict:
         print(config_dict['defense'].keys())
@@ -751,7 +752,10 @@ def do_load_basic_configs_llm(config_dict, args):
 
         elif args.defense_name == "GradientSparsification":
             args.defense_param = args.defense_configs['gradient_sparse_rate']
+            # pred/grad
+            args.gs_add_position = str(args.defense_configs['position']) if 'position' in args.defense_configs else ['grad']
             args.defense_param_name = 'gradient_sparse_rate'
+        
         elif args.defense_name == "GradPerturb":
             args.defense_param = args.defense_configs['perturb_epsilon']
             args.defense_param_name = 'perturb_epsilon'

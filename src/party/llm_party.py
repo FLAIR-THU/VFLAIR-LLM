@@ -390,11 +390,16 @@ class Party(object):
 
         resp = self.models[model_index](**kwargs)
 
+
         if model_index == self.args.vfl_model_slice_num - 1:
             self.output_tensors[model_index] = resp.get('logits')
             self.output_attention_mask[model_index] = None
         else:
-            self.output_tensors[model_index] = resp.get('inputs_embeds')
+            if resp.get('inputs_embeds') != None:
+                self.output_tensors[model_index] = resp.get('inputs_embeds')
+            else: # for encoder-decoder inference
+                self.output_tensors[model_index] = resp.get('encoder_outputs')['last_hidden_state']
+
             self.output_attention_mask[model_index] = resp.get('attention_mask')
         # self.output_tensors[model_index].requires_grad = True
         return resp #self._detach_tensor(resp)

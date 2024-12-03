@@ -645,6 +645,7 @@ class LambadaDataset_LLM(Dataset):
         self.labels = []
         self.features = []
         self.input_dicts = []
+        self.split_name = split_name
 
         if split_name == 'test':
             for i in range(len(texts)):
@@ -683,8 +684,21 @@ class LambadaDataset_LLM(Dataset):
         for key_name in input_dict.keys():
             if not isinstance(input_dict[key_name], dict):
                 input_dict[key_name] = torch.tensor(input_dict[key_name]).squeeze().to(self.args.device)
+        
+        if self.args.model_type == 'T5':
+            if self.args.tokenizer.bos_token_id == None:
+                self.args.tokenizer.bos_token_id = 101 # set to 101 defaultly
+            
+            if self.split_name == 'train':
+                input_dict['decoder_input_ids'] = input_dict['input_ids']
+            else:
+                bos_tensor = torch.tensor( [self.args.tokenizer.bos_token_id] ).to(input_dict['input_ids'].device)
+                # input_dict['decoder_input_ids'] = torch.cat((bos_tensor, input_dict['input_ids'][1:]), dim=0)
+                input_dict['decoder_input_ids'] = bos_tensor
+
 
         label = torch.tensor(self.labels[item_idx]).squeeze().to(self.args.device)
+        # print('get item:',input_dict['decoder_input_ids'].shape,label.shape)
         return input_dict, label
 
 

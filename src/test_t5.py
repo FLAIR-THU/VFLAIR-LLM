@@ -6,6 +6,7 @@ import numpy as np
 import random
 # Load model directly
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModel,AutoModelForQuestionAnswering, AutoModelForSeq2SeqLM
+from transformers import AutoTokenizer, T5ForConditionalGeneration
 
 def set_seed(seed=0):
     random.seed(seed)
@@ -24,18 +25,14 @@ MODEL_PATH = {
     "googleflan-t5-base": YOUR_MODEL_PATH + "googleflan-t5-base",
     "baichuan-incBaichuan-7B": YOUR_MODEL_PATH + "baichuan-incBaichuan-7B",
     "roberta": "/shared/model/deepsetroberta-base-squad2",
+    "t5":"/shared/model/googleflan-t5-small"
 
 }
 
-current_model_type = "roberta"
+current_model_type = "t5"
 tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH[current_model_type])#,trust_remote_code=True)
-full_model = AutoModelForCausalLM.from_pretrained(MODEL_PATH[current_model_type])#,trust_remote_code=True) # AutoModelForCausalLM
-
-
-
-model_type = 'Roberta'
-# for name, param in full_gpt.named_parameters():  GPT2LMHeadModel
-#     print("-----full_gpt--{}:{}".format(name, ""))
+full_model = T5ForConditionalGeneration.from_pretrained(MODEL_PATH[current_model_type])#,trust_remote_code=True) # AutoModelForCausalLM
+print('Full Model Type:',type(full_model))
 
 pad_token = '[PAD]'
 tokenizer.pad_token = pad_token # ({'pad_token': '[PAD]'}) # args.tokenizer.eos_token #
@@ -43,18 +40,20 @@ pad_id = tokenizer.convert_tokens_to_ids(pad_token)  #
 full_model.config.pad_token_id = pad_id
 config = full_model.config 
 
-inputs = tokenizer( ["Hello, how are you ?","Are you OK?"], \
-                                padding='max_length',  # Pad to max_length
+inputs = tokenizer( "summarize: studies have shown that owning a dog is good for you.", \
+                                # padding='max_length',  # Pad to max_length
                                 # truncation='longest_first',  # Truncate to max_length
-                                max_length=12,  
+                                # max_length=12,  
                                 return_tensors='pt')
-print('inputs:',inputs['input_ids']) #[1,8]
+print('inputs.input_ids:',inputs['input_ids']) #[1,8]
 
 print('-'*25)
 
 print('Full Type')
 full_model.eval()
-logits = full_model(**inputs)
-print('logits:',logits.logits.shape,logits.logits)  # 1,3,vocab_size
+outputs = full_model.generate(inputs.input_ids, max_new_tokens = 2, use_cache = False)
+print('outputs:',outputs.shape,outputs)  # 1,3,vocab_size
 
+generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+print(generated_text)
 

@@ -1603,10 +1603,10 @@ def load_dataset_per_party_llm(args, index):
         if train_set_file is None or test_set_file is None:
             train_set_file = DATA_PATH + 'SST-2/train.tsv'
             test_set_file = DATA_PATH + 'SST-2/dev.tsv'
-        df = pd.read_csv(train_set_file, delimiter='\t')  # names=[  'sentence','label'] , names=['label', 'sentence']
+        df = pd.read_csv(train_set_file, delimiter='\t' )  # , names=['label', 'sentence']
         sentences = df.sentence.values[:]
         labels = df.label.values[:]
-
+        
 
         X_train = np.array(sentences)
         y_train = np.array([int(_label) for _label in labels])
@@ -1614,7 +1614,7 @@ def load_dataset_per_party_llm(args, index):
         df = pd.read_csv(test_set_file, delimiter='\t')  # names=[  'sentence','label']
         sentences = df.sentence.values[:]
         labels = df.label.values[:]
-
+        
 
         X_test = np.array(sentences)
         y_test = np.array([int(_label) for _label in labels])
@@ -2173,7 +2173,7 @@ def load_dataset_per_party_llm(args, index):
 
         inputs = []
         labels = []
-        for feature in train_features[:10]:
+        for feature in train_features[:]:
             inputs.append(feature)
             labels.append([feature["start_position"], feature["end_position"]])
 
@@ -2189,7 +2189,7 @@ def load_dataset_per_party_llm(args, index):
 
         inputs = []
         labels = []
-        for feature in test_features[:10]:
+        for feature in test_features[:]:
             inputs.append(feature)
             labels.append([feature["start_position"], feature["end_position"]])
 

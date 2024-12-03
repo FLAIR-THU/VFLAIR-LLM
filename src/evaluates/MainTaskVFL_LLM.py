@@ -232,9 +232,11 @@ def create_main_task(global_model_type: GenerationMixin):
         def apply_defense_on_pred_transmission(self, pred_detach):
             ########### Defense applied on pred transmit ###########
             if self.args.apply_defense == True and self.is_first_forward_iter== 1:
-                if self.args.apply_dp == True and ('pred' in self.args.dp_add_position or self.args.dp_add_position == 'pred'):
+                if (self.args.apply_dp == True and 'pred' in self.args.dp_add_position) or\
+                    (self.args.apply_gs == True and 'pred' in self.args.gs_add_position):
+                    # print('before pred_detach:',pred_detach.shape)
                     pred_detach = torch.stack(self.launch_defense(pred_detach, "pred"))
-                    # print('after pred_detach:',type(pred_detach),pred_detach.shape) # torch.size bs,12,768 intermediate
+                    # print('after pred_detach:',pred_detach.shape)
             return pred_detach
         
         def apply_defense_on_grad_transmission(self, grad):
@@ -243,10 +245,12 @@ def create_main_task(global_model_type: GenerationMixin):
             # print('self.args.apply_dp:',self.args.apply_dp, self.args.dp_add_position)
             # print('self.args.apply_gs:',self.args.apply_gs)
             if self.args.apply_defense == True:
-                if (self.args.apply_dp == True and 'grad' in self.args.dp_add_position) or (self.args.apply_gs == True):
+                if (self.args.apply_dp == True and 'grad' in self.args.dp_add_position) or \
+                    (self.args.apply_gs == True and 'grad' in self.args.gs_add_position):
                     grad = self.launch_defense(grad, "gradients")
                     # print('after grad:',type(grad),grad.shape) # torch.size bs,12,768 intermediate
             return grad
+
 
         def apply_communication_protocol_on_transmission(self, pred_detach):
             ########### communication_protocols ###########
@@ -263,22 +267,23 @@ def create_main_task(global_model_type: GenerationMixin):
             for ik in range(self.k - 1):
                 start_time = time.time()
                 result_dict = self.parties[ik].give_pred(use_cache=use_cache)  # use_cache=use_cache
-
-                pred_detach = result_dict['inputs_embeds']
-
-                # Defense
-                if self.args.apply_defense:
-                    if (ik in self.args.defense_configs['party']):
-                        pred_detach = self.apply_defense_on_pred_transmission(pred_detach)
                 
-                # Communication Process
-                pred_detach = self.apply_communication_protocol_on_transmission(pred_detach)
-                pred_clone = torch.autograd.Variable(pred_detach, requires_grad=True).to(self.args.device)
-                # attention_mask = torch.autograd.Variable(attention_mask).to(self.args.device)
+                if not ('encoder_outputs' in result_dict.keys()): #self.args.model_config.is_encoder_decoder:
+                    pred_detach = result_dict['inputs_embeds']
+                    # Defense
+                    if self.args.apply_defense:
+                        if (ik in self.args.defense_configs['party']):
+                            pred_detach = self.apply_defense_on_pred_transmission(pred_detach)
+                    
+                    # Communication Process
+                    pred_detach = self.apply_communication_protocol_on_transmission(pred_detach)
+                    pred_clone = torch.autograd.Variable(pred_detach, requires_grad=True).to(self.args.device)
+                    result_dict['inputs_embeds'] = pred_clone
 
-                result_dict['inputs_embeds'] = pred_clone
-                # result_dict['attention_mask'] = attention_mask
+                else: # inference process of encoder-decoder LLMs
+                    pred_clone = result_dict['encoder_outputs']['last_hidden_state']
 
+               
                 pred_list = result_dict
                 get_total_size(pred_list)
                 self.parties[self.k - 1].receive_pred(pred_list, ik)
@@ -460,13 +465,13 @@ def create_main_task(global_model_type: GenerationMixin):
                     
                     elif self.args.model_architect=='CLM': #task_type == "CausalLM":
                         if self.args.task_type == "CausalLM":
-                            
                             if not (self.args.max_new_tokens==1):
                                 self.set_is_first_forward_epoch(1)
                                 generation_output = self.generate(**data_inputs, \
                                         generation_config = self.generation_config)
-
+                                
                             else:  # next token prediction
+                                # print(data_inputs)
                                 generation_output = self.forward(**data_inputs)
                                 if self.args.model_type.lower() == 'qwen2':
                                     self._loss += self.shift_logits_loss(generation_output.logits,
@@ -587,11 +592,9 @@ def create_main_task(global_model_type: GenerationMixin):
                     predict_word_list = predict_list # bs, seq_len, vocab_size
                     target_word_list = label_list # bs, seq_len
 
-                    if len(target_word_list[0].shape)>0: # not next token prediction   
+                    if len(target_word_list[0].shape)>0: # long text generation, not next token prediction   
                         # print('target_word_list:',len(target_word_list),target_word_list[0].shape)
                         # print('predict_word_list:',len(predict_word_list),predict_word_list[0].shape)
-              
-                        
                         
                         if self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
                             self.evaluator = GMS8KEval(self.args)
@@ -676,7 +679,6 @@ def create_main_task(global_model_type: GenerationMixin):
 
                         else:
                             
-
                             def calculate_token_precision_recall(reference_ids, candidate_ids):
                                 reference_ids = reference_ids.tolist()
                                 candidate_ids = candidate_ids.tolist()
@@ -695,12 +697,12 @@ def create_main_task(global_model_type: GenerationMixin):
 
                                 score = sentence_bleu(reference_tokens, candidate_tokens)
 
-                                # print('Reference_tokens:',reference_tokens)
-                                # print('-'*25)
-                                # print('Candidate_tokens',candidate_tokens)
-                                # print('Score:',score)
-                                # print('='*50)
-                                # assert 1>2
+                                print('Reference_tokens:',reference_tokens)
+                                print('-'*25)
+                                print('Candidate_tokens',candidate_tokens)
+                                print('Score:',score)
+                                print('='*50)
+                                assert 1>2
                                 return score
                             
 

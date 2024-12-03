@@ -170,8 +170,6 @@ class ActiveParty_LLM(Party_LLM):
                 if param.requires_grad:
                     global_model_params.append(param)
                     global_model_params_name.append(name)
-            print('global_model_params:',len(global_model_params))
-
 
             if self.args.vfl_model_slice_num==2 and self.args.model_architect == 'TQA':
                 # update global model

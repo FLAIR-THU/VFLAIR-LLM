@@ -187,6 +187,9 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
         elif model_type == 'llama':
             from models.llm_models import llama
             target_cls = getattr(llama, "LlamaTailForCausalLM")
+        elif model_type == 't5':
+            from models.llm_models import t5
+            target_cls = getattr(t5, "T5ForConditionalGenerationTail_3slice")
         else:
             
             from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, \
@@ -202,7 +205,7 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
 
 
 def create_exp_dir_and_file(dataset, vfl_model_slice_num, split_info, model_name, pipeline, defense_name='', defense_param=''):
-    exp_res_dir = f'exp_result/LIA_test/{dataset}/{str(vfl_model_slice_num)}-slice/{split_info}/'
+    exp_res_dir = f'exp_result/finetune/passive/{dataset}/{str(vfl_model_slice_num)}-slice/{split_info}/'
     if not os.path.exists(exp_res_dir):
         os.makedirs(exp_res_dir)
     if pipeline == 'pretrained':

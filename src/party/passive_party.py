@@ -380,6 +380,7 @@ class PassiveParty_LLM(Party_LLM):
 
 
             if len(labels.shape) > 1:
+                print('labels:',labels.shape,'  lm_logits:',lm_logits.shape)
                 # Shift so that tokens < n predict n
                 shift_logits = lm_logits[..., :-1, :].contiguous()
                 shift_labels = labels[..., 1:].contiguous()
@@ -589,7 +590,6 @@ class PassiveParty_LLM(Party_LLM):
             self.processed_labels = intermediate['processed_labels']
             del(intermediate['processed_labels'])
 
-        
         self.local_attention_mask = intermediate['attention_mask'] if ('attention_mask' in intermediate) else None
 
         self.local_pred_clone = self.output_tensors[0].detach().clone()

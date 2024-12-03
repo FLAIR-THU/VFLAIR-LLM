@@ -1,118 +1,105 @@
 {
-    "epochs": 40,
-    "lr": 0.0001,
-    "k": 2,
-    "batch_size": 16,
-    "early_stop_threshold": 2,
-    "pipeline": "finetune",
-    "model_architect":"CLS",
-    "communication":{
-        "communication_protocol": "FedSGD",
-        "iteration_per_aggregation": 1
-    },
-    "dataset": {
-      "dataset_name": "SST-2",
-      "num_classes": 2
-    },
-    "tokenizer": {
-      "padding": "max_length",
-      "padding_type": "outside",
-      "pad_token": "[PAD]",
-      "truncation": "longest_first",
-      "max_length": 70,
-      "padding_side": "left",
-      "add_special_tokens": 1
-    },
-    "finetune_configs":{
-        "name":"LoRA",
-        "configs":{}
-    },
-    "model_list":{
-        "name": "textattackbert-base-uncased-SST-2",
-        "pretrained": 1,
-        "model_type": "Bert",
-        "max_sequence": 512,
-        "kwargs_model_loading":{
-        },
-        "0": {
-          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
+  "epochs": 40,
+  "lr": 0.0001,
+  "k": 2,
+  "batch_size": 16,
+  "early_stop_threshold": 2,
+  "pipeline": "finetune",
+  "model_architect":"CLS",
+  "communication":{
+      "communication_protocol": "FedSGD",
+      "iteration_per_aggregation": 1
+  },
+  "dataset": {
+    "dataset_name": "SST-2",
+    "num_classes": 2
+  },
+  "tokenizer": {
+    "padding": "max_length",
+    "padding_type": "outside",
+    "pad_token": "[PAD]",
+    "truncation": "longest_first",
+    "max_length": 70,
+    "padding_side": "left",
+    "add_special_tokens": 1
+  },
+  "finetune_configs":{
+      "name":"Vanilla",
+      "configs":{}
+  },
+  "model_list":{
+      "name": "textattackbert-base-uncased-SST-2",
+      "pretrained": 1,
+      "model_type": "Bert",
+      "max_sequence": 512,
+      "kwargs_model_loading":{
+      },
+      "0": {
+        "path": "/shared/model/bert-base-uncased-SST-2",
 
-            "head":{
-                "trainable": 1,
-                "embedding_trainable": 0,
-                "encoder_trainable": 0,
-                "encoder_trainable_ids":[]
-            },
-            "tail":{
-                "trainable": 1,
-                "head_layer_trainable": 0,
-                "encoder_trainable": 0,
-                "encoder_trainable_ids":[]
-            }
-        },
-        "1": {
-          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
-            "body":{
-                "trainable": 1,
-                "encoder_trainable": 0,
-                "encoder_trainable_ids":[]
-            }
-        },
-        "task":{
-            "task_type": "SequenceClassification"
-        },
-        "vfl_model_slice_num": 3,
-        "local_encoders_num": 3,
-        "local_tail_encoders_num": 3
-    },
-    "defense": {
-        "name": "GradientSparsification",
+          "head":{
+              "trainable": 1
+          },
+          "tail":{
+              "trainable": 1
+          }
+      },
+      "1": {
+        "path": "/shared/model/bert-base-uncased-SST-2",
+          "body":{
+              "trainable": 1
+          }
+      },
+      "task":{
+          "task_type": "SequenceClassification"
+      },
+      "vfl_model_slice_num": 3,
+      "local_encoders_num": 3,
+      "local_tail_encoders_num": 3
+  },
+  "defense": {
+      "name": "GradientSparsification",
       "parameters": {
         "party": [0],
+        "position": ["grad","pred"],
         "gradient_sparse_rate": 100.0
       }
-    },
-    "attack_list": {
-      "0":{
-            "name": "VanillaModelInversion_WhiteBox",
-            "parameters": {
-                "party": [1],
-                "lr": 0.01,
-                "epochs": 100,
-                "batch_size": 32,
-                "attack_sample_num": 100
-            }
-        },
-        "1":{
-            "name": "WhiteBoxInversion",
-            "parameters": {
-                "party": [1],
-                "T": 0.05,
-                "lr": 0.005,
-                "epochs": 500,
-                "batch_size": 32,
-                "attack_sample_num": 100
-            }
-        },
-      "2": {
-        "name": "BatchLabelReconstruction_LLM",
-        "parameters": {
-          "party": [1],
-          "lr": 0.05,
-          "epochs": 500
-        }
-      },
-      "3": {
-          "name": "DirectionbasedScoring_LLM",
+  },
+  "attack_list": {
+    "0":{
+          "name": "VanillaModelInversion_WhiteBox",
           "parameters": {
-            "party": [1]
-        }
+              "party": [1],
+              "lr": 0.01,
+              "epochs": 100,
+              "batch_size": 32,
+              "attack_sample_num": 100
+          }
       },
-      "4": {
-          "name": "NormbasedScoring_LLM",
+      "1":{
+          "name": "WhiteBoxInversion",
           "parameters": {
-            "party": [1]
-        }
+              "party": [1],
+              "T": 0.05,
+              "lr": 0.005,
+              "epochs": 500,
+              "batch_size": 32,
+              "attack_sample_num": 100
+          }
+      },
+    "2": {
+      "name": "BatchLabelReconstruction_LLM",
+      "parameters": {
+        "party": [1],
+        "lr": 0.05,
+        "epochs": 500
       }
-  }
+    },
+    "3": {
+        "name": "NormbasedScoring_LLM",
+        "parameters": {
+          "party": [1]
+      }
+    }
+}
 }

@@ -553,17 +553,12 @@ def LaplaceDP_for_llm_pred(args, original_object):
     scale = delta_f / epsilon
     location = 0.0
 
-    new_object = []
     with torch.no_grad():
+        new_object = []
         for ik in range(len(original_object)):
-            if ik == args.k - 1:
-                new_object.append(original_object[ik])
-            else:
-                # norm_factor_a = torch.div(torch.max(torch.norm(original_object[ik], dim=1)),
-                #                             threshold + 1e-6).clamp(min=1.0)
-                # add laplace noise
-                dist_a = torch.distributions.laplace.Laplace(location, scale)
-                new_object.append(original_object[ik] + dist_a.sample(original_object[ik].shape).to(args.device))
+            dist_a = torch.distributions.laplace.Laplace(location, scale)
+            new_object.append(original_object[ik] + dist_a.sample(original_object[ik].shape).to(args.device))
+
         # print("norm of gradients after laplace:", torch.norm(original_object, dim=1), torch.max(torch.norm(original_object, dim=1)))
     # print('new:')
     # print(new_object[0][0,:2,:5])
@@ -608,8 +603,31 @@ def LaplaceDP_for_llm_grad(args, original_object):
     else:
         return original_object
 
+def GradientSparsification_for_llm_pred(args, original_object):
+    # print("GradientSparsification_for_llm_pred")
+    original_object = original_object[0]
+    
+    assert ('gradient_sparse_rate' in args.defense_configs), "missing defense parameter: 'gradient_sparse_rate'"
+    grad_spars_ratio = args.defense_configs['gradient_sparse_rate']
+    while grad_spars_ratio > 1.0:
+        grad_spars_ratio = grad_spars_ratio / 100.0
+    
+    if grad_spars_ratio > 0.0:
+        with torch.no_grad():
+            # if args.pred_res_a is not None and \
+            #         original_object.shape[0] == args.pred_res_a.shape[0]:
+            #     original_object = original_object + args.pred_res_a
+            a_thr = torch.quantile(torch.abs(original_object), grad_spars_ratio)
+            args.pred_res_a = torch.where(torch.abs(original_object).double() < a_thr.item(),
+                                                    original_object.double(), float(0.)).to(args.device).to(original_object.dtype)
+            new_object = list( original_object - args.pred_res_a )
+            # print('new_object:',len(new_object),new_object[0].shape,new_object[0].dtype)
+        return new_object
+    else:
+        return original_object
+
 def GradientSparsification_for_llm_grad(args, original_object):
-    # print("using gradient sparsification function")
+    # print("GradientSparsification_for_llm_grad")
     original_object = original_object[0]
     # print('original_object:',type(original_object),original_object.shape)
     
@@ -627,8 +645,13 @@ def GradientSparsification_for_llm_grad(args, original_object):
             a_thr = torch.quantile(torch.abs(original_object), grad_spars_ratio)
             args.gradients_res_a = torch.where(torch.abs(original_object).double() < a_thr.item(),
                                                     original_object.double(), float(0.)).to(args.device)
-            # new_object.append(original_object[ik])
             new_object = original_object - args.gradients_res_a
+
+            
         return new_object
+        
     else:
         return original_object
+    
+            
+                

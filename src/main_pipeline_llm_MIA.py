@@ -188,6 +188,9 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
         elif model_type == 'llama':
             from models.llm_models import llama
             target_cls = getattr(llama, "LlamaTailForCausalLM")
+        elif model_type == 't5':
+            from models.llm_models import t5
+            target_cls = getattr(t5, "T5ForConditionalGenerationTail_3slice")
         else:
             from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, \
                 MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES, MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES
