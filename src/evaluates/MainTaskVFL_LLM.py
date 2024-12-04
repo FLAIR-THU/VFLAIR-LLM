@@ -1699,7 +1699,7 @@ def create_main_task(global_model_type: GenerationMixin):
         def save_party_data(self):
             return {
                 # "aux_data": [copy.deepcopy(self.parties[ik].aux_data) for ik in range(self.k)],
-                # "train_data": [copy.deepcopy(self.parties[ik].train_data) for ik in range(self.k)],
+                "train_data": [copy.deepcopy(self.parties[ik].train_data) for ik in range(self.k)],
                 "test_data": [copy.deepcopy(self.parties[ik].test_data) for ik in range(self.k - 1)],
 
                 # "aux_dst": [self.parties[ik].aux_dst for ik in range(self.k)],
@@ -1707,7 +1707,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 # "test_dst": [self.parties[ik].test_dst for ik in range(self.k)],
 
                 # "aux_label": [copy.deepcopy(self.parties[ik].aux_label) for ik in range(self.k)],
-                # "train_label": [copy.deepcopy(self.parties[ik].train_label) for ik in range(self.k)],
+                "train_label": [copy.deepcopy(self.parties[ik].train_label) for ik in range(self.k)],
                 "test_label": [copy.deepcopy(self.parties[ik].test_label) for ik in range(self.k - 1)],
 
                 # "aux_attribute": [copy.deepcopy(self.parties[ik].aux_attribute) for ik in range(self.k)],

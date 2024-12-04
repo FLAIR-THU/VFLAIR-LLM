@@ -1,11 +1,11 @@
 {
-    "epochs": 1,
-    "lr": 0.000,
+    "epochs": 40,
+    "lr": 0.00001,
     "k": 2,
-    "batch_size": 16,
+    "batch_size": 8,
     "test_batch_size": 1,
     "early_stop_threshold": 1,
-    "pipeline": "pretrained",
+    "pipeline": "finetune",
     "finetune_configs":{
         "name":"Vanilla",
         "configs":{
@@ -20,7 +20,7 @@
         "iteration_per_aggregation": 1
     },
     "dataset": {
-      "dataset_name": "TextVQA-test",
+      "dataset_name": "TextVQA",
       "num_classes": 1
     },
     "tokenizer": {
@@ -33,20 +33,18 @@
       "add_special_tokens": 1
     },
     "model_list":{
-        "name": "openbmbMiniCPM-V-2",
+        "name": "openbmb/MiniCPM-V-2",
         "pretrained": 1,
         "model_type": "MiniCPMV",
         "max_sequence": 512,
         "kwargs_model_loading":{
+            "device_map": "auto"
         },
         "0": {
           "path": "/shared/model/openbmb/MiniCPM-V-2",
             "head":{
                 "trainable": 1,
-                "vision_processor_trainable": 0,
-                "embedding_trainable": 0,
-                "encoder_trainable": 0,
-                "encoder_trainable_ids":[]
+                "vision_processor_trainable": 0
             }
             
         },
@@ -60,7 +58,7 @@
             "task_type": "MultiModality",
             "generation_method":"chat",
             "generation_config_dict":{
-                "max_new_tokens": 20,
+                "max_new_tokens": 10,
                 "sampling":false,
                 "num_beams":3
             },
@@ -72,7 +70,7 @@
                     "name": "MiniCPM_Transform"
                 }
             },
-            "max_new_tokens": 20
+            "max_new_tokens": 10
         },
         "vfl_model_slice_num": 2,
         "local_encoders_num": 2,

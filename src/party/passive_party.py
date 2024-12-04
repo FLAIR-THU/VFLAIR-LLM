@@ -380,7 +380,7 @@ class PassiveParty_LLM(Party_LLM):
 
 
             if len(labels.shape) > 1:
-                print('labels:',labels.shape,'  lm_logits:',lm_logits.shape)
+                # print('labels:',labels.shape,'  lm_logits:',lm_logits.shape)
                 # Shift so that tokens < n predict n
                 shift_logits = lm_logits[..., :-1, :].contiguous()
                 shift_labels = labels[..., 1:].contiguous()

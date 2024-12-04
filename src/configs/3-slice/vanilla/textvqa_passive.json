@@ -7,7 +7,7 @@
     "early_stop_threshold": 1,
     "pipeline": "finetune",
     "finetune_configs":{
-        "name":"LoRA",
+        "name":"Vanilla",
         "configs":{
           "r":4,  
           "lora_alpha":32, 
@@ -45,13 +45,16 @@
             "head":{
                 "trainable": 1,
                 "vision_processor_trainable": 0
+            },
+            "tail":{
+                "trainable": 1
             }
             
         },
         "1": {
           "path": "/shared/model/openbmb/MiniCPM-V-2",
-            "tail":{
-                "trainable": 1
+            "body":{
+                "trainable": 0
             }
         },
         "task":{
@@ -72,9 +75,9 @@
             },
             "max_new_tokens": 10
         },
-        "vfl_model_slice_num": 2,
+        "vfl_model_slice_num": 3,
         "local_encoders_num": 2,
-        "local_tail_encoders_num": 0
+        "local_tail_encoders_num": 2
     }
   }
   

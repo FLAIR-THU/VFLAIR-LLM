@@ -51,7 +51,7 @@
         "1": {
           "path": "/shared/model/openbmb/MiniCPM-V-2",
             "tail":{
-                "trainable": 1
+                "trainable": 0
             }
         },
         "task":{

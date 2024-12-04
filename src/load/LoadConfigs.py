@@ -17,7 +17,7 @@ FEATURE_INFERENCE = ['GenerativeRegressionNetwork', 'ResSFL']
 
 # LLM attacks
 INVERSION_LLM = ["VanillaModelInversion_WhiteBox", "VanillaModelInversion_WhiteBox_test","DLG_LLM",\
-"VanillaModelInversion_BlackBox", "WhiteBoxInversion",\
+"VanillaModelInversion_BlackBox", "WhiteBoxInversion","BiSR",\
 "VanillaModelInversion_WhiteBox_mse","WhiteBoxInversion_mse"]
 LABEL_INFERENCE_LLM = ['ResultReconstruction','BatchLabelReconstruction_LLM','BatchLabelReconstruction_LLM_2slice','DirectLabelScoring_LLM','DirectionbasedScoring_LLM','NormbasedScoring_LLM']
 
@@ -824,7 +824,7 @@ def do_load_basic_configs_llm(config_dict, args):
         args.need_first_epoch_state = 1
 
     ATTACKS_NEED_FINAL_EPOCH_STATE = ["VanillaModelInversion_WhiteBox", "VanillaModelInversion_WhiteBox_test",\
-    "VanillaModelInversion_BlackBox", "WhiteBoxInversion","DLG_LLM",\
+    "VanillaModelInversion_BlackBox", "WhiteBoxInversion","DLG_LLM","BiSR",\
     "VanillaModelInversion_WhiteBox_mse","WhiteBoxInversion_mse","ResultReconstruction"]
     args.need_final_epoch_state = 0
     if len(list(set(ATTACKS_NEED_FINAL_EPOCH_STATE)&set(args.all_attack_list))) > 0:

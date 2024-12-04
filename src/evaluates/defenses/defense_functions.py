@@ -619,7 +619,7 @@ def GradientSparsification_for_llm_pred(args, original_object):
             #     original_object = original_object + args.pred_res_a
             a_thr = torch.quantile(torch.abs(original_object), grad_spars_ratio)
             args.pred_res_a = torch.where(torch.abs(original_object).double() < a_thr.item(),
-                                                    original_object.double(), float(0.)).to(args.device).to(original_object.dtype)
+                                                    original_object.double(), float(0.)).to(original_object.device).to(original_object.dtype)
             new_object = list( original_object - args.pred_res_a )
             # print('new_object:',len(new_object),new_object[0].shape,new_object[0].dtype)
         return new_object
@@ -644,7 +644,7 @@ def GradientSparsification_for_llm_grad(args, original_object):
                 original_object = original_object + args.gradients_res_a
             a_thr = torch.quantile(torch.abs(original_object), grad_spars_ratio)
             args.gradients_res_a = torch.where(torch.abs(original_object).double() < a_thr.item(),
-                                                    original_object.double(), float(0.)).to(args.device)
+                                                    original_object.double(), float(0.)).to(original_object.device)
             new_object = original_object - args.gradients_res_a
 
             

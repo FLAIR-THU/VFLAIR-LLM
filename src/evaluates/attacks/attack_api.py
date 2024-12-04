@@ -20,6 +20,7 @@ from evaluates.attacks.VanillaModelInversion_WhiteBox import VanillaModelInversi
 from evaluates.attacks.VanillaModelInversion_WhiteBox_mse import VanillaModelInversion_WhiteBox_mse
 
 from evaluates.attacks.VanillaModelInversion_WhiteBox_test import VanillaModelInversion_WhiteBox_test
+from evaluates.attacks.BiSR import BiSR
 
 from evaluates.attacks.DLG_LLM import DLG_LLM
 
