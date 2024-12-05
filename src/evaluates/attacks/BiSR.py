@@ -130,16 +130,19 @@ class BiSR(Attacker):
                 attacker_model.load_state_dict(torch.load(attacker_model_path))
                 print('Load Pretrained Attacker Model From:',attacker_model_path)
             else:
-                attack_train_num = 100
+                try:
+                    attack_train_num = self.args.attack_configs['auxiliary_data_num']
+                except:
+                    attack_train_num = 0.05 * len(self.vfl_info["train_data"][0])
                 train_data = self.vfl_info["train_data"][0][:attack_train_num]
                 train_label = self.vfl_info["train_label"][0][:attack_train_num]
                 
                 if self.args.dataset == 'Lambada' or self.args.dataset == 'Lambada_test':
-                    attack_train_dataset = LambadaDataset_LLM(self.args, train_data, train_label, 'test')
+                    attack_train_dataset = LambadaDataset_LLM(self.args, train_data, train_label, 'train')
                 elif self.args.dataset == 'TextVQA' or self.args.dataset == 'TextVQA-test':
                     attack_train_dataset = TextVQADataset_train(self.args, train_data, train_label, vis_processor,'train')
                 elif self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
-                    attack_train_dataset = GSMDataset_LLM(self.args, train_data, train_label, 'test')
+                    attack_train_dataset = GSMDataset_LLM(self.args, train_data, train_label, 'train')
                 else:
                     attack_train_dataset = PassiveDataset_LLM(self.args, train_data, train_label)
 
@@ -370,7 +373,7 @@ class BiSR(Attacker):
             print(attack_info)
             append_exp_res(self.args.exp_res_path, attack_info)
 
-            test_data_loader = DataLoader(attack_test_dataset, batch_size=batch_size ,collate_fn=lambda x:x ) # ,
+            test_data_loader = DataLoader(attack_test_dataset, batch_size=1 ,collate_fn=lambda x:x ) # ,
             del(self.vfl_info)
             
             flag = 0
@@ -438,8 +441,9 @@ class BiSR(Attacker):
                     dummy_input_ids = torch.argmax(dummy_input_ids,dim=-1)
                     # print('dummy_input_ids:',dummy_input_ids.dtype,dummy_input_ids.shape)
 
-                    dummy_embedding = self.top_vfl.parties[-1].global_model.get_input_embeddings()(dummy_input_ids).to(received_intermediate.device)
-                    dummy_embedding.requires_grad_(True) 
+                    dummy_embedding = self.top_vfl.parties[-1].global_model.get_input_embeddings()(dummy_input_ids).detach().to(received_intermediate.device)
+                    dummy_embedding.requires_grad =True 
+                    
                     
                     optimizer = torch.optim.Adam([dummy_embedding], lr=self.lr)
                     

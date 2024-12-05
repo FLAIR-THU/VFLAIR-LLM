@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# model files
+src/models/model_parameters/pretrained_attacker_models
+
 # dataset files
 # dataset/
 data/
