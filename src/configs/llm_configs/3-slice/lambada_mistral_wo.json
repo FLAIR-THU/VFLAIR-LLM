@@ -1,12 +1,15 @@
 {
-  "epochs": 1,
+  "epochs": 2,
   "lr": 0.001,
   "k": 2,
-  "batch_size": 2,
+  "batch_size": 8,
   "test_batch_size": 1,
   "early_stop_threshold": 1,
   "pipeline": "finetune",
   "model_architect":"CLM",
+        "device": "cuda",
+  "gpu": 0,
+  "fl_type": "VFL",
   "communication":{
       "communication_protocol": "FedSGD",
       "iteration_per_aggregation": 1
@@ -39,7 +42,9 @@
         "device_map": "balanced_low_0"
       },
       "0": {
-      "path": "/home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B",
+      "path": "/shared/model/Mistral-7B-Instruct-v0.2",
+          "train_set_file": "/shared/data/Lambada",
+      "test_set_file": "/shared/data/Lambada",
           "head":{
               "embedding_trainable": 0,
               "encoder_trainable": 0,
@@ -52,15 +57,17 @@
           }
       },
       "1": {
-      "path": "/home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B",
+         "path": "/shared/model/Mistral-7B-Instruct-v0.2",
+          "train_set_file": "/shared/data/Lambada",
+      "test_set_file": "/shared/data/Lambada",
           "body":{
               "encoder_trainable": 0,
               "encoder_trainable_ids":[]
           }
       },
-      "task":{
+      "task": {
           "task_type": "CausalLM",
-          "doc_stride" : 512,
+          "doc_stride": 512,
           "max_seq_length": 512,
           "metric_type": "best_pred",
           "n_best_size": 3

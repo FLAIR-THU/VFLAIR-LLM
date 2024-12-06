@@ -617,7 +617,8 @@ class PassiveParty_LLM(Party_LLM):
         ######### Defense Applied on Local Model Tail Prediction Process ###########
         
         resp['inputs_embeds'] = received_pred
-
+        if self.args.model_type == 'XLNet':
+            resp.setdefault('output_g', None) # compatible with distributed version. todo: need to be removed later
         return self.forward(2, **resp)
 
     def local_backward(self):

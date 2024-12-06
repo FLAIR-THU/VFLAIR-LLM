@@ -1,5 +1,5 @@
 {
-    "epochs": 40,
+    "epochs": 1,
     "lr": 0.001,
     "k": 2,
     "batch_size": 16,
@@ -35,8 +35,9 @@
         "kwargs_model_loading":{
         },
         "0": {
-          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
-
+         "path": "/shared/model/bert-base-uncased-SST-2",
+          "train_set_file": "/shared/data/SST-2/train.tsv",
+          "test_set_file": "/shared/data/SST-2/dev.tsv",
             "head":{
                 "trainable": 0,
                 "embedding_trainable": 0,
@@ -51,7 +52,9 @@
             }
         },
         "1": {
-          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
+          "path": "/shared/model/bert-base-uncased-SST-2",
+          "train_set_file": "/shared/data/SST-2/train.tsv",
+          "test_set_file": "/shared/data/SST-2/dev.tsv",
             "body":{
                 "trainable": 1,
                 "encoder_trainable": 0,

@@ -1,13 +1,13 @@
 {
-  "epochs": 1,
+  "epochs": 2,
   "lr": 0.001,
   "k": 2,
-  "batch_size": 128,
-  "test_batch_size": 128,
+  "batch_size": 256,
+  "test_batch_size": 256,
   "early_stop_threshold": 1,
   "pipeline": "finetune",
-  "model_architect":"CLS",
-        "device": "cuda",
+  "model_architect":"TQA",
+  "device": "cuda",
   "gpu": 0,
   "fl_type": "VFL",
   "communication":{
@@ -20,53 +20,60 @@
       }
   },
   "dataset": {
-        "dataset_name": "SST-2-test",
-        "num_classes": 2
+        "dataset_name": "SQuAD",
+        "num_classes": 1,
+        "use_prompt": 1,
+        "n_shot": 1
     },
     "tokenizer": {
         "padding": "max_length",
         "padding_type": "outside",
         "pad_token": "[PAD]",
         "truncation": "longest_first",
-        "max_length": 70,
+        "max_length": 256,
         "padding_side": "left",
         "add_special_tokens": 1
     },
   "model_list":{
-      "name": "gpt2",
+      "name": "rsvp-aibertserini-bert-base-squad",
       "pretrained": 1,
-      "model_type": "GPT2",
+      "model_type": "Bert",
       "max_sequence": 512,
       "kwargs_model_loading":{
-        "device_map": "auto"
       },
       "0": {
-        "path": "/shared/model/gpt2",
-        "train_set_file": "/shared/data/SST-2/train.tsv",
-        "test_set_file": "/shared/data/SST-2/dev.tsv",
-        "head":{
-            "embedding_trainable": 0,
-            "encoder_trainable": 0,
-            "encoder_trainable_ids":[]
-        },
-        "tail":{
-            "head_layer_trainable": 1,
-            "encoder_trainable": 0,
-            "encoder_trainable_ids":[]
-        }
-    },
-    "1": {
-        "path": "/shared/model/gpt2",
-        "train_set_file": "/shared/data/SST-2/train.tsv",
-        "test_set_file": "/shared/data/SST-2/dev.tsv",
-        "body":{
-            "encoder_trainable": 0,
-            "encoder_trainable_ids":[]
-        }
-    },
-      "task":{
-          "task_type": "SequenceClassification"
+        "path": "/shared/model/bertserini-bert-base-squad",
+        "train_set_file": "/shared/data/SQuAD/train-v1.1.json",
+        "test_set_file": "/shared/data/SQuAD/dev-v1.1.json",
+          "head":{
+              "embedding_trainable": 0,
+              "encoder_trainable": 0,
+              "encoder_trainable_ids":[]
+          },
+          "tail":{
+              "head_layer_trainable": 1,
+              "encoder_trainable": 0,
+              "encoder_trainable_ids":[]
+          }
       },
+      "1": {
+        "path": "/shared/model/bertserini-bert-base-squad",
+        "train_set_file": "/shared/data/SQuAD/train-v1.1.json",
+        "test_set_file": "/shared/data/SQuAD/dev-v1.1.json",
+          "body":{
+              "encoder_trainable": 0,
+              "encoder_trainable_ids":[]
+          }
+      },
+      "task": {
+            "task_type": "QuestionAnswering",
+            "metric_type": "best_pred",
+            "doc_stride": 128,
+            "max_seq_length": 256,
+            "max_query_length": 64,
+            "max_answer_length": 30,
+            "n_best_size": 2
+        },
       "vfl_model_slice_num": 3,
       "local_encoders_num": 1,
       "local_tail_encoders_num": 0
@@ -80,7 +87,7 @@
             "lambda": 0.01,
             "mid_position": "head",
             "current_bottleneck_scale": 1,
-            "seq_length": 70
+            "seq_length": 256
         }
     },
     "attack_list": {

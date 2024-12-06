@@ -20,7 +20,7 @@
         "add_special_tokens": 1
     },
     "dataset":{
-        "dataset_name": "yelp-polarity",
+         "dataset_name": "yelp-polarity-test",
         "num_classes": 5
     },
     "model_list":{
@@ -31,8 +31,9 @@
       "kwargs_model_loading":{
       },
       "0": {
-          "path": "/home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification",
-
+          "path": "/shared/model/Shunianyelp_review_classification/model",
+          "train_set_file": "/shared/data/yelp/train.csv",
+          "test_set_file": "/shared/data/yelp/test.csv",
             "head":{
                 "trainable": 0,
                 "embedding_trainable": 0,
@@ -47,7 +48,9 @@
             }
         },
         "1": {
-          "path": "/home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification",
+          "path": "/shared/model/Shunianyelp_review_classification/model",
+          "train_set_file": "/shared/data/yelp/train.csv",
+          "test_set_file": "/shared/data/yelp/test.csv",
             "body":{
                 "trainable": 1,
                 "encoder_trainable": 0,
