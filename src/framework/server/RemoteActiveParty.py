@@ -130,6 +130,14 @@ class RemoteActiveParty(IParty):
         result = response.named_values['test_logit'].bytes
         return convert_to_tensor(result)
 
+    @property
+    def train_data(self):
+        return None
+
+    @property
+    def train_label(self):
+        return None
+
     def get_global_model(self):
         return self
 
