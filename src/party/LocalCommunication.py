@@ -26,3 +26,6 @@ class LocalCommunication(ICommunication):
 
     def send_global_model_train_message(self):
         self.__active_party.train()
+
+    def send_save_model_body_message(self):
+        pass

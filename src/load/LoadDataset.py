@@ -1507,12 +1507,10 @@ def load_dataset_per_party_llm(args, index):
         test_dst = (X_test, y_test)
 
     elif args.dataset == 'yelp-polarity':
-        train_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/train.csv'
-        test_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/test.csv'
-
-        # train_set_file = DATA_PATH + '/yelp_review_full_csv/train.csv'
-        # test_set_file = DATA_PATH + '/yelp_review_full_csv/test.csv'
-
+        train_set_file, test_set_file = get_dataset_path(args.model_list[str(index)])
+        if train_set_file is None or test_set_file is None:
+            train_set_file = DATA_PATH + '/yelp_review_full_csv/train.csv'
+            test_set_file = DATA_PATH + '/yelp_review_full_csv/test.csv'
 
         df = pd.read_csv(train_set_file, delimiter=',', header=None,
                          names=['label', 'sentence'])#[:200]
@@ -1538,8 +1536,10 @@ def load_dataset_per_party_llm(args, index):
         print('y:', type(y_train), y_train.shape, y_test.shape)
 
     elif args.dataset == 'yelp-polarity-test':
-        train_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/train.csv'
-        test_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/test.csv'
+        train_set_file, test_set_file = get_dataset_path(args.model_list[str(index)])
+        if train_set_file is None or test_set_file is None:
+            train_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/train.csv'
+            test_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/test.csv'
 
         df = pd.read_csv(train_set_file, delimiter=',', header=None,
                          names=['label', 'sentence'])[:200]
@@ -1620,7 +1620,7 @@ def load_dataset_per_party_llm(args, index):
         df = pd.read_csv(train_set_file, delimiter='\t' )  # , names=['label', 'sentence']
         sentences = df.sentence.values[:]
         labels = df.label.values[:]
-        
+
 
         X_train = np.array(sentences)
         y_train = np.array([int(_label) for _label in labels])
@@ -1628,7 +1628,7 @@ def load_dataset_per_party_llm(args, index):
         df = pd.read_csv(test_set_file, delimiter='\t')  # names=[  'sentence','label']
         sentences = df.sentence.values[:]
         labels = df.label.values[:]
-        
+
 
         X_test = np.array(sentences)
         y_test = np.array([int(_label) for _label in labels])
@@ -2332,6 +2332,11 @@ def load_dataset_per_party_llm(args, index):
 
     elif args.dataset == 'GMS8K':
         data_path = DATA_PATH + '/GMS8K/'
+        train_set_file, test_set_file = get_dataset_path(args.model_list[str(index)])
+        if train_set_file is None or test_set_file is None:
+            train_set_file = DATA_PATH + '/GMS8K/train.jsonl'
+            test_set_file = DATA_PATH + '/GMS8K/test.jsonl'
+
         problem_prompt = ("Below is an instruction that describes a task. "
         "Write a response that appropriately completes the request.\n\n"
         "### Instruction:\n{instruction}\n\n### Response: Let's think step by step.")
@@ -2344,24 +2349,23 @@ def load_dataset_per_party_llm(args, index):
             temp_ans = int(temp_ans.replace(',', ''))
             return str(temp_ans)
 
-        def get_examples(data_path, split):
-            path = os.path.join(data_path, f"{split}.jsonl")
+        def get_examples(path):
             examples = read_jsonl(path)
 
             for ex in examples:
                 ex.update(question=ex["question"] + "\n")
                 ex.update(answer=ex["answer"])
 
-            print(f"{len(examples)} {split} examples")
+            print(f"{len(examples)} {path} examples")
             return examples
 
         ##### Train #####
-        train_examples = get_examples(data_path, 'train') # list of [  {'quesion':... , 'answer':...} ...]
+        train_examples = get_examples(train_set_file) # list of [  {'quesion':... , 'answer':...} ...]
         X_train = np.array([ problem_prompt.format(instruction=_ex['question']+ "<|endoftext|>") for _ex in train_examples])
         y_train = np.array([ _ex['answer'] for _ex in train_examples])
 
         ##### Test #####
-        test_examples = get_examples(data_path, 'test') # list of [  {'quesion':... , 'answer':...} ...]
+        test_examples = get_examples(test_set_file) # list of [  {'quesion':... , 'answer':...} ...]
         X_test = np.array([ problem_prompt.format(instruction=_ex['question']) for _ex in test_examples])
         y_test = np.array([ get_final_ans(_ex['answer']) for _ex in test_examples])
 
@@ -2373,6 +2377,11 @@ def load_dataset_per_party_llm(args, index):
 
     elif args.dataset == 'GMS8K-test':
         data_path = DATA_PATH + '/GMS8K/'
+        train_set_file, test_set_file = get_dataset_path(args.model_list[str(index)])
+        if train_set_file is None or test_set_file is None:
+            train_set_file = DATA_PATH + '/GMS8K/train.jsonl'
+            test_set_file = DATA_PATH + '/GMS8K/test.jsonl'
+
         problem_prompt = ("Below is an instruction that describes a task. "
         "Write a response that appropriately completes the request.\n\n"
         "### Instruction:\n{instruction}\n\n### Response: Let's think step by step.")
@@ -2385,24 +2394,23 @@ def load_dataset_per_party_llm(args, index):
             temp_ans = int(temp_ans.replace(',', ''))
             return str(temp_ans)
 
-        def get_examples(data_path, split):
-            path = os.path.join(data_path, f"{split}.jsonl")
+        def get_examples(path):
             examples = read_jsonl(path)
 
             for ex in examples:
                 ex.update(question=ex["question"] + "\n")
                 ex.update(answer=ex["answer"])
 
-            print(f"{len(examples)} {split} examples")
+            print(f"{len(examples)} {path} examples")
             return examples
 
         ##### Train #####
-        train_examples = get_examples(data_path, 'train')[:10] # list of [  {'quesion':... , 'answer':...} ...]
+        train_examples = get_examples(train_set_file)[:10] # list of [  {'quesion':... , 'answer':...} ...]
         X_train = np.array([ problem_prompt.format(instruction=_ex['question']+ "<|endoftext|>") for _ex in train_examples])
         y_train = np.array([ _ex['answer'] for _ex in train_examples])
 
         ##### Test #####
-        test_examples = get_examples(data_path, 'test')[:6] # list of [  {'quesion':... , 'answer':...} ...]
+        test_examples = get_examples(test_set_file)[:6] # list of [  {'quesion':... , 'answer':...} ...]
         X_test = np.array([ problem_prompt.format(instruction=_ex['question']) for _ex in test_examples])
         y_test = np.array([ get_final_ans(_ex['answer']) for _ex in test_examples])
 
@@ -2522,8 +2530,14 @@ def load_dataset_per_party_llm(args, index):
     
     elif args.dataset == 'TextVQA':
         prompt = "Answer the question directly with single word." + '\n'#+ questions[0]
-        image_dir = DATA_PATH+"/TextVQA/train_images"
-        ann_path = DATA_PATH+"/TextVQA/TextVQA_0.5.1_train.json"
+        dataset_split = args.model_list[str(index)]
+        if 'train_set_file' in dataset_split and 'test_set_file' in dataset_split:
+            file_folder = dataset_split['train_set_file']
+            image_dir = file_folder + "/TextVQA/train_images"
+            ann_path = file_folder + "/TextVQA/TextVQA_0.5.1_train.json"
+        else:
+            image_dir = DATA_PATH+"/TextVQA/train_images"
+            ann_path = DATA_PATH+"/TextVQA/TextVQA_0.5.1_train.json"
 
         # image_dir = DATA_PATH+"/TextVQA/test_images"
         # ann_path = DATA_PATH+"/TextVQA/TextVQA_0.5.1_test.json"
@@ -2555,8 +2569,14 @@ def load_dataset_per_party_llm(args, index):
     
     elif args.dataset == 'TextVQA-test':
         prompt = "Answer the question directly with single word." + '\n'#+ questions[0]
-        image_dir = DATA_PATH+"/TextVQA/train_images"
-        ann_path = DATA_PATH+"/TextVQA/TextVQA_0.5.1_train.json"
+        dataset_split = args.model_list[str(index)]
+        if 'train_set_file' in dataset_split and 'test_set_file' in dataset_split:
+            file_folder = dataset_split['train_set_file']
+            image_dir = file_folder + "/TextVQA/train_images"
+            ann_path = file_folder + "/TextVQA/TextVQA_0.5.1_train.json"
+        else:
+            image_dir = DATA_PATH + "/TextVQA/train_images"
+            ann_path = DATA_PATH + "/TextVQA/TextVQA_0.5.1_train.json"
 
         # image_dir = DATA_PATH+"/TextVQA/test_images"
         # ann_path = DATA_PATH+"/TextVQA/TextVQA_0.5.1_test.json"

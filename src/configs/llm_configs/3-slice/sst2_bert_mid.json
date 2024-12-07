@@ -1,5 +1,5 @@
 {
-  "epochs": 1,
+  "epochs": 2,
   "lr": 0.001,
   "k": 2,
   "batch_size": 128,
@@ -33,15 +33,14 @@
         "add_special_tokens": 1
     },
   "model_list":{
-      "name": "gpt2",
+      "name": "textattackbert-base-uncased-SST-2",
       "pretrained": 1,
-      "model_type": "GPT2",
+      "model_type": "Bert",
       "max_sequence": 512,
       "kwargs_model_loading":{
-        "device_map": "auto"
       },
       "0": {
-        "path": "/shared/model/gpt2",
+        "path": "/shared/model/bert-base-uncased-SST-2",
         "train_set_file": "/shared/data/SST-2/train.tsv",
         "test_set_file": "/shared/data/SST-2/dev.tsv",
         "head":{
@@ -56,7 +55,7 @@
         }
     },
     "1": {
-        "path": "/shared/model/gpt2",
+        "path": "/shared/model/bert-base-uncased-SST-2",
         "train_set_file": "/shared/data/SST-2/train.tsv",
         "test_set_file": "/shared/data/SST-2/dev.tsv",
         "body":{

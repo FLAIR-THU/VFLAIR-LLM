@@ -1,12 +1,15 @@
 {
-  "epochs": 30,
+  "epochs": 1,
   "lr": 0.001,
   "k": 2,
-  "batch_size": 32,
+  "batch_size": 2,
   "test_batch_size": 1,
   "early_stop_threshold": 1,
   "pipeline": "finetune",
   "model_architect":"CLM",
+        "device": "cuda",
+  "gpu": 0,
+  "fl_type": "VFL",
   "communication":{
       "communication_protocol": "FedSGD",
       "iteration_per_aggregation": 1
@@ -17,7 +20,7 @@
       }
   },
   "dataset":{
-      "dataset_name": "Lambada",
+      "dataset_name": "Lambada_test",
       "num_classes": 1,
       "use_prompt": 1
   },
@@ -35,11 +38,13 @@
       "pretrained": 1,
       "model_type": "Llama",
       "max_sequence": 512,
-      "path": "/home/DAIR/guzx/Git_FedProject/Models/llama-2-7b",
       "kwargs_model_loading":{
         "device_map": "auto"
       },
       "0": {
+      "path": "/shared/model/Llama-2-7b-hf",
+            "train_set_file": "/shared/data/Lambada",
+        "test_set_file": "/shared/data/Lambada",
           "head":{
               "embedding_trainable": 0,
               "encoder_trainable": 0,
@@ -52,6 +57,9 @@
           }
       },
       "1": {
+        "path": "/shared/model/Llama-2-7b-hf",
+            "train_set_file": "/shared/data/Lambada",
+        "test_set_file": "/shared/data/Lambada",
           "body":{
               "encoder_trainable": 0,
               "encoder_trainable_ids":[]
@@ -78,7 +86,8 @@
         "imagined_adversary": "ImaginedAdversary_MLP3_noflatten",
         "imagined_adversary_lr": 0.001,
         "lambda": 1.0,
-        "seq_length": 512
+        "seq_length": 512,
+        "embed_dim": 4096
         }
     },
     "attack_list": {

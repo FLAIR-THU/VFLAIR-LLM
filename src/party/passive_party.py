@@ -570,22 +570,11 @@ class PassiveParty_LLM(Party_LLM):
     @timer()
     def give_pred(self, use_cache=False):
         self.local_data_input['use_cache'] = use_cache
-        if use_cache:
-            self.local_data_input['past_key_values'] = self.past_key_values.get(0)
         # self._tensor_to_device(self.local_data_input , self.models[0].device)
 
         # collect processed labels (only in some cases)
         # model 0 head  / model 1 body(active) / model 2 tail
         intermediate = self.forward(model_index=0, **self.local_data_input)
-        
-        # if not isinstance(intermediate, VFLModelIntermediate):
-        #     _input = self.local_data_input
-        #     intermediate = VFLModelIntermediate(**intermediate).prepare_for_forward(
-        #         attention_mask=_input.get('attention_mask'),
-        #         position_ids=_input.get('position_ids'),
-        #         cache_position=_input.get('cache_position'),
-        #         use_cache=_input.get('use_cache'),
-        #     )
 
         if 'processed_labels' in intermediate.keys():
             self.processed_labels = intermediate['processed_labels']
@@ -629,7 +618,8 @@ class PassiveParty_LLM(Party_LLM):
         ######### Defense Applied on Local Model Tail Prediction Process ###########
         
         resp['inputs_embeds'] = received_pred
-
+        if self.args.model_type == 'XLNet':
+            resp.setdefault('output_g', None) # compatible with distributed version. todo: need to be removed later
         return self.forward(2, **resp)
 
     def local_backward(self):

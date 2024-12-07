@@ -11,9 +11,10 @@ from party.llm_party import Party as Party_LLM
 from utils.basic_functions import cross_entropy_for_onehot, tf_distance_cov_cor, pairwise_dist
 from utils import timer
 from dataset.party_dataset import ActiveDataset
-from framework.client.DistributedCommunication import convert_pred_to_msg, convert_msg_to_pred, convert_tensor_to_batch_msg, convert_msg_to_tensor
+from framework.client.DistributedCommunication import convert_pred_to_msg, convert_msg_to_pred, convert_tensor_to_batch_msg, convert_msg_to_tensor, convert_to_msg
 from models.llm_models.base import VFLModelIntermediate
 from config import vfl_basic_config
+import copy
 
 
 class ActiveParty_LLM(Party_LLM):
@@ -53,10 +54,37 @@ class ActiveParty_LLM(Party_LLM):
 
         self.encoder_hidden_states = None
         self.encoder_attention_mask = None
+        self.first_epoch_state = None
 
     # def prepare_data_loader(self, **kwargs):
     #     super().prepare_data_loader(self.args.batch_size, self.args.need_auxiliary)
 
+    def get_output_tensors(self):
+        return convert_to_msg(self.output_tensors)
+
+    def get_output_attention_mask(self):
+        return convert_to_msg(self.output_attention_mask)
+
+    def get_global_gradient(self):
+        return convert_to_msg(self.global_gradient)
+
+    def get_weights_grad_a(self):
+        return convert_to_msg(self.weights_grad_a)
+
+    def save_model_body(self):
+        self.first_epoch_state = {
+            "active_model_body": copy.deepcopy(self.global_model).to("cpu") if self.global_model != None else None,
+        }
+
+    def get_global_model(self):
+        return copy.deepcopy(self.global_model).to("cpu") if self.global_model != None else None,
+
+    def get_global_parameters(self):
+        return self.first_epoch_state['active_model_body'].parameters()
+
+    def model_body_forward(self, intermediate):
+        resp = self.first_epoch_state['active_model_body'](**intermediate)
+        return resp
 
     def prepare_data(self, args, index):
         print('Active Party has no data, only global model')
@@ -111,12 +139,15 @@ class ActiveParty_LLM(Party_LLM):
                 return convert_pred_to_msg(result, 'test_logit')
         elif self.args.task_type == 'SequenceClassification':  
             return convert_pred_to_msg(result, 'test_logit')
-        elif self.args.task_type == 'QuestionAnswering': 
-            return {
-                "requires_grad": True,
-                "start_logits": result.start_logits.tolist(),
-                "end_logits": result.end_logits.tolist(),
-            }
+        
+        # elif self.args.task_type == 'QuestionAnswering': 
+        #     return {
+        #         "requires_grad": True,
+        #         "start_logits": result.start_logits.tolist(),
+        #         "end_logits": result.end_logits.tolist(),
+        #     }
+        elif self.args.task_type == 'QuestionAnswering':  # self.passive_pred_list[0] = [intermediate, attention_mask]
+            return convert_pred_to_msg(result, 'test_logit')
         elif self.args.task_type == 'DevLLMInference':
             return convert_pred_to_msg(result)
         else:
@@ -132,6 +163,7 @@ class ActiveParty_LLM(Party_LLM):
         self.global_output_dict[current_client_id] = intermediate
         
         return self._detach_tensor(self.global_output_dict[current_client_id])
+
 
     def receive_loss_and_gradients_remote(self, data, client_id):
         gradients = convert_msg_to_tensor(data)
@@ -207,7 +239,7 @@ class ActiveParty_LLM(Party_LLM):
             # for param in self.models[1].parameters():
             #     if param.requires_grad:
             #         global_model_params.append(param)
-            
+
             global_model_params_name = []
             for name,param in self.models[1].named_parameters():
                 if param.requires_grad:
@@ -234,6 +266,7 @@ class ActiveParty_LLM(Party_LLM):
                     for _i in range(len(weights_grad_a_start)):
                         weights_grad_a.append(weights_grad_a_start[_i] + weights_grad_a_end[_i] if weights_grad_a_start[_i]!= None else None)
                     self.weights_grad_a_list.append(weights_grad_a)
+                
                 
                 self.weights_grad_a = tuple( cal_avg_grad(self.weights_grad_a_list) )
 

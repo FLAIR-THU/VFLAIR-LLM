@@ -1,5 +1,5 @@
 {
-  "epochs": 40,
+  "epochs": 1,
   "lr": 0.0001,
   "k": 2,
   "batch_size": 16,
@@ -11,7 +11,7 @@
         "iteration_per_aggregation": 1
     },
     "dataset": {
-      "dataset_name": "yelp-polarity",
+      "dataset_name": "yelp-polarity-test",
         "num_classes": 5
     },
     "tokenizer": {
@@ -35,8 +35,9 @@
         "kwargs_model_loading":{
         },
         "0": {
-          "path": "/shared/model//Shunianyelp_review_classification",
-
+          "path": "/shared/model/Shunianyelp_review_classification",
+          "train_set_file": "/shared/data/yelp/train.csv",
+          "test_set_file": "/shared/data/yelp/test.csv",
             "head":{
                 "trainable": 0,
                 "embedding_trainable": 0,
@@ -51,7 +52,9 @@
             }
         },
         "1": {
-          "path": "/shared/model//Shunianyelp_review_classification",
+            "path": "/shared/model/Shunianyelp_review_classification",
+             "train_set_file": "/shared/data/yelp/train.csv",
+            "test_set_file": "/shared/data/yelp/test.csv",
             "body":{
                 "trainable": 1,
                 "encoder_trainable": 0,

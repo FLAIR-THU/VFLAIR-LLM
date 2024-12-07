@@ -43,6 +43,8 @@ class BaichuanModelLoader(LLMModelLoader):
                 print(_key)
                 self._models[_key].print_trainable_parameters()
 
+        model_trainable_info = args.model_trainable_info[party_idx]
+        
         # change with model type
         if not is_active_party:
             if not model_trainable_info.model_slice_trainable[0]:
@@ -112,7 +114,7 @@ class BaichuanModelLoader(LLMModelLoader):
         for _key in self._models.keys():
             model_dtype = self._get_model_dtype(self._models[_key].config)
             break
-        tokenizer = AutoTokenizer.from_pretrained(model_path, padding_side='left')
+        tokenizer = AutoTokenizer.from_pretrained(model_path, padding_side='left', trust_remote_code=True)
         return {
             "tokenizer": tokenizer,
             "models": self._models,

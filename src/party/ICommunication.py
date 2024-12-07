@@ -27,3 +27,7 @@ class ICommunication(object):
     @abstractmethod
     def send_global_model_train_message(self):
         pass
+
+    @abstractmethod
+    def send_save_model_body_message(self):
+        pass

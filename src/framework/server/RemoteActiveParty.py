@@ -3,6 +3,7 @@ import json
 import torch
 from transformers.modeling_outputs import CausalLMOutputWithPast
 
+from framework.client.DistributedCommunication import convert_to_tensor
 from framework.database.model.Task import Task
 from party.IParty import IParty
 
@@ -45,7 +46,7 @@ class RemoteActiveParty(IParty):
                 value.update({k: v.tolist()})
 
         task = Task()
-        task.run = "distributed_predict"
+        task.run = "model_body_forward"
         task.party = "active"
         task.job_id = self._job_id
         task.params = value
@@ -87,6 +88,70 @@ class RemoteActiveParty(IParty):
         if kwargs:
             task.params.update(kwargs)
         response = self._client.open_and_send(task)
+
+    @property
+    def output_tensors(self):
+        task = Task()
+        task.run = "get_output_tensors"
+        task.party = "active"
+        task.job_id = self._job_id
+        response = self._client.open_and_send(task)
+        result = response.named_values['test_logit'].bytes
+        data = convert_to_tensor(result)
+        return data
+
+    @property
+    def output_attention_mask(self):
+        task = Task()
+        task.run = "get_output_attention_mask"
+        task.party = "active"
+        task.job_id = self._job_id
+        response = self._client.open_and_send(task)
+        result = response.named_values['test_logit'].bytes
+        return convert_to_tensor(result)
+
+    @property
+    def weights_grad_a(self):
+        task = Task()
+        task.run = "get_weights_grad_a"
+        task.party = "active"
+        task.job_id = self._job_id
+        response = self._client.open_and_send(task)
+        result = response.named_values['test_logit'].bytes
+        return convert_to_tensor(result)
+
+    @property
+    def global_gradient(self):
+        task = Task()
+        task.run = "get_global_gradient"
+        task.party = "active"
+        task.job_id = self._job_id
+        response = self._client.open_and_send(task)
+        result = response.named_values['test_logit'].bytes
+        return convert_to_tensor(result)
+
+    @property
+    def train_data(self):
+        return None
+
+    @property
+    def train_label(self):
+        return None
+
+    def get_global_model(self):
+        return self
+
+    def to(self, device):
+        pass
+
+    def parameters(self):
+        task = Task()
+        task.run = "get_global_parameters"
+        task.party = "active"
+        task.job_id = self._job_id
+        response = self._client.open_and_send(task)
+        result = response.named_values['test_logit'].bytes
+        return convert_to_tensor(result)
 
     def __call__(self, *args, **kwargs):
         return self.predict(kwargs)

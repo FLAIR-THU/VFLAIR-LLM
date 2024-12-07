@@ -1,11 +1,14 @@
 {
-  "epochs": 1,
+  "epochs": 2,
   "lr": 0.001,
   "k": 2,
-  "batch_size": 4,
+  "batch_size": 8,
   "test_batch_size": 1,
   "early_stop_threshold": 1,
   "pipeline": "finetune",
+      "device": "cuda",
+  "gpu": 0,
+  "fl_type": "VFL",
   "model_architect":"CLM",
   "communication":{
       "communication_protocol": "FedSGD",
@@ -39,7 +42,9 @@
         "device_map": "balanced_low_0"
       },
       "0": {
-      "path": "/home/DAIR/guzx/Git_FedProject/Models/tiiuaefalcon-rw-1b",
+      "path": "/shared/model/falcon-rw-1b",
+          "train_set_file": "/shared/data/Lambada",
+      "test_set_file": "/shared/data/Lambada",
           "head":{
             "trainable": 1,
               "embedding_trainable": 0,
@@ -54,7 +59,9 @@
           }
       },
       "1": {
-      "path": "/home/DAIR/guzx/Git_FedProject/Models/tiiuaefalcon-rw-1b",
+     "path": "/shared/model/falcon-rw-1b",
+          "train_set_file": "/shared/data/Lambada",
+      "test_set_file": "/shared/data/Lambada",
           "body":{
                 "trainable": 1,
               "encoder_trainable": 0,

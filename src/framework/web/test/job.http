@@ -10,7 +10,7 @@ Content-Type: multipart/form-data; boundary=WebAppBoundary
 --WebAppBoundary
 Content-Disposition: form-data; name="file"; filename="file.json"
 
-< /home/shannon/dev/projects/VFLAIR/src/configs/dev_llm_inference.json
+< /home/shannon/dev/projects/VFLAIR/src/configs/llm_configs/3-slice/lambada_baichuan_wo_d.json
 --WebAppBoundary--
 
 ###

@@ -2,7 +2,7 @@
   "epochs": 30,
   "lr": 0.001,
   "k": 2,
-  "batch_size": 32,
+  "batch_size": 16,
   "test_batch_size": 1,
   "early_stop_threshold": 1,
   "pipeline": "finetune",
@@ -17,7 +17,7 @@
       }
   },
   "dataset":{
-      "dataset_name": "Lambada",
+      "dataset_name": "Lambada_test",
       "num_classes": 1,
       "use_prompt": 1
   },
@@ -35,13 +35,13 @@
       "pretrained": 1,
       "model_type": "GPT2",
       "max_sequence": 512,
-      "path": "/home/DAIR/guzx/Git_FedProject/Models/gpt2",
       "kwargs_model_loading":{
         "device_map": "auto"
       },
       "0": {
-      "path": "/home/DAIR/guzx/Git_FedProject/Models/gpt2",
-
+         "path": "/shared/model/gpt2",
+        "train_set_file": "/shared/data/Lambada",
+        "test_set_file": "/shared/data/Lambada",
           "head":{
               "embedding_trainable": 0,
               "encoder_trainable": 0,
@@ -49,8 +49,9 @@
           }
       },
       "1": {
-      "path": "/home/DAIR/guzx/Git_FedProject/Models/gpt2",
-
+        "path": "/shared/model/gpt2",
+        "train_set_file": "/shared/data/Lambada",
+        "test_set_file": "/shared/data/Lambada",
           "tail":{
               "head_layer_trainable": 1,
               "encoder_trainable": 0,

@@ -97,7 +97,39 @@ VFLAIR
 
 更多配置文件参考[配置文件目录](../configs/test_configs)
 
-#### 自定义算法步骤
+### 四、使用脚本方式启动服务
+除了使用docker部署外，我们也支持使用脚本启动服务
+
+- 启动服务器
+````
+export CUDA_VISIBLE_DEVICES=0
+export MODEL_FOLDER=/model/foler # 设置模型所在文件夹
+python src/framework/server/grpc_server.py --config=./src/framework/server/server_config.yml
+````
+- 启动客户端
+
+先修改/etc/hosts
+```shell
+vi /etc/hosts
+```
+添加域名映射后保存
+```shell
+127.0.0.1 vflair-server.com
+```
+然后启动客户端
+````
+export CUDA_VISIBLE_DEVICES=0
+export MYSQL_HOST=localhost
+export MYSQL_PASSWORD=xxxxx #你的mysql 密码
+export MODEL_FOLDER=/model/foler # 设置模型所在文件夹
+python src/framework/web/main.py --config=./src/framework/web/web_config.yml
+````
+- 测试
+```
+curl localhost:5000/job/upload -F "file=@/Users/test/Downloads/basic_config_cola.json" -v
+```
+
+### 自定义算法步骤
 参考[Add New Algorithms](../../usage_guidance/Add_New_Algorithm.md)实现新算法后，使用docker build命令分别构建映像，然后安装重新创建容器使用即可
 
 - docker build -f Dockerfile-server -t vflair-server .

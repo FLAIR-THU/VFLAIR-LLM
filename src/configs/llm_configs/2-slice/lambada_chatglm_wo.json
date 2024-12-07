@@ -2,7 +2,7 @@
   "epochs": 1,
   "lr": 0.001,
   "k": 2,
-  "batch_size": 2,
+  "batch_size": 4,
   "test_batch_size": 1,
   "early_stop_threshold": 1,
   "pipeline": "finetune",
@@ -31,7 +31,7 @@
       "add_special_tokens": 1
   },
   "model_list":{
-      "name": "katuni4katiny-random-chatglm2",
+      "name": "THUDMchatglm3-6b",
       "pretrained": 1,
       "model_type": "ChatGLM",
       "max_sequence": 512,
@@ -39,20 +39,24 @@
         "device_map": "auto"
       },
       "0": {
-      "path": "/home/DAIR/guzx/Git_FedProject/Models/katuni4katiny-random-chatglm2",
-          "head":{
-              "embedding_trainable": 0,
-              "encoder_trainable": 0,
-              "encoder_trainable_ids":[]
-          }
+      "path": "/shared/model/chatglm3-6b",
+         "train_set_file": "/shared/data/Lambada",
+      "test_set_file": "/shared/data/Lambada",
+       "head":{
+          "embedding_trainable": 0,
+          "encoder_trainable": 0,
+          "encoder_trainable_ids":[]
+        }
       },
       "1": {
-      "path": "/home/DAIR/guzx/Git_FedProject/Models/katuni4katiny-random-chatglm2",
-          "tail":{
+      "path": "/shared/model/chatglm3-6b",
+        "train_set_file": "/shared/data/Lambada",
+      "test_set_file": "/shared/data/Lambada",
+        "tail":{
             "head_layer_trainable": 1,
-              "encoder_trainable": 0,
-              "encoder_trainable_ids":[]
-          }
+            "encoder_trainable": 0,
+            "encoder_trainable_ids":[]
+        }
       },
       "task":{
           "task_type": "CausalLM",

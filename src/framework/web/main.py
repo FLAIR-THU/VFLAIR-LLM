@@ -51,8 +51,7 @@ async def upload_job(file: UploadFile):
     msg = Namespace()
     msg.data = {"config": contents, 'async': True}
     msg.type = fpm.CREATE_JOB
-    result = service['grpc_client'].parse_message(msg)
-    job_id = result['job_id']
+    job_id, _ = service['grpc_client'].parse_message(msg)
     return {"result": "success", "job_id": job_id}
 
 
