@@ -4,7 +4,7 @@ import torch
 class LLMModelLoader(object):
     __metaclass__ = ABCMeta
     @abstractmethod
-    def load(self, path: str, is_active_party: bool):
+    def load(self, path: str, is_active_party: bool, party_idx: int):
         pass
 
     def _set_peft(self, model, finetune_detail_configs):

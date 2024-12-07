@@ -73,18 +73,18 @@ class WhiteBoxInversion(Attacker):
 
         for attacker_ik in self.party: # attacker party #attacker_ik
             assert attacker_ik == (self.k - 1), 'Only Active party launch input inference attack'
+            attacked_party = 0
+            self.top_vfl.current_client_id = attacked_party
 
-            attacked_party_list = [ik for ik in range(self.k)]
-            attacked_party_list.remove(attacker_ik)
             index = attacker_ik
 
             # collect necessary information
-            local_model = self.top_vfl.parties[0].local_model#.to(self.device)
+            local_model = self.top_vfl.parties[attacked_party].local_model#.to(self.device)
             #self.vfl_info['local_model_head'].to(self.device) # Passive
             local_model.eval()
 
             if self.args.model_architect == 'MM':
-                vis_processor = self.top_vfl.parties[0].vis_processors['eval']
+                vis_processor = self.top_vfl.parties[attacked_party].vis_processors['eval']
                 #self.vfl_info['vis_processors']['eval']
                 
             batch_size = self.attack_batch_size
@@ -99,7 +99,6 @@ class WhiteBoxInversion(Attacker):
 
             attack_result = pd.DataFrame(columns = ['Pad_Length','Length','Precision', 'Recall'])
 
-            # attack_test_dataset = self.top_vfl.parties[0].test_dst
             test_data = self.vfl_info["test_data"][0] 
             test_label = self.vfl_info["test_label"][0] 
             
@@ -147,20 +146,15 @@ class WhiteBoxInversion(Attacker):
                     else:
                         data_inputs[key_name] = [batch_input_dicts[i][key_name] for i in range(len(batch_input_dicts))] 
 
-                # self.top_vfl.parties[0].set_is_first_forward_iter(1)
-                # self.top_vfl.parties[1].set_is_first_forward_iter(1)
+
                 self.top_vfl.set_is_first_forward_epoch(1)
 
-
                 # real received intermediate result
-                self.top_vfl.parties[0].obtain_local_data(data_inputs)
-                self.top_vfl.parties[0].gt_one_hot_label = batch_label
+                self.top_vfl.parties[attacked_party].obtain_local_data(data_inputs)
+                self.top_vfl.parties[attacked_party].gt_one_hot_label = batch_label
 
-
-                all_pred_list = self.top_vfl.pred_transmit()
+                real_results = self.top_vfl.pred_transmit()
                 self.top_vfl._clear_past_key_values()
-
-                real_results = all_pred_list[0]
 
                 vocab_size = local_model.config.vocab_size # 30522
                 # print('vocab_size:',vocab_size) # 50257

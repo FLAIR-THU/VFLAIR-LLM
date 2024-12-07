@@ -5,7 +5,7 @@
   "batch_size": 24,
   "test_batch_size": 1,
   "early_stop_threshold": 1,
-  "pipeline": "pretrained",
+  "pipeline": "finetune",
   "model_architect":"CLM",
   "communication":{
       "communication_protocol": "FedSGD",

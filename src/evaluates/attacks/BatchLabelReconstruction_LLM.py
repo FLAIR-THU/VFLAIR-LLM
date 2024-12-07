@@ -106,19 +106,8 @@ class BatchLabelReconstruction_LLM(Attacker):
 
         for attacker_ik in self.party: # attacker party #attacker_ik
             assert attacker_ik == (self.k - 1), 'Only Active party launch input inference attack'
-            attacked_party_list = [ik for ik in range(self.k)]
-            attacked_party_list.remove(attacker_ik)
-            index = attacker_ik
-
+            attacked_party = 0
             
-            # batch_data = self.vfl_info['batch_data']
-            # true_label = self.vfl_info['label'].to(self.device)  # copy.deepcopy(self.gt_one_hot_label)
-            # print('true_label:', true_label.size()) # bs, num_class
-            # self.vfl_info = self.top_vfl.save_state(True)
-            # loss, train_acc = self.top_vfl.train_batch(batch_data, true_label)
-            # self.vfl_info.update(self.top_vfl.save_state(False))
-            
-
             ####### collect necessary information #######
 
             # gradient received by active party
@@ -138,7 +127,7 @@ class BatchLabelReconstruction_LLM(Attacker):
             passive_model_head_attention_mask = self.vfl_info['passive_predict_attention_mask'][0]  # bs, seq_len, embed_dim
             
             # target
-            true_label = self.vfl_info['label'].to(self.device)  # CLM: bs, seq_len
+            true_label = self.vfl_info['label'][attacked_party].to(self.device)  # CLM: bs, seq_len
             if self.args.model_architect == 'CLM': 
                 true_label = true_label[:,-1]
             
@@ -171,7 +160,7 @@ class BatchLabelReconstruction_LLM(Attacker):
                 print('active_model_body_pred:',active_model_body_pred.shape)
             
             # set fake label
-            dummy_label =torch.zeros(sample_count, self.label_size).to(self.device)
+            dummy_label = torch.zeros(sample_count, self.label_size).to(self.device)
             dummy_label.requires_grad = True
             print(f'dummy_label={dummy_label.shape} true_label={true_label.shape}')
             
@@ -243,8 +232,8 @@ class BatchLabelReconstruction_LLM(Attacker):
 
             
 
-            print(f'batch_size=%d,class_num=%d,party_index=%d,recovery_rate=%lf,time_used=%lf' % (
-            sample_count, self.label_size, index, final_rec_rate, end_time - start_time))
+            print(f'batch_size=%d,class_num=%d,attacked_party=%d,recovery_rate=%lf,time_used=%lf' % (
+            sample_count, self.label_size, attacked_party, final_rec_rate, end_time - start_time))
 
             attack_total_time = end_time - start_time
             print(f"BLI, if self.args.apply_defense={self.args.apply_defense}")

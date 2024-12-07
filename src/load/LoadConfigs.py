@@ -5,6 +5,7 @@ import math
 import json
 import argparse
 from models.autoencoder import AutoEncoder
+from utils.basic_functions import ModelTrainableConfig
 
 communication_protocol_list = ['FedSGD', 'FedBCD_p', 'FedBCD_s', 'CELU', 'Quantization', 'Topk']
 
@@ -598,8 +599,12 @@ def do_load_basic_configs_llm(config_dict, args):
             args.pretrained = 1
         # Overall LLM type/None for non-llm scenario
         args.model_type = config_model_dict['model_type'] if 'model_type' in config_model_dict else None  
+        args.model_path = []
         
         # Finetune Configs  
+        args.model_trainable_info = []
+        
+        # Passive Party Models
         # dict:{model_slice: value}  model_slice = head/body/tail
         args.model_slice_trainable = [False, False, False]
         args.embedding_trainable = False
@@ -607,31 +612,49 @@ def do_load_basic_configs_llm(config_dict, args):
         args.head_layer_trainable = False
         args.encoder_trainable = {}
         args.encoder_trainable_ids = {}
-        args.model_path = []
-        # Passive Party Models
         assert '0' in config_model_dict, "Passive Party not specified in model list"
-        passive_model_dict = config_model_dict['0']
-        args.model_path.append(passive_model_dict['path'])
-        
-        assert 'head' in passive_model_dict, "Model Head not specified in passive party model configs"
-        args.encoder_trainable['head'] = passive_model_dict['head']['encoder_trainable'] if 'encoder_trainable' in passive_model_dict['head'] else False
-        args.encoder_trainable_ids['head'] = passive_model_dict['head']['encoder_trainable_ids'] if 'encoder_trainable_ids' in passive_model_dict['head'] else []
-        args.embedding_trainable = passive_model_dict['head']['embedding_trainable'] if 'embedding_trainable' in passive_model_dict['head'] else False
-        args.vision_processor_trainable = passive_model_dict['head']['vision_processor_trainable'] if 'vision_processor_trainable' in passive_model_dict['head'] else False
-        
-        args.model_slice_trainable[0] = passive_model_dict['head']['trainable'] if 'trainable' in passive_model_dict['head'] else False
-        
-         
-        if args.vfl_model_slice_num==3:
-            assert 'tail' in passive_model_dict, "Model Tail not specified in passive party model configs"
-            args.encoder_trainable['tail'] = passive_model_dict['tail']['encoder_trainable'] if 'encoder_trainable' in passive_model_dict['tail'] else False
-            args.encoder_trainable_ids['tail'] = passive_model_dict['tail']['encoder_trainable_ids'] if 'encoder_trainable_ids' in passive_model_dict['tail'] else []
-            args.head_layer_trainable = passive_model_dict['tail']['head_layer_trainable'] if 'head_layer_trainable' in passive_model_dict['tail'] else False
-            args.model_slice_trainable[2] = passive_model_dict['tail']['trainable'] if 'trainable' in passive_model_dict['tail'] else False
-        
+        for ik in range(args.k-1):
+            passive_model_dict = config_model_dict[str(ik)]
+            args.model_path.append(passive_model_dict['path'])
+            
+            assert 'head' in passive_model_dict, "Model Head not specified in passive party model configs"
+            args.encoder_trainable['head'] = passive_model_dict['head']['encoder_trainable'] if 'encoder_trainable' in passive_model_dict['head'] else False
+            args.encoder_trainable_ids['head'] = passive_model_dict['head']['encoder_trainable_ids'] if 'encoder_trainable_ids' in passive_model_dict['head'] else []
+            args.embedding_trainable = passive_model_dict['head']['embedding_trainable'] if 'embedding_trainable' in passive_model_dict['head'] else False
+            
+            args.vision_processor_trainable = passive_model_dict['head']['vision_processor_trainable'] if 'vision_processor_trainable' in passive_model_dict['head'] else False
+            args.model_slice_trainable[0] = passive_model_dict['head']['trainable'] if 'trainable' in passive_model_dict['head'] else False
+            
+            args.head_layer_trainable = 0
+            if args.vfl_model_slice_num==3:
+                assert 'tail' in passive_model_dict, "Model Tail not specified in passive party model configs"
+                args.encoder_trainable['tail'] = passive_model_dict['tail']['encoder_trainable'] if 'encoder_trainable' in passive_model_dict['tail'] else False
+                args.encoder_trainable_ids['tail'] = passive_model_dict['tail']['encoder_trainable_ids'] if 'encoder_trainable_ids' in passive_model_dict['tail'] else []
+                args.head_layer_trainable = passive_model_dict['tail']['head_layer_trainable'] if 'head_layer_trainable' in passive_model_dict['tail'] else False
+                args.model_slice_trainable[2] = passive_model_dict['tail']['trainable'] if 'trainable' in passive_model_dict['tail'] else False
+            
+            args.model_trainable_info.append(
+                ModelTrainableConfig(
+                    **{
+                        'encoder_trainable': args.encoder_trainable,
+                        'encoder_trainable_ids': args.encoder_trainable_ids,
+                        'embedding_trainable': args.embedding_trainable,
+                        'vision_processor_trainable': args.vision_processor_trainable,
+                        'model_slice_trainable': args.model_slice_trainable,
+                        'head_layer_trainable': args.head_layer_trainable
+                    }
+                )
+            )
+            
         # Active Party Models
-        assert '1' in config_model_dict, "Active Party not specified in model list"
-        active_model_dict = config_model_dict['1']
+        args.model_slice_trainable = [False, False, False]
+        args.embedding_trainable = False
+        args.vision_processor_trainable = False
+        args.head_layer_trainable = False
+        args.encoder_trainable = {}
+        args.encoder_trainable_ids = {}
+        assert str(args.k-1) in config_model_dict, "Active Party not specified in model list"
+        active_model_dict = config_model_dict[str(args.k-1)]
         args.model_path.append(active_model_dict['path'])
         
         if args.vfl_model_slice_num==3:
@@ -646,16 +669,23 @@ def do_load_basic_configs_llm(config_dict, args):
             args.encoder_trainable_ids['tail'] = active_model_dict['tail']['encoder_trainable_ids'] if 'encoder_trainable_ids' in active_model_dict['tail'] else []
             args.head_layer_trainable = active_model_dict['tail']['head_layer_trainable'] if 'head_layer_trainable' in active_model_dict['tail'] else False
         
+        args.model_trainable_info.append(
+                ModelTrainableConfig(
+                    **{
+                        'encoder_trainable': args.encoder_trainable,
+                        'encoder_trainable_ids': args.encoder_trainable_ids,
+                        'model_slice_trainable': args.model_slice_trainable,
+                        'head_layer_trainable': args.head_layer_trainable
+                    }
+                )
+            )
         
-        print('args.vfl_model_slice_num:', args.vfl_model_slice_num)
-        print('args.local_encoders_num:', args.local_encoders_num)
-        print('args.local_tail_encoders_num:', args.local_tail_encoders_num)
-        print('args.encoder_trainable:', args.encoder_trainable)
-        print('args.embedding_trainable:', args.embedding_trainable)
-        print('args.head_layer_trainable:', args.head_layer_trainable)
-
+        # print('Final model_trainable_info:',len(args.model_trainable_info))
+        # for _idx in range(len(args.model_trainable_info)):
+        #     print(f'party {_idx}')
+        #     print(args.model_trainable_info[_idx])
+        
         args.model_list = config_model_dict
-
 
     else:
         default_model_dict = {}

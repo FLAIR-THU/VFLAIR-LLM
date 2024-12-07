@@ -7,17 +7,17 @@ class LocalCommunication(ICommunication):
     def __init__(self, active_party):
         self.__active_party = active_party
 
-    def send_pred_message(self, pred_list, parse_result_fn=None, use_cache=False, test="True"):
-        return self.__active_party.aggregate(pred_list, test=test) # use_cache=use_cache, 
+    def send_pred_message(self, pred_list, client_id, parse_result_fn=None, use_cache=False, test="True"):
+        return self.__active_party.aggregate(pred_list, client_id, test=test) # use_cache=use_cache, 
 
     def send_global_backward_message(self):
         self.__active_party.global_backward()
 
-    def send_global_loss_and_gradients(self, gradients):
-        self.__active_party.receive_loss_and_gradients(gradients)
+    def send_global_loss_and_gradients(self, gradients, client_id):
+        self.__active_party.receive_loss_and_gradients(gradients, client_id)
 
-    def send_cal_passive_local_gradient_message(self, index):
-        return self.__active_party.cal_passive_local_gradient(index, remote=False)
+    def send_cal_passive_local_gradient_message(self, client_id):
+        return self.__active_party.cal_passive_local_gradient(client_id, remote=False)
 
     def send_global_lr_decay(self, i_epoch):
         # for ik in range(self.k):

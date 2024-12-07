@@ -101,17 +101,18 @@ class BiSR(Attacker):
         for attacker_ik in self.party: # attacker party #attacker_ik
             assert attacker_ik == (self.k - 1), 'Only Active party launch input inference attack'
 
-            attacked_party_list = [ik for ik in range(self.k)]
-            attacked_party_list.remove(attacker_ik)
+            attacked_party = 0
+            self.top_vfl.current_client_id = attacked_party
+
             index = attacker_ik
 
             # collect necessary information
-            local_model = self.top_vfl.parties[0].local_model#.to(self.device)
+            local_model = self.top_vfl.parties[attacked_party].local_model#.to(self.device)
             local_model.eval()
             embedding_layer = self.top_vfl.parties[-1].global_model.get_input_embeddings()#.to(self.device)
 
             if self.args.model_architect == 'MM':
-                vis_processor = self.top_vfl.parties[0].vis_processors['eval']
+                vis_processor = self.top_vfl.parties[attacked_party].vis_processors['eval']
                 #self.vfl_info['vis_processors']['eval']
 
             batch_size = self.attack_batch_size
@@ -124,7 +125,10 @@ class BiSR(Attacker):
                 "Linear": LinearSIPInverter
             }
             attacker_model = attacker_model_cls[self.attacker_model_name](self.args, reduce_dim=None).to(local_model.device)
-            attacker_model_path = f'./models/model_parameters/pretrained_attacker_models/{attacker_model.attacker_model_name}_{self.args.dataset}_{self.args.model_type}.pkl'
+            attacker_model_dir = f'./models/model_parameters/pretrained_attacker_models/'
+            if not os.path.exists(attacker_model_dir):
+                os.makedirs(attacker_model_dir)
+            attacker_model_path = attacker_model_dir + f'{attacker_model.attacker_model_name}_{self.args.dataset}_{self.args.model_type}.pkl'
             
             if os.path.exists(attacker_model_path):
                 attacker_model.load_state_dict(torch.load(attacker_model_path))
@@ -133,7 +137,7 @@ class BiSR(Attacker):
                 try:
                     attack_train_num = self.args.attack_configs['auxiliary_data_num']
                 except:
-                    attack_train_num = 0.05 * len(self.vfl_info["train_data"][0])
+                    attack_train_num = int(0.05 * len(self.vfl_info["train_data"][0]))
                 train_data = self.vfl_info["train_data"][0][:attack_train_num]
                 train_label = self.vfl_info["train_label"][0][:attack_train_num]
                 
@@ -402,11 +406,10 @@ class BiSR(Attacker):
                 self.top_vfl.set_is_first_forward_epoch(1)
 
                 # real received intermediate result
-                self.top_vfl.parties[0].obtain_local_data(data_inputs)
-                self.top_vfl.parties[0].gt_one_hot_label = batch_label
+                self.top_vfl.parties[attacked_party].obtain_local_data(data_inputs)
+                self.top_vfl.parties[attacked_party].gt_one_hot_label = batch_label
 
-                all_pred_list = self.top_vfl.pred_transmit()
-                real_results = all_pred_list[0]
+                real_results = self.top_vfl.pred_transmit()
                 self.top_vfl._clear_past_key_values()
 
 

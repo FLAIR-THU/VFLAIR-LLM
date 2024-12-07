@@ -164,6 +164,18 @@ class PassiveDataset_LLM(Dataset):
             if not isinstance( input_dict[key_name] , dict):
                 input_dict[key_name] = torch.tensor(input_dict[key_name]).squeeze().to(self.args.device)
 
+        if self.args.model_type == 'T5':
+            if self.args.tokenizer.bos_token_id == None:
+                self.args.tokenizer.bos_token_id = 101 # set to 101 defaultly
+            
+            if self.split_name == 'train':
+                input_dict['decoder_input_ids'] = input_dict['input_ids']
+            else:
+                bos_tensor = torch.tensor( [self.args.tokenizer.bos_token_id] ).to(input_dict['input_ids'].device)
+                # input_dict['decoder_input_ids'] = torch.cat((bos_tensor, input_dict['input_ids'][1:]), dim=0)
+                input_dict['decoder_input_ids'] = bos_tensor
+
+        
         label = torch.tensor(self.labels[item_idx]).squeeze().to(self.args.device)
         return input_dict, label
 
@@ -177,6 +189,7 @@ class TextVQADataset_test(Dataset):
             }
         '''
         self.args = args
+        self.split_name = split_name
         self.data = data
         self.labels = labels
         self.transform = transform
@@ -196,6 +209,12 @@ class TextVQADataset_test(Dataset):
                 'image':Image.open(data_input['img_path']).convert('RGB')
         }
         
+        if self.split_name == 'train':
+                input_dict['decoder_input_ids'] = input_dict['input_ids']
+                # input_dict['label'] = self.labels[item_idx].to(self.args.device)
+        else:
+            bos_tensor = torch.tensor( [self.args.tokenizer.bos_token_id] ).to(input_dict['input_ids'].device)
+            input_dict['decoder_input_ids'] = bos_tensor
         # print('-- get item input_dict question:',input_dict['question'])
         # print('-- get item input_dict image:',type(input_dict['image']))
         # print('-- get item answer:',answer)
@@ -212,6 +231,7 @@ class TextVQADataset_train(Dataset):
             }
         '''
         self.args = args
+        self.split_name = split_name
         self.data = data
         self.labels = labels
         self.tokenizer = args.tokenizer
@@ -266,6 +286,14 @@ class TextVQADataset_train(Dataset):
             image_bound=ret["image_bound"],
         )
         
+        if self.split_name == 'train':
+                input_dict['decoder_input_ids'] = input_dict['input_ids']
+                # input_dict['label'] = self.labels[item_idx].to(self.args.device)
+        else:
+            bos_tensor = torch.tensor( [self.args.tokenizer.bos_token_id] ).to(input_dict['input_ids'].device)
+            input_dict['decoder_input_ids'] = bos_tensor
+            
+        
         label = torch.cat((ret["target"], torch.full((self.args.max_length - len(ret["target"]),),
          fill_value=-100)))
         
@@ -278,7 +306,6 @@ class TextVQADataset_train(Dataset):
         # print('--- get item label:',label.shape)
 
         return input_dict, label
-
 
 def preprocess(
     images_dict,
@@ -396,7 +423,6 @@ def preprocess(
 
     return input_dict
 
-
 def conversation_to_ids(conversation, tokenizer, llm_type=None, new_schema=False, max_length=2048):
     """
     for single image multi-turn conversation
@@ -422,10 +448,10 @@ def conversation_to_ids(conversation, tokenizer, llm_type=None, new_schema=False
     if input_ids.shape[-1] > max_length:
         ids =ids[:max_length]
         context = context[:max_length]
-        logger.warning(f"The input length ({input_ids.shape[-1]}) exceeds the model's maximum length ({max_length}), so it has been truncated")
+        # logger.warning(f"The input length ({input_ids.shape[-1]}) exceeds the model's maximum length ({max_length}), so it has been truncated")
     
     if torch.all(context):
-        logger.error("No tokens available to compute loss.")
+        # logger.error("No tokens available to compute loss.")
         raise Exception("No tokens available to compute loss.")
 
     # build target
@@ -597,20 +623,12 @@ class CCSBUAlignDataset(Dataset): # CaptionDataset
         
         self.instruction = '[INST] <Img><ImageHere></Img> Please provide a detailed description of the picture. [/INST] '
 
-        print(f'===== Dataset {split_name} =====')
-        print('self.vis_processor:',self.vis_processor)
-        print('self.text_processor:',self.text_processor)
+        # print(f'===== Dataset {split_name} =====')
+        # print('self.vis_processor:',self.vis_processor)
+        # print('self.text_processor:',self.text_processor)
 
-        print('self.instruction:',self.instruction)
+        # print('self.instruction:',self.instruction)
 
-        # for i in range(len(images)):
-        #     self.images.append( self.vis_processor(images[i]) )
-
-        #     if self.text_processor != None:
-        #         self.labels.append( self.text_processor(labels[i])  )
-        #     else:
-        #         self.labels.append( labels[i] )
-        
         for i in range(len(images)):
             self.images.append( images[i] )
             self.labels.append( labels[i] )
@@ -632,6 +650,18 @@ class CCSBUAlignDataset(Dataset): # CaptionDataset
         ### prepare target tokens
         self.args.tokenizer.padding_side = "right"
         label = label+'\n' 
+        
+        if self.args.model_type == 'T5':
+            if self.args.tokenizer.bos_token_id == None:
+                self.args.tokenizer.bos_token_id = 101 # set to 101 defaultly
+            
+            if self.split_name == 'train':
+                input_dict['decoder_input_ids'] = input_dict['input_ids']
+            else:
+                bos_tensor = torch.tensor( [self.args.tokenizer.bos_token_id] ).to(input_dict['input_ids'].device)
+                # input_dict['decoder_input_ids'] = torch.cat((bos_tensor, input_dict['input_ids'][1:]), dim=0)
+                input_dict['decoder_input_ids'] = bos_tensor
+        
 
         return input_dict, label
 
@@ -749,6 +779,7 @@ class AlpacaDataset_LLM(Dataset):
         texts: np.array
         '''
         self.args = args
+        self.split_name = split_name
 
         IGNORE_INDEX = args.tokenizer.pad_token_id  # -100
 
@@ -846,6 +877,17 @@ class AlpacaDataset_LLM(Dataset):
             if not isinstance( input_dict[key_name] , dict):
                 input_dict[key_name] = torch.tensor(input_dict[key_name]).squeeze().to(self.args.device)
 
+        if self.args.model_type == 'T5':
+            if self.args.tokenizer.bos_token_id == None:
+                self.args.tokenizer.bos_token_id = 101 # set to 101 defaultly
+            
+            if self.split_name == 'train':
+                input_dict['decoder_input_ids'] = input_dict['input_ids']
+            else:
+                bos_tensor = torch.tensor( [self.args.tokenizer.bos_token_id] ).to(input_dict['input_ids'].device)
+                # input_dict['decoder_input_ids'] = torch.cat((bos_tensor, input_dict['input_ids'][1:]), dim=0)
+                input_dict['decoder_input_ids'] = bos_tensor
+        
         label = torch.tensor(self.labels[item_idx]).squeeze().to(self.args.device)
         return input_dict, label
 
@@ -856,7 +898,7 @@ class GSMDataset_LLM(Dataset):
         self.qns = qns
         self.ans = ans
         self.loss_on_prefix = loss_on_prefix
-
+        self.split_name = split_name
         if split_name == 'train':
             self.input_dicts = [ self.args.tokenizer(
                                     self.qns[i]+self.ans[i],return_tensors="pt",
@@ -888,19 +930,6 @@ class GSMDataset_LLM(Dataset):
                 for i in range(len(self.ans))
             ]
 
-            # print('--- test ---')
-            # print(self.input_dicts[0])
-            # print(self.labels[0])
-
-        # print(f'=== Dataset Split = {split_name} ===')
-        # print('text:',self.input_dicts[0]['input_ids'].shape)
-        # print(self.args.tokenizer.decode( self.input_dicts[0]['input_ids'].squeeze()))
-        # print('-'*25)
-        # print('label:',self.labels[0].shape)
-        # print(self.args.tokenizer.decode(self.labels[0].squeeze()))
-        # print('='*50)
-
-
     def __len__(self):
         return len(self.ans)
 
@@ -912,30 +941,30 @@ class GSMDataset_LLM(Dataset):
             if not isinstance( input_dict[key_name] , dict):
                 input_dict[key_name] = torch.tensor(input_dict[key_name]).squeeze().to(self.args.device)
 
+        if self.args.model_type == 'T5':
+            if self.args.tokenizer.bos_token_id == None:
+                self.args.tokenizer.bos_token_id = 101 # set to 101 defaultly
+            
+            if self.split_name == 'train':
+                input_dict['decoder_input_ids'] = input_dict['input_ids']
+                # input_dict['label'] = self.labels[item_idx].to(self.args.device)
+            else:
+                bos_tensor = torch.tensor( [self.args.tokenizer.bos_token_id] ).to(input_dict['input_ids'].device)
+                input_dict['decoder_input_ids'] = bos_tensor
         label = torch.tensor(self.labels[item_idx]).squeeze().to(self.args.device)
-        # print('--get item:',label.shape)
+        
+        # print('--get item decoder_input_ids:',input_dict['decoder_input_ids'].shape,input_dict['decoder_input_ids'])
+        # print('--get item label:',input_dict['label'].shape,input_dict['label'])
         return input_dict, label
 
-    # def __getitem__(self, idx):
-    #     qn_tokens = self.qns["input_ids"][idx]
-    #     ans_tokens = self.ans["input_ids"][idx]
-    #     pad_tokens = [0] * (self.max_len - len(qn_tokens) - len(ans_tokens))
-    #     tokens = qn_tokens + ans_tokens + pad_tokens
-    #     mask = (
-    #         ([int(self.loss_on_prefix)] * len(qn_tokens))
-    #         + ([1] * len(ans_tokens))
-    #         + ([0] * len(pad_tokens))
-    #     )
-    #     tokens = th.tensor(tokens)
-    #     mask = th.tensor(mask)
-    #     return dict(input_ids=tokens, attention_mask=mask)
-
+   
 class MATHDataset_LLM(Dataset):
     def __init__(self, args, sources ,targets, split_name='train'):
         '''
         texts: np.array
         '''
         self.args = args
+        self.split_name = split_name
         
         IGNORE_INDEX = args.tokenizer.pad_token_id #-100
         def _tokenize_fn(strings: Sequence[str], tokenizer) -> Dict:
@@ -985,22 +1014,7 @@ class MATHDataset_LLM(Dataset):
                     label[:-target_len] = IGNORE_INDEX
             else:
                 inputs_tokenized, targets_tokenized = [_tokenize_fn(strings, tokenizer) for strings in (sources, targets)]
-                # inputs_tokenized = _tokenize_fn(sources, tokenizer) 
-                
-                # targets_tokenized = 
 
-                # targets_tokenized_list = [
-                #     args.tokenizer(
-                #         text,
-                #         return_tensors="pt",
-                #         padding=args.padding,#"longest",
-                #         max_length=args.max_length, #tokenizer.model_max_length,
-                #         truncation=args.truncation, #True,
-                #     )
-                #     for text in strings
-                # ]
-                # targets_tokenized = [tokenized.input_ids[0] for tokenized in targets_tokenized_list]
-            
                 input_ids = inputs_tokenized["input_ids"]
                 attention_mask = inputs_tokenized["attention_mask"]
                 labels = targets_tokenized["input_ids"]
@@ -1016,12 +1030,6 @@ class MATHDataset_LLM(Dataset):
             ] # list of input_dicts
         self.labels = data_dict["labels"] # list of tensor(labels)
 
-        print(f'=== Dataset Split = {split_name} ===')
-        print('text:',self.input_dicts[0]['input_ids'].shape, self.args.tokenizer.decode(self.input_dicts[0]['input_ids']))
-        print('-'*25)
-        print('label:',self.labels[0].shape, self.args.tokenizer.decode(self.labels[0]))
-        print('='*50)
-
     def __len__(self):
         return len(self.labels)
 
@@ -1033,229 +1041,19 @@ class MATHDataset_LLM(Dataset):
             if not isinstance(input_dict[key_name], dict):
                 input_dict[key_name] = torch.tensor(input_dict[key_name]).squeeze().to(self.args.device)
 
+        if self.args.model_type == 'T5':
+            if self.args.tokenizer.bos_token_id == None:
+                self.args.tokenizer.bos_token_id = 101 # set to 101 defaultly
+            
+            if self.split_name == 'train':
+                input_dict['decoder_input_ids'] = input_dict['input_ids']
+            else:
+                bos_tensor = torch.tensor( [self.args.tokenizer.bos_token_id] ).to(input_dict['input_ids'].device)
+                # input_dict['decoder_input_ids'] = torch.cat((bos_tensor, input_dict['input_ids'][1:]), dim=0)
+                input_dict['decoder_input_ids'] = bos_tensor
+          
         label = torch.tensor(self.labels[item_idx]).squeeze().to(self.args.device)
         return input_dict, label
-
-
-class PassiveDataset_LLM_old(Dataset):
-    def __init__(self, args, texts, labels, split_name='test'):
-        '''
-        texts: np.array
-        '''
-        self.args = args
-        self.texts = []  # input_ids
-        self.masks = []  # attention_mask
-        self.token_type_ids = []  # token_type_ids
-        self.labels = []
-        self.features = []
-
-        max_token_len = 0
-
-        if args.task_type == 'QuestionAnswering':
-            # labels : bs * [start_position, end_position]
-            # texts: bs * [feature]
-            for i in range(len(texts)):
-                _feature = texts[i]
-                self.texts.append(_feature["input_ids"])  # input_ids
-                self.masks.append(_feature["input_mask"])  # input_mask
-                self.token_type_ids.append(_feature["segment_ids"])  # segment_ids
-
-                self.labels.append(labels[i])  # [ [start_position, end_position] ]
-                self.features.append(_feature)
-
-                # print('self.features:',type(self.features), len(self.features))
-            # print(type(self.features[0]), type(self.features[1]))
-
-        elif args.task_type == 'CausalLM':
-            if args.dataset == 'MMLU':
-                flag = 0
-                for i in range(len(texts)):
-                    ids = args.tokenizer(texts[i], \
-                                         padding=args.padding, truncation=args.truncation, \
-                                         max_length=args.max_length, return_tensors='pt')
-
-                    self.texts.append(torch.tensor(ids['input_ids']).squeeze())
-                    self.masks.append(torch.tensor(ids['attention_mask']).squeeze())
-                    if 'token_type_ids' in list(ids.keys()):
-                        self.token_type_ids.append(torch.tensor(ids['token_type_ids']).squeeze())
-
-                    if flag == 0:
-                        print('TEXT:', texts[i])
-                        print(self.texts[-1])
-                        print('LABEL:', labels[i])
-
-                        print('-' * 25)
-                        flag = flag + 1
-                self.labels = labels
-                self.texts = [aa.tolist() for aa in self.texts]
-                self.masks = [aa.tolist() for aa in self.masks]
-                if self.token_type_ids != []:
-                    self.token_type_ids = [aa.tolist() for aa in self.token_type_ids]
-
-            else:
-                flag = 0
-                for i in range(len(texts)):
-
-                    if split_name == 'test':
-                        ids = args.tokenizer(texts[i], return_tensors='pt')
-                    else:
-                        # # truncation
-                        # if torch.tensor(ids['input_ids']).squeeze().shape[0] > args.max_length:
-                        #     ids['input_ids'] = ids['input_ids'][...,-(args.max_length+1):] # torch.size([max_length])
-                        #     ids['attention_mask'] = ids['attention_mask'][...,-(args.max_length+1):] # torch.size([max_length])
-                        #     if 'token_type_ids' in list(ids.keys()):
-                        #         ids['token_type_ids'] = ids['token_type_ids'][...,-(args.max_length+1):] # torch.size([max_length])
-                        # # padding
-                        # else:
-                        ids = args.tokenizer(texts[i], \
-                                             padding=args.padding, truncation=args.truncation, \
-                                             max_length=args.max_length, return_tensors='pt')
-
-                    self.texts.append(torch.tensor(ids['input_ids']).squeeze())
-                    self.masks.append(torch.tensor(ids['attention_mask']).squeeze())
-                    # self.labels.append( int(torch.tensor(ids['input_ids']).squeeze()[-1].item()) )
-                    self.labels.append(args.tokenizer.convert_tokens_to_ids(labels[i]))
-
-                    if 'token_type_ids' in list(ids.keys()):
-                        self.token_type_ids.append(torch.tensor(ids['token_type_ids']).squeeze())
-
-                    # if flag == 0:
-                    #     print('TEXT:', texts[i])
-
-                    #     print('text_id:', self.texts[-1].shape, self.texts[-1])
-                    #     print('label:', labels[i], self.labels[-1])
-                    #     print('-' * 25)
-                    #     flag = flag + 1
-
-                self.labels = [int(aa) for aa in self.labels]
-                self.texts = [aa.tolist() for aa in self.texts]
-                self.masks = [aa.tolist() for aa in self.masks]
-                if self.token_type_ids != []:
-                    self.token_type_ids = [aa.tolist() for aa in self.token_type_ids]
-
-        elif args.task_type == 'SequenceClassification':
-            if len(texts.shape) == 1:  # input: single sentence
-                for _text in texts:
-                    if args.padding != "do_not_pad" and args.padding_type == "inside":  # [PAD] between [CLS][SEP]
-                        text_tokens = args.tokenizer.tokenize(_text)
-
-                        pad_length = max(args.max_length - len(text_tokens), 0)
-                        for _pad in range(pad_length):
-                            if args.padding_side == 'right':
-                                text_tokens.append(args.tokenizer.pad_token)
-                            elif args.padding_side == 'left':
-                                text_tokens.insert(0, args.tokenizer.pad_token)
-                            elif args.padding_side == 'random':
-                                text_tokens.insert(randrange(len(text_tokens) + 1), args.tokenizer.pad_token)
-
-                        _text = " ".join(text_tokens)
-                        # print('after pad:', _text)
-
-                        ids = args.tokenizer(_text, truncation=args.truncation, max_length=args.max_length, \
-                                             return_tensors='pt', add_special_tokens=args.add_special_tokens)
-
-                        # for _pos in range(ids['attention_mask'].shape[1]):
-                        #     if ids['input_ids'][0][_pos] == args.tokenizer.pad_token_id:
-                        #         ids['attention_mask'][0][_pos] = 0
-
-                    else:  # [PAD] outside [CLS][SEP]
-                        ids = args.tokenizer(_text, \
-                                             padding=args.padding, truncation=args.truncation, \
-                                             max_length=args.max_length, return_tensors='pt',
-                                             add_special_tokens=args.add_special_tokens)
-
-                        # _len = torch.tensor(ids['input_ids']).shape[1]
-                        # max_token_len = max(max_token_len,_len)
-                    # print('max_token_len:',max_token_len)
-
-                    self.texts.append(torch.tensor(ids['input_ids']).squeeze())
-                    # avoid performing attention on padding token indices.
-                    self.masks.append(torch.tensor(ids['attention_mask']).squeeze())
-                    # Segment token indices to indicate first and second portions of the inputs.
-                    if 'token_type_ids' in list(ids.keys()):
-                        self.token_type_ids.append(torch.tensor(ids['token_type_ids']).squeeze())
-                print(self.texts[0])
-                assert 1 > 2
-
-            elif len(texts.shape) == 2:  # input: sentence pairs
-                for _text in texts:
-
-                    try:
-                        ids = args.tokenizer(_text[0], _text[1], \
-                                             padding=args.padding, truncation=args.truncation, \
-                                             max_length=args.max_length, return_tensors='pt')
-                    except:
-                        assert 1 > 2
-
-                    self.texts.append(torch.tensor(ids['input_ids']).squeeze())
-                    self.masks.append(torch.tensor(ids['attention_mask']).squeeze())
-                    if 'token_type_ids' in list(ids.keys()):
-                        self.token_type_ids.append(torch.tensor(ids['token_type_ids']).squeeze())
-                print(self.texts[0])
-                assert 1 > 2
-
-            elif len(texts.shape) == 3:  # input: sentence pairs
-                for _text in texts:
-                    try:
-                        ids = args.tokenizer(list(_text[0]), list(_text[1]), \
-                                             padding=args.padding, truncation=args.truncation, \
-                                             max_length=args.max_length, return_tensors='pt')
-
-                    except:
-                        assert 1 > 2
-                    self.texts.append(torch.tensor(ids['input_ids']).squeeze())
-                    self.masks.append(torch.tensor(ids['attention_mask']).squeeze())
-                    if 'token_type_ids' in list(ids.keys()):
-                        self.token_type_ids.append(torch.tensor(ids['token_type_ids']).squeeze())
-
-            else:
-                print(texts.shape)
-                assert 1 > 2, 'text input shape not supported'
-
-            if self.args.num_classes == 1:
-                self.labels = torch.tensor(labels, dtype=torch.float32)
-            else:
-                self.labels = torch.tensor(labels)
-
-            self.texts = [aa.tolist() for aa in self.texts]
-
-            self.masks = [aa.tolist() for aa in self.masks]
-
-            if self.token_type_ids != []:
-                self.token_type_ids = [aa.tolist() for aa in self.token_type_ids]
-
-    def __len__(self):
-        return len(self.labels)
-
-    def __getitem__(self, item_idx):
-        data_i, target_i, mask_i = \
-            self.texts[item_idx], self.labels[item_idx], self.masks[item_idx]
-        data_i = torch.tensor(data_i, dtype=torch.long).to(self.args.device)
-        mask_i = torch.tensor(mask_i, dtype=torch.long).to(self.args.device)
-
-        if not type(target_i) == str:
-            target_i = torch.tensor(target_i, dtype=torch.long).to(self.args.device)
-            # if self.args.num_classes == 1:
-            #     target_i = torch.tensor(target_i, dtype=torch.float32).to(self.args.device)
-            # else:
-            #     target_i = torch.tensor(target_i, dtype=torch.long).to(self.args.device)
-
-        if self.token_type_ids == []:
-            token_type_ids_i = []
-        else:
-            token_type_ids_i = self.token_type_ids[item_idx]
-            token_type_ids_i = torch.tensor(token_type_ids_i, dtype=torch.long).to(self.args.device)
-
-        if self.features == []:
-            features_i = []
-        else:
-            features_i = self.features[item_idx]
-
-        # if data_i.shape[1] > self.args.max_sequence:
-        # print('fetch data:',data_i.shape, target_i, mask_i.shape)
-        # print(type(token_type_ids_i), token_type_ids_i, '  ',type(features_i), features_i )
-
-        return data_i, target_i, mask_i, token_type_ids_i, features_i  # doc_tokens_i
 
 
 class PassiveDataset(Dataset):

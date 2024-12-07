@@ -369,7 +369,7 @@ def load_basic_models_llm(args, index):
     is_active_party = (index == args.k - 1)
     loader = Loader_Map[args.model_type]()
     model_path = args.model_path[index]
-    result = loader.load(args=args, model_path=model_path, is_active_party = is_active_party)
+    result = loader.load(args=args, model_path=model_path, is_active_party = is_active_party, party_idx = index)
     return result
 '''
 return {

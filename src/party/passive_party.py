@@ -75,7 +75,8 @@ class PassiveParty_LLM(Party_LLM):
         for _ in range(args.k):
             self.pred_received.append([])
 
-        self.global_pred = None
+        self.active_intermediate = None
+        
         self.global_loss = None
         self.communication_cost = 0
         self.num_total_comms = 0
@@ -238,10 +239,10 @@ class PassiveParty_LLM(Party_LLM):
                 print(f'Passive Party {self.index}: init DP Defense')
 
     def prepare_data(self, args, index):
+        print(f'-- Party {index} preparing data')
         if not args.dataset:
             return None
         super().prepare_data(args, index)  # Party_llm's prepare_data
-
         if args.dataset in ['Alpaca', 'CodeAlpaca']:
             self.train_dst = AlpacaDataset_LLM(args, self.train_data, self.train_label, 'train')
             self.test_dst = AlpacaDataset_LLM(args, self.test_data, self.test_label, 'test')

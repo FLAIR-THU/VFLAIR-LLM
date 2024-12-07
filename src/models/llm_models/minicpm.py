@@ -207,7 +207,7 @@ class MiniCPMModelBody(MiniCPMModelSplitter):
         super().__init__(config)
         self.past_key_values = None
         del self.norm
-        del self.embed_tokens
+        # del self.embed_tokens
         # todo: del norm will cause error when load from original model weight
         # del self.norm
     

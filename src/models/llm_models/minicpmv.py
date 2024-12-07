@@ -34,13 +34,13 @@ class MiniCPMVModelSplitter(MiniCPMV, VFLModel):
 
     def _split_layers(self, idx_of_layers: Iterable[int]) -> bool:
         new_layers = ModuleList()
-        for i, layer in enumerate(self.llm.model.layers):
+        for i, layer in enumerate(self.llm.layers):
             if i in idx_of_layers:
                 new_layers.append(layer)
-        self.llm.model.layers = new_layers
+        self.llm.layers = new_layers # self.llm.model
 
         # update config
-        self.llm.model.config.num_hidden_layers = len(new_layers)
+        self.llm.config.num_hidden_layers = len(new_layers)
         self.llm.config.num_hidden_layers = len(new_layers)
         self.config.num_hidden_layers = len(new_layers)
         return True

@@ -75,6 +75,7 @@ class MiniCPMV(MiniCPMVPreTrainedModel):
         self.llm.embed_tokens = value
 
     def vpm_forward_features(self, pixel_value):
+        # pixel_value.to(self.vpm.pos_embed.device)
         if isinstance(self.vpm, ModulesToSaveWrapper):
             if self.vpm.disable_adapters or (self.vpm.active_adapter not in self.vpm.modules_to_save):
                 return self.vpm.original_module.forward_features(pixel_value)

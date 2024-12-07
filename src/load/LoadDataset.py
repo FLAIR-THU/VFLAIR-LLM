@@ -49,10 +49,9 @@ from utils.basic_functions import get_class_i, get_labeled_data, fetch_data_and_
 from utils.cora_utils import *
 from utils.graph_functions import load_data1, split_graph
 
-# DATA_PATH ='./load/share_dataset/'  #'../../../share_dataset/'
 
-DATA_PATH = '../../../share_dataset/'
-# DATA_PATH = '/shared/data/'
+# DATA_PATH = '../../../share_dataset/'
+DATA_PATH = '/shared/data/'
 
 IMAGE_DATA = ['mnist', 'cifar10', 'cifar100', 'cifar20', 'utkface', 'facescrub', 'places365']
 TABULAR_DATA = ['breast_cancer_diagnose', 'diabetes', 'adult_income', 'criteo', 'credit', 'nursery', 'avazu']
@@ -72,42 +71,56 @@ def dataset_partition_llm(args, index, dst, half_dim):
     '''
     total_dim = len(dst[0])
     passive_party_num = args.k - 1
-
+    print('#dataset_partition_llm passive_party_num=',passive_party_num,' total_dim:',total_dim)
+    
+    # 1 Passive Party
     if passive_party_num == 1:
         return dst
 
-    if args.dataset in TEXT_DATA:
+    # Multiple Passive Parties
+    elif passive_party_num > 1:
+        total_dim = len(dst[0])
         dim_list = [0]
         for ik in range(passive_party_num - 1):
             dim_list.append(int(total_dim // (passive_party_num)) * (ik + 1))
         dim_list.append(total_dim)
+        print(len(dst[0][dim_list[index]:dim_list[index+1]]))
+        return (dst[0][dim_list[index]:dim_list[index+1]], dst[1][dim_list[index]:dim_list[index+1]])  # (dst[0][dim_list[index]:], dst[1])
+    else:
+        assert 1 > 2, 'partition not available'
+        
+    # if args.dataset in TEXT_DATA:
+    #     dim_list = [0]
+    #     for ik in range(passive_party_num - 1):
+    #         dim_list.append(int(total_dim // (passive_party_num)) * (ik + 1))
+    #     dim_list.append(total_dim)
 
-        if passive_party_num == 1:
-            return (dst[0], dst[1])
+    #     if passive_party_num == 1:
+    #         return (dst[0], dst[1])
 
-        elif passive_party_num == 2:
-            # if index == (args.k-1): # active party has label
-            # print('Passive Party Index:',index,'___',dim_list[index],':')
-            active_dst = []
-            for _i in range(dst[0].shape[0]):
-                word_num = len(dst[0][_i]) // 2
-                active_dst.append(dst[0][_i][:word_num])
-            active_dst = np.array(active_dst)
-            return (active_dst, dst[1])  # (dst[0][dim_list[index]:], dst[1])
-            # else: # passive party does not have label
-            #     if index <= (args.k-1):
-            #         print('Passive Index:',index,'___',dim_list[index],':',dim_list[index+1])
-            #         passive_dst = []
-            #         for _i in range(dst[0].shape[0]):
-            #             word_num = len(dst[0][_i]) //2
-            #             passive_dst.append( dst[0][_i][word_num:] )
-            #         passive_dst = np.array(passive_dst)
-            #         return (passive_dst ,None) #(dst[0][dim_list[index]:dim_list[index+1]], None)
-            #     else:
-            #         assert index <= (args.k-1), "invalide party index"
-            #         return None
-        else:
-            assert 1 > 2, 'partition not available'
+    #     elif passive_party_num == 2:
+    #         # if index == (args.k-1): # active party has label
+    #         # print('Passive Party Index:',index,'___',dim_list[index],':')
+    #         active_dst = []
+    #         for _i in range(dst[0].shape[0]):
+    #             word_num = len(dst[0][_i]) // 2
+    #             active_dst.append(dst[0][_i][:word_num])
+    #         active_dst = np.array(active_dst)
+    #         return (active_dst, dst[1])  # (dst[0][dim_list[index]:], dst[1])
+    #         # else: # passive party does not have label
+    #         #     if index <= (args.k-1):
+    #         #         print('Passive Index:',index,'___',dim_list[index],':',dim_list[index+1])
+    #         #         passive_dst = []
+    #         #         for _i in range(dst[0].shape[0]):
+    #         #             word_num = len(dst[0][_i]) //2
+    #         #             passive_dst.append( dst[0][_i][word_num:] )
+    #         #         passive_dst = np.array(passive_dst)
+    #         #         return (passive_dst ,None) #(dst[0][dim_list[index]:dim_list[index+1]], None)
+    #         #     else:
+    #         #         assert index <= (args.k-1), "invalide party index"
+    #         #         return None
+    #     else:
+    #         assert 1 > 2, 'partition not available'
 
 
 def dataset_partition(args, index, dst, half_dim):
@@ -2174,7 +2187,7 @@ def load_dataset_per_party_llm(args, index):
 
         inputs = []
         labels = []
-        for feature in train_features[:]:
+        for feature in train_features[:100]:
             inputs.append(feature)
             labels.append([feature["start_position"], feature["end_position"]])
 
@@ -2190,7 +2203,7 @@ def load_dataset_per_party_llm(args, index):
 
         inputs = []
         labels = []
-        for feature in test_features[:]:
+        for feature in test_features[:50]:
             inputs.append(feature)
             labels.append([feature["start_position"], feature["end_position"]])
 
@@ -2684,11 +2697,12 @@ def load_dataset_per_party_llm(args, index):
     # test_dst = (test_dst[0].to(args.device),test_dst[1].to(args.device))
     # if args.need_auxiliary == 1:
     #     aux_dst = (aux_dst[0].to(args.device),aux_dst[1].to(args.device))
-
     train_dst = dataset_partition_llm(args, index, train_dst, half_dim)
     test_dst = dataset_partition_llm(args, index, test_dst, half_dim)
     if args.need_auxiliary == 1:
         aux_dst = dataset_partition_llm(args, index, aux_dst, half_dim)
+
+    print(f'index={index} allocated train sample:{len(train_dst[0])}   test sample:{len(test_dst[0])}')
 
     # important
     if args.need_auxiliary == 1:

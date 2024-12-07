@@ -30,15 +30,25 @@ class ActiveParty_LLM(Party_LLM):
         self.test_index = None  # args.idx_test
 
         self.gt_one_hot_label = None
+        
+        # store attributes of model slices
+        self.input_tensors = [{} for i in range(args.k-1)]  # client_number * input intermediate type:dict[int,torch.Tensor]
+        self.output_tensors = [{} for i in range(args.k-1)]  # client_number * output embeddings type:dict[int,torch.Tensor]
+        self.output_attention_mask = [{} for i in range(args.k-1)]  # client_number * output attention mask type:dict[int,torch.Tensor]
 
         self.pred_received = []
         for _ in range(args.k):
             self.pred_received.append([])
 
-        self.global_output = None  # transmitted to passive party
-        self.global_loss = None  # transmitted from passive party
-        self.global_gradient = None  # transmitted from passive party
-
+        self.global_output = None 
+        self.global_output_dict = {} 
+        
+        self.global_loss = None
+        self.global_loss_dict = {}
+        
+        self.global_gradient = None
+        self.global_gradient_dict = {}
+        
         self.weights_grad_a = None
 
         self.encoder_hidden_states = None
@@ -60,6 +70,33 @@ class ActiveParty_LLM(Party_LLM):
     def receive_token_type_ids(self, token_type_ids):
         self.local_batch_token_type_ids = token_type_ids
 
+    @timer()
+    def forward(self, model_index, client_id, **kwargs):
+        # logger.debug(f"model_{model_index} forward")
+
+        self.input_tensors[client_id][model_index] = kwargs.get('inputs_embeds')
+        
+        self._tensor_to_device(kwargs , self.models[model_index].device)
+        
+        # print(f"model_{model_index} forward:{kwargs.keys()}")
+        resp = self.models[model_index](**kwargs)
+
+
+        if model_index == self.args.vfl_model_slice_num - 1:
+            if not self.args.task_type == 'QuestionAnswering':
+                self.output_tensors[client_id][model_index] = resp.get('logits')
+            else:
+                self.output_tensors[client_id][model_index] = resp.get('start_logits') + resp.get('end_logits') 
+            self.output_attention_mask[client_id][model_index] = None
+        else:
+            if resp.get('inputs_embeds') != None:
+                self.output_tensors[client_id][model_index] = resp.get('inputs_embeds')
+            else: # for encoder-decoder inference
+                self.output_tensors[client_id][model_index] = resp.get('encoder_outputs')['last_hidden_state']
+            self.output_attention_mask[client_id][model_index] = resp.get('attention_mask')
+
+        return resp #self._detach_tensor(resp)
+
 
     def _do_aggregate_remote(self, pred_list):
         new_dict = convert_msg_to_pred(pred_list)
@@ -67,14 +104,14 @@ class ActiveParty_LLM(Party_LLM):
             new_dict['output_g'] = None
         result = self.aggregate([new_dict])
 
-        if not self.args.task_type or self.args.task_type == 'CausalLM':  # self.passive_pred_list[0] = [intermediate, attention_mask]
+        if not self.args.task_type or self.args.task_type == 'CausalLM': 
             if 'logits' in result:
                 return convert_tensor_to_batch_msg(result.logits, 'test_logit')
             else:
                 return convert_pred_to_msg(result, 'test_logit')
-        elif self.args.task_type == 'SequenceClassification':  # self.passive_pred_list[0] = [intermediate, ,sequence_lengths, attention_mask]
+        elif self.args.task_type == 'SequenceClassification':  
             return convert_pred_to_msg(result, 'test_logit')
-        elif self.args.task_type == 'QuestionAnswering':  # self.passive_pred_list[0] = [intermediate, attention_mask]
+        elif self.args.task_type == 'QuestionAnswering': 
             return {
                 "requires_grad": True,
                 "start_logits": result.start_logits.tolist(),
@@ -88,46 +125,36 @@ class ActiveParty_LLM(Party_LLM):
     def aggregate_remote(self, pred_list):
         return self._do_aggregate_remote(pred_list)
 
-    # def save_pretrained_remote(self, data):
-    #     model_index = data['model_index']
-    #     model_id = data['model_id']
-    #     self.save_pretrained(model_index, model_id)
-
     @timer()
-    def aggregate(self, pred_list, use_cache=False, test=False):
-        # print(' == Active Aggregate == ')
-
-        self.passive_pred_list = pred_list
-        # self.passive_pred_list[0].update({'use_cache':use_cache})
-        self._tensor_to_device(self.passive_pred_list[0], self.device)
-
-        # _input = VFLModelIntermediate(**self.passive_pred_list[0]).prepare_for_forward(
-        #     past_key_values=self.past_key_values.get(1))
+    def aggregate(self, passive_pred, current_client_id, use_cache=False, test=False):
+        self._tensor_to_device(passive_pred, self.device)
+        intermediate = self.forward(model_index=1, client_id = current_client_id, **passive_pred)  # use_cache = use_cache,return_dict=True
+        self.global_output_dict[current_client_id] = intermediate
         
-        intermediate = self.forward(model_index=1, **self.passive_pred_list[0])  # use_cache = use_cache,return_dict=True
-        self.global_output = intermediate
-        
-        # if _input.get("use_cache") and intermediate.get('past_key_values'):
-        #     self.past_key_values.update({1: intermediate['past_key_values']})
-        # if not isinstance(intermediate, VFLModelIntermediate):
-        #     self.global_output = VFLModelIntermediate(**intermediate).prepare_for_forward(
-        #         attention_mask=_input.get('attention_mask'),
-        #         position_ids=_input.get('position_ids'),
-        #         cache_position=_input.get('cache_position'),
-        #         use_cache=_input.get('use_cache'), )
+        return self._detach_tensor(self.global_output_dict[current_client_id])
 
-        return self._detach_tensor(self.global_output)
-
-    def receive_loss_and_gradients_remote(self, data):
+    def receive_loss_and_gradients_remote(self, data, client_id):
         gradients = convert_msg_to_tensor(data)
         gradients = gradients.to(self.device)
-        self.receive_loss_and_gradients(gradients)
+        self.receive_loss_and_gradients(gradients,client_id)
 
-    def receive_loss_and_gradients(self, gradients):
-        # self.global_loss = loss
-        self.global_gradient = gradients
-        # print(f'receive_global_gradient:',self.global_gradient[0,0,:5])
+    def receive_loss_and_gradients(self, gradients, client_id):
+        self.global_gradient_dict[client_id] = gradients
 
+    def aggregate_gradients(self):
+        num_tensors = len(self.global_gradient_dict)
+        
+        # Calculate the total sum of tensors
+        total_sum = torch.zeros_like(list(self.global_gradient_dict.values())[0])
+        for tensor in self.global_gradient_dict.values():
+            total_sum += tensor
+
+        # Calculate the average tensor
+        average_tensor = total_sum / num_tensors
+
+        self.global_gradient = average_tensor
+        
+        
     def global_LR_decay(self, i_epoch):
         if self.global_model_optimizer != None:
             eta_0 = self.args.main_lr
@@ -141,13 +168,11 @@ class ActiveParty_LLM(Party_LLM):
         if remote:
             ik = int(ik)
         if self.args.vfl_model_slice_num== 2 and self.args.task_type == 'QuestionAnswering':
-            passive_local_gradient = \
-            torch.autograd.grad(self.global_output.start_logits + self.global_output.end_logits,
-                                self.passive_pred_list[ik]['inputs_embeds'], \
-                                grad_outputs=self.global_gradient, retain_graph=True)[0].detach().clone()
+            global_output = self.global_output_dict[ik]
+            passive_local_gradient = torch.autograd.grad(global_output.start_logits + global_output.end_logits, self.input_tensors[ik][1],\
+                grad_outputs=self.global_gradient, retain_graph=True)[0].detach().clone()
         else:
-            passive_local_gradient = \
-                torch.autograd.grad(self.output_tensors[1], self.passive_pred_list[ik]['inputs_embeds'], \
+            passive_local_gradient = torch.autograd.grad(self.output_tensors[ik][1], self.input_tensors[ik][1], \
                                     grad_outputs=self.global_gradient, retain_graph=True)[0].detach().clone()
         if remote:
             return convert_tensor_to_batch_msg(passive_local_gradient, 'test_logit')
@@ -158,6 +183,24 @@ class ActiveParty_LLM(Party_LLM):
         3-slice: model body backward
         2-slive: model tail backward
         '''
+        def cal_avg_grad(weights_grad_a_list):
+            '''
+            input:  weights_grad_a_list: client_number * [grad_tensor1, grad_tensor2...]
+            output: avg_weights_grad_a: [avg_grad_tensor1, avg_grad_tensor2...]
+            '''
+            avg_weights_grad_a = []
+            for _i in range( len(weights_grad_a_list[0]) ):
+                if weights_grad_a_list[0][_i] == None:
+                    avg_weights_grad_a.append(None)
+                else:
+                    grad_list = [sublist[_i] for sublist in weights_grad_a_list]
+                    total_sum = torch.zeros_like(grad_list[0])
+                    for tensor in grad_list:
+                        total_sum += tensor
+                    avg_grad = total_sum / len(grad_list)
+                    avg_weights_grad_a.append(avg_grad)
+            return avg_weights_grad_a
+                
         if self.global_model_optimizer != None:
             # trainable layer parameters
             global_model_params = []
@@ -175,36 +218,39 @@ class ActiveParty_LLM(Party_LLM):
                 # update global model
                 self.global_model_optimizer.zero_grad()
 
-                for i in range(len(global_model_params)):
-                    try:
-                        weights_grad_a_start = torch.autograd.grad(self.global_output.start_logits,
-                                                            [global_model_params[i]], #self.global_model.head_layer.parameters(),
-                                                            grad_outputs=self.global_gradient, retain_graph=True)
-                    except:
-                        print(f'wrong {global_model_params_name[i]}')
-                # load grads into parameters
-                weights_grad_a_start = torch.autograd.grad(self.global_output.start_logits,
-                                                           global_model_params, 
-                                                           grad_outputs=self.global_gradient, 
-                                                           retain_graph=True,allow_unused=True)
-                weights_grad_a_end = torch.autograd.grad(self.global_output.end_logits,
-                                                         global_model_params, 
-                                                         grad_outputs=self.global_gradient, 
-                                                         retain_graph=True,allow_unused=True)
+                self.weights_grad_a_list = []
+                for client_id in range(self.args.k-1):
+                    # load grads into parameters
+                    weights_grad_a_start = torch.autograd.grad(self.global_output_dict[client_id].start_logits,
+                                                            global_model_params, 
+                                                            grad_outputs=self.global_gradient_dict[client_id], 
+                                                            retain_graph=True,allow_unused=True)
+                    weights_grad_a_end = torch.autograd.grad(self.global_output_dict[client_id].end_logits,
+                                                            global_model_params, 
+                                                            grad_outputs=self.global_gradient_dict[client_id], 
+                                                            retain_graph=True,allow_unused=True)
 
-                self.weights_grad_a = []
-                for _i in range(len(weights_grad_a_start)):
-                    self.weights_grad_a.append(weights_grad_a_start[_i] + weights_grad_a_end[_i] if weights_grad_a_start[_i]!= None else None)
-                self.weights_grad_a = tuple(self.weights_grad_a)
+                    weights_grad_a = []
+                    for _i in range(len(weights_grad_a_start)):
+                        weights_grad_a.append(weights_grad_a_start[_i] + weights_grad_a_end[_i] if weights_grad_a_start[_i]!= None else None)
+                    self.weights_grad_a_list.append(weights_grad_a)
+                
+                self.weights_grad_a = tuple( cal_avg_grad(self.weights_grad_a_list) )
 
             else:
                 self.global_model_optimizer.zero_grad()
-                self.global_gradient = self.global_gradient.to(self.output_tensors[1].device)
-                self.weights_grad_a = torch.autograd.grad(self.output_tensors[1],
-                                                        global_model_params, 
-                                                        grad_outputs=self.global_gradient, 
-                                                        allow_unused=True,
-                                                        retain_graph=True)
+                
+                self.weights_grad_a_list = []
+                for client_id in range(self.args.k-1):
+                    client_global_gradient = self.global_gradient_dict[client_id].to(self.output_tensors[client_id][1].device)
+                    weights_grad_a = torch.autograd.grad(self.output_tensors[client_id][1],
+                                                            global_model_params, 
+                                                            grad_outputs=client_global_gradient, 
+                                                            allow_unused=True,
+                                                            retain_graph=True)
+                    self.weights_grad_a_list.append( list(weights_grad_a) )
+                
+                self.weights_grad_a = tuple( cal_avg_grad(self.weights_grad_a_list) )
             
             for w, g in zip(global_model_params, self.weights_grad_a):
                 if w.requires_grad and g!=None:

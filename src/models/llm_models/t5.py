@@ -653,7 +653,6 @@ class T5ForConditionalGenerationBody(T5ForConditionalGenerationSplitter,T5PreTra
         **kwargs
     ) -> Union[Tuple[torch.FloatTensor], Seq2SeqLMOutput]:
         # print('==== T5ForConditionalGenerationBody')
-
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         use_cache = False

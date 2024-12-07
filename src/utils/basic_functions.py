@@ -22,7 +22,11 @@ from utils.noisy_sample_functions import noisy_sample
 
 tp = transforms.ToTensor()
 
-
+class ModelTrainableConfig:
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+                    
 def multiclass_auc(targets, scores):
     aucs = []
     for i in range(scores.shape[1]):

@@ -175,6 +175,8 @@ def create_main_task(global_model_type: GenerationMixin):
             self.local_pred_list_clone = []
             self.local_pred_gradients_list = []
             self.local_pred_gradients_list_clone = []
+            
+            self.global_pred_dict = {}
 
             
             # some state of VFL throughout training process
@@ -252,65 +254,52 @@ def create_main_task(global_model_type: GenerationMixin):
             return grad
 
 
-        def apply_communication_protocol_on_transmission(self, pred_detach):
-            ########### communication_protocols ###########
-            if self.args.communication_protocol in ['Quantization', 'Topk']:
-                pred_detach = compress_pred(self.args, pred_detach, self.parties[ik].local_gradient, \
-                                            self.current_epoch, self.current_step).to(self.args.device)
-            return pred_detach
+        # def apply_communication_protocol_on_transmission(self, pred_detach):
+        #     ########### communication_protocols ###########
+        #     if self.args.communication_protocol in ['Quantization', 'Topk']:
+        #         pred_detach = compress_pred(self.args, pred_detach, self.parties[ik].local_gradient, \
+        #                                     self.current_epoch, self.current_step).to(self.args.device)
+        #     return pred_detach
 
         def pred_transmit(self, use_cache=None, count_time=False):
             '''
             Active party gets pred from passive parties
             '''
-            all_pred_list = []
-            for ik in range(self.k - 1):
-                start_time = time.time()
-                result_dict = self.parties[ik].give_pred(use_cache=use_cache)  # use_cache=use_cache
+            ik = self.current_client_id # for ik in range(self.k - 1):
+            result_dict = self.parties[ik].give_pred(use_cache=use_cache)  # use_cache=use_cache
+            
+            if not ('encoder_outputs' in result_dict.keys()): #self.args.model_config.is_encoder_decoder:
+                pred_detach = result_dict['inputs_embeds']
+                # Defense
+                if self.args.apply_defense:
+                    if (ik in self.args.defense_configs['party']):
+                        pred_detach = self.apply_defense_on_pred_transmission(pred_detach)
                 
-                if not ('encoder_outputs' in result_dict.keys()): #self.args.model_config.is_encoder_decoder:
-                    pred_detach = result_dict['inputs_embeds']
-                    # Defense
-                    if self.args.apply_defense:
-                        if (ik in self.args.defense_configs['party']):
-                            pred_detach = self.apply_defense_on_pred_transmission(pred_detach)
-                    
-                    # Communication Process
-                    pred_detach = self.apply_communication_protocol_on_transmission(pred_detach)
-                    pred_clone = torch.autograd.Variable(pred_detach, requires_grad=True).to(self.args.device)
-                    result_dict['inputs_embeds'] = pred_clone
+                # Communication Process
+                # pred_detach = self.apply_communication_protocol_on_transmission(pred_detach)
+                pred_clone = torch.autograd.Variable(pred_detach, requires_grad=True).to(self.args.device)
+                result_dict['inputs_embeds'] = pred_clone
 
-                else: # inference process of encoder-decoder LLMs
-                    pred_clone = result_dict['encoder_outputs']['last_hidden_state']
-
-               
-                pred_list = result_dict
-                get_total_size(pred_list)
-                self.parties[self.k - 1].receive_pred(pred_list, ik)
-                self.parties[ik].update_local_pred(pred_clone)
-
-                all_pred_list.append(pred_list)
-
-                end_time = time.time()
-                if count_time == 'train':
-                    self.train_party_time[ik] += end_time - start_time
-                elif count_time == 'inference':
-                    self.inference_party_time[ik] += end_time - start_time
-
-            self.all_pred_list = all_pred_list
-            return all_pred_list
+            else: # inference process of encoder-decoder LLMs
+                pred_clone = result_dict['encoder_outputs']['last_hidden_state']
+            
+            passive_pred = result_dict
+            get_total_size(result_dict)
+            
+            self.parties[self.k - 1].receive_pred(result_dict, ik)
+            self.parties[ik].update_local_pred(pred_clone)
+        
+            # print(f'#pred_transmit party{ik}:',result_dict.keys())
+            return result_dict
 
         @timer()
-        def global_pred_transmit(self, pred_list, use_cache=None, count_time=False):
-            start_time = time.time()
-            global_pred = self._communication.send_pred_message(pred_list, self.parse_pred_message_result,
-                                                                use_cache=use_cache)  #
+        def global_pred_transmit(self, passive_pred, use_cache=None, count_time=False):
+            # print(f'#global_pred_transmit party{self.current_client_id}:',passive_pred.keys())
+            
+            global_pred = self._communication.send_pred_message(passive_pred, self.current_client_id,\
+                self.parse_pred_message_result,use_cache=use_cache)  
+            
             get_total_size(global_pred)
-            end_time = time.time()
-            if count_time == 'train':
-                self.train_party_time[-1] += end_time - start_time
-            elif count_time == 'inference':
-                self.inference_party_time[-1] += end_time - start_time
             return global_pred
         
         def parse_pred_message_result(self, result):
@@ -350,45 +339,46 @@ def create_main_task(global_model_type: GenerationMixin):
             '''
             active party --[local gradient]--> passive party
             '''
-            for ik in range(self.k - 1):
-                if self.parties[ik].local_model_optimizer != None:
-                    passive_local_gradient = self._communication.send_cal_passive_local_gradient_message(ik)
-                    if not isinstance(passive_local_gradient, torch.Tensor):
-                        passive_local_gradient = torch.Tensor(passive_local_gradient).to(self.args.device)
-                    
-                    # Direct alter on gradients
-                    if self.args.apply_defense:
-                        if (1 in self.args.defense_configs['party']):
-                            passive_local_gradient = self.apply_defense_on_grad_transmission(passive_local_gradient)
-                    
-                    self.parties[ik].local_gradient = passive_local_gradient
+            # print('#local_gradient_transmit client:',self.current_client_id)
+            if self.parties[self.current_client_id].local_model_optimizer != None:
+                passive_local_gradient = self._communication.send_cal_passive_local_gradient_message(self.current_client_id)
+                if not isinstance(passive_local_gradient, torch.Tensor):
+                    passive_local_gradient = torch.Tensor(passive_local_gradient).to(self.args.device)
+                
+                # Direct alter on gradients
+                if self.args.apply_defense:
+                    if (1 in self.args.defense_configs['party']):
+                        passive_local_gradient = self.apply_defense_on_grad_transmission(passive_local_gradient)
+                
+                self.parties[self.current_client_id].local_gradient = passive_local_gradient
 
         def global_gradient_transmit(self, final_pred, count_time='train'):
             '''
             passive party --[global gradient]--> active party
             '''
-            global_loss = self.parties[0].cal_loss(final_pred)
+            # print('#global_gradient_transmit client:',self.current_client_id)
+
+            ik = self.current_client_id
+            self.parties[ik].cal_loss(final_pred)
 
             if self.args.vfl_model_slice_num == 2:
-                global_gradient = self.parties[0].cal_global_gradient_2slice(global_loss, final_pred)
+                global_gradient = self.parties[ik].cal_global_gradient_2slice(self.parties[ik].global_loss, final_pred)
             else:
-                global_gradient = self.parties[0].cal_global_gradient_3slice(global_loss, self.global_pred)
+                global_gradient = self.parties[ik].cal_global_gradient_3slice(self.parties[ik].global_loss, self.parties[ik].active_intermediate)
 
             #### Defense ####
             # Direct alter on gradients
             if self.args.apply_defense:
-                if (0 in self.args.defense_configs['party']):
+                if (ik in self.args.defense_configs['party']):
                     if (not self.args.apply_mid) and (not self.args.apply_adversarial):
                         global_gradient = self.apply_defense_on_grad_transmission(global_gradient)
 
             # Update_loss_with_defense after gradient calculation -- for ad defense at model tail
-            self.parties[0].update_loss_with_defense()
-
-
-            self._communication.send_global_loss_and_gradients(global_gradient)  
+            self.parties[ik].update_loss_with_defense()
+            #### Defense ####
+  
+            self._communication.send_global_loss_and_gradients(global_gradient, self.current_client_id) 
             self.communication_cost += get_size_of(global_gradient)
-
-            return global_loss
         
         def predict(self):
             # passive party dataloader list
@@ -419,105 +409,103 @@ def create_main_task(global_model_type: GenerationMixin):
                         batch_input_dicts = []
                         batch_label = []
                         for bs_id in range(len(parties_data[party_id])):
-                            # Input Dict
-                            batch_input_dicts.append(parties_data[party_id][bs_id][0])
-                            # Label
-                            batch_label.append(parties_data[party_id][bs_id][1])
+                            batch_input_dicts.append(parties_data[party_id][bs_id][0]) # Input Dict
+                            batch_label.append(parties_data[party_id][bs_id][1]) # Label
                         _parties_data.append([batch_input_dicts, batch_label])
-                    self.parties_data = _parties_data
-
-                    if self.args.model_architect == 'CLS' and self.args.num_classes > 1:  # classification
-                        self.gt_one_hot_label = self.label_to_one_hot(self.parties_data[0][1], self.args.num_classes)
-                    elif self.args.model_architect == 'TQA':
-                        self.gt_one_hot_label = list(self.parties_data[0][1])
-                    else:
-                        self.gt_one_hot_label = self.parties_data[0][1]
+                    self.parties_data = _parties_data # party_number * [batch_input_dicts, batch_label]
                     
-                    data_inputs = {}
-                    for key_name in self.parties_data[0][0][0].keys():
-                        if isinstance(self.parties_data[0][0][0][key_name], torch.Tensor):
-                            data_inputs[key_name] = torch.stack( [self.parties_data[0][0][i][key_name] for i in range(len(self.parties_data[0][0]))] )
+                    self.gt_one_hot_label = [] # party_number * party_label
+                    for party_id in range(len(parties_data)):
+                        if self.args.model_architect == 'CLS' and self.args.num_classes > 1:  # classification
+                            self.gt_one_hot_label.append(self.label_to_one_hot(self.parties_data[party_id][1], self.args.num_classes))
+                        elif self.args.model_architect == 'TQA':
+                            self.gt_one_hot_label.append(list(self.parties_data[party_id][1]))
                         else:
-                            data_inputs[key_name] =  [self.parties_data[0][0][i][key_name] for i in range(len(self.parties_data[0][0]))]
+                            self.gt_one_hot_label.append(self.parties_data[party_id][1])
                     
-                    if 'input_ids' in data_inputs.keys() and data_inputs['input_ids']!=None:
-                        self.seq_length = data_inputs['input_ids'].shape[-1]
-                    else:
-                        self.seq_length = 0
+                    data_input_list = [] # party_number * data_inputs(dict)
+                    for party_id in range(len(parties_data)):
+                        data_inputs = {}
+                        for key_name in self.parties_data[party_id][0][0].keys():
+                            if isinstance(self.parties_data[party_id][0][0][key_name], torch.Tensor):
+                                data_inputs[key_name] = torch.stack( [self.parties_data[party_id][0][i][key_name] for i in range(len(self.parties_data[0][0]))] )
+                            else:
+                                data_inputs[key_name] =  [self.parties_data[party_id][0][i][key_name] for i in range(len(self.parties_data[0][0]))]
+                        
+                        if 'input_ids' in data_inputs.keys() and data_inputs['input_ids']!=None:
+                            self.seq_length = data_inputs['input_ids'].shape[-1]
+                        else:
+                            self.seq_length = 0
+                        data_input_list.append(data_inputs)
                     
                     if self.args.model_architect == 'CLS':  # task_type == "SequenceClassification":  # and self.args.num_classes > 1: # classification
-                        global_output = self.forward(**data_inputs)
-                        batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(global_output,
-                                                                                                   self.gt_one_hot_label)
-                        predict_label_list.extend(batch_predict_label)
-                        actual_label_list.extend(batch_actual_label)
-                        if sample_cnt is not None:
-                            total_sample_cnt += sample_cnt
-                    
-                    elif self.args.model_architect == 'TQA':  # task_type == "QuestionAnswering":
-                        global_output = self.forward(**data_inputs)
-                        feature_list = data_inputs['feature']
-                        batch_nbest, batch_gold_ans, sample_cnt = self.generate_result(global_output, self.gt_one_hot_label, feature_list)
-                        nbest_list.extend(batch_nbest)
-                        gold_ans_list.extend(batch_gold_ans)
-                        if sample_cnt is not None:
-                            total_sample_cnt += sample_cnt
-                    
-                    elif self.args.model_architect=='CLM': #task_type == "CausalLM":
-                        if self.args.task_type == "CausalLM":
-                            if not (self.args.max_new_tokens==1):
-                                self.set_is_first_forward_epoch(1)
-                                generation_output = self.generate(**data_inputs, \
-                                        generation_config = self.generation_config)
-                                
-                            else:  # next token prediction
-                                # print(data_inputs)
-                                generation_output = self.forward(**data_inputs)
-                                if self.args.model_type.lower() == 'qwen2':
-                                    self._loss += self.shift_logits_loss(generation_output.logits,
-                                                                     torch.stack(self.gt_one_hot_label),
-                                                                     self.args.config).item()
-                            self._clear_past_key_values()
-
-                            batch_target_word, batch_predict_word, sample_cnt = self.generate_result(generation_output, self.gt_one_hot_label)
-                            target_word_list.extend(batch_target_word)
-                            predict_word_list.extend(batch_predict_word)
-                            if sample_cnt is not None:
-                                total_sample_cnt += sample_cnt
-                        else:
-                            global_output = self.forward(**data_inputs)
-                            batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(global_output, self.gt_one_hot_label)
+                        for party_id in range(self.args.k-1):
+                            party_global_output = self.forward(**data_input_list[party_id])
+                            batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(party_global_output,
+                                                                                            self.gt_one_hot_label[party_id])
                             predict_label_list.extend(batch_predict_label)
                             actual_label_list.extend(batch_actual_label)
                             if sample_cnt is not None:
                                 total_sample_cnt += sample_cnt
                     
+                    elif self.args.model_architect == 'TQA':  # task_type == "QuestionAnswering":
+                        for party_id in range(self.args.k-1):
+                            party_global_output = self.forward(**data_input_list[party_id])
+                            feature_list = data_input_list[party_id]['feature']
+                            batch_nbest, batch_gold_ans, sample_cnt = self.generate_result(party_global_output, self.gt_one_hot_label[party_id], feature_list)
+                            nbest_list.extend(batch_nbest)
+                            gold_ans_list.extend(batch_gold_ans)
+                            if sample_cnt is not None:
+                                total_sample_cnt += sample_cnt
+                    
+                    elif self.args.model_architect=='CLM': #task_type == "CausalLM":
+                        for party_id in range(self.args.k-1):
+                            if not (self.args.max_new_tokens==1):
+                                self.set_is_first_forward_epoch(1)
+                                party_generation_output = self.generate(**data_input_list[party_id], \
+                                        generation_config = self.generation_config)
+                            else:  # next token prediction
+                                party_generation_output = self.forward(**data_input_list[party_id])
+                            
+                            self._clear_past_key_values()
+
+                            batch_target_word, batch_predict_word, sample_cnt = self.generate_result(party_generation_output, self.gt_one_hot_label[party_id])
+                            target_word_list.extend(batch_target_word)
+                            predict_word_list.extend(batch_predict_word)
+                            if sample_cnt is not None:
+                                total_sample_cnt += sample_cnt
+                        # else:
+                        #     global_output = self.forward(**data_inputs)
+                        #     batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(global_output, self.gt_one_hot_label)
+                        #     predict_label_list.extend(batch_predict_label)
+                        #     actual_label_list.extend(batch_actual_label)
+                        #     if sample_cnt is not None:
+                        #         total_sample_cnt += sample_cnt
+                    
                     elif self.args.model_architect=='MM':
-                        if not (self.args.max_new_tokens==1):
-                            self.set_is_first_forward_epoch(1)
-                            if self.args.generation_method == 'chat':
-                                # print('generation_config_dict:',self.generation_config_dict)
-                                generation_output = self.mm_chat(samples = data_inputs, # 
-                                                                    **self.generation_config_dict
-                                                                    )
-                            elif self.args.generation_method == 'generate':
-                                generation_output = self.mm_generate(samples = data_inputs, # 
-                                                                    generation_config = self.generation_config,
-                                                                    **self.generation_config_dict)
-                            else:
-                                assert 1>2,f'Generation Method {self.args.generation_method} not supported'
+                        for party_id in range(self.args.k-1):
+                            if not (self.args.max_new_tokens==1):
+                                self.set_is_first_forward_epoch(1)
+                                if self.args.generation_method == 'chat':
+                                    party_generation_output = self.mm_chat(samples = data_input_list[party_id], # 
+                                                                        **self.generation_config_dict
+                                                                        )
+                                elif self.args.generation_method == 'generate':
+                                    party_generation_output = self.mm_generate(samples = data_input_list[party_id], # 
+                                                                        generation_config = self.generation_config,
+                                                                        **self.generation_config_dict)
+                                else:
+                                    assert 1>2,f'Generation Method {self.args.generation_method} not supported'
+                            else:  # next token prediction
+                                party_generation_output = self.forward(samples = data_input_list[party_id], labels = self.gt_one_hot_label[party_id])
+                            self._clear_past_key_values()
 
-                        else:  # next token prediction
-                            generation_output = self.forward(samples = data_inputs, labels = self.gt_one_hot_label)
-                        self._clear_past_key_values()
+                            batch_target_answer, batch_predict_answer, sample_cnt = self.generate_result(party_generation_output, self.gt_one_hot_label[party_id])
+                            target_answer_list.extend(batch_target_answer)
+                            predict_answer_list.extend(batch_predict_answer)
 
-
-                        batch_target_answer, batch_predict_answer, sample_cnt = self.generate_result(generation_output, self.gt_one_hot_label)
-                        target_answer_list.extend(batch_target_answer)
-                        predict_answer_list.extend(batch_predict_answer)
-
-                        if sample_cnt is not None:
-                            total_sample_cnt += sample_cnt
+                            if sample_cnt is not None:
+                                total_sample_cnt += sample_cnt
                         
                     else:
                         assert 1 > 2, 'Task type not supported'
@@ -1134,28 +1122,24 @@ def create_main_task(global_model_type: GenerationMixin):
             return exp_result, self.test_acc
 
         def forward(self, **kwargs):
-            self.parties[0].obtain_local_data(kwargs)
+            self.parties[self.current_client_id].obtain_local_data(kwargs)
 
             # passive party do local pred
-            pred_list = self.pred_transmit(use_cache=False)
+            passive_party_pred = self.pred_transmit(use_cache=False)
 
             # passive party inform active party to do global pred
-            resp = self.global_pred_transmit(pred_list, use_cache=False)
+            resp = self.global_pred_transmit(passive_party_pred, use_cache=False)
 
             if self.args.vfl_model_slice_num > 2:
-                
-                self.global_pred = resp['inputs_embeds']#.to(self.device)
-
-                p = self.parties[0]
+                p = self.parties[self.current_client_id]
                 p._tensor_to_device(resp, p.models[2].device)
+                p.active_intermediate = resp['inputs_embeds'] # receive active party's intermediate
                 final_output = p.give_final_pred(resp) 
             else:
                 final_output = resp
+            self.parties[self.current_client_id]._tensor_to_device(final_output,self.device)
 
-            self.parties[0]._tensor_to_device(final_output,self.device)
-
-            if self.args.max_new_tokens > 1 and \
-                (self.args.need_final_epoch_state or self.args.need_test_sample_states):
+            if (self.current_client_id == 0) and self.args.max_new_tokens > 1 and (self.args.need_final_epoch_state or self.args.need_test_sample_states):
                 if self.args.need_generation_state:
                     if self.is_first_forward_iter:
                         self.final_state.update(self.save_element('active_predict_list'))
@@ -1208,15 +1192,22 @@ def create_main_task(global_model_type: GenerationMixin):
             # print('after pre_generation aligned_input:',aligned_input.keys())
             return self.generate( **aligned_input)# tokenizer = self.args.tokenizer,
 
-        def transmit_relevant_gradient(self, final_pred):
+        def transmit_relevant_gradient(self, final_pred_dict):
             '''
             calculate and transmit relevant gradient
             '''
             # passive party -> global gradient -> active party
-            loss = self.global_gradient_transmit(final_pred, count_time='train')
+            for client_id in range(self.k-1):
+                self.current_client_id = client_id
+                self.global_gradient_transmit(final_pred_dict[client_id], count_time='train')
+            
+            # active party aggregate received global gradient --> active_party.global_gradient
+            self.parties[-1].aggregate_gradients()
             
             # active party -> local gradient -> passive party
-            self.local_gradient_transmit(count_time='train')
+            for client_id in range(self.k-1):
+                self.current_client_id = client_id
+                self.local_gradient_transmit(count_time='train')
 
         @timer()
         def inference(self, **kwargs):
@@ -1277,55 +1268,52 @@ def create_main_task(global_model_type: GenerationMixin):
                 return exp_result, main_task_result
 
         def train_batch(self, parties_data, batch_label):
+            '''
+            parties_data : client_number * (batch_input, batch_label)
+            batch_label : client_number * batch_label
+            '''
             self.set_is_first_forward_epoch(1)
 
             ############### allocate data ###############
             gt_one_hot_label = batch_label
             
             for ik in range(self.k - 1):
-                # # allocate data (data/label/attention_mask/token_type_ids)
+                # allocate data to party ik
                 data_inputs = {}
-                for key_name in parties_data[0][0][0].keys():
-                    if isinstance(parties_data[0][0][0][key_name], torch.Tensor):
-                        data_inputs[key_name] = torch.stack( [parties_data[0][0][i][key_name] for i in range(len(parties_data[0][0]))] )
+                for key_name in parties_data[ik][0][0].keys():
+                    if isinstance(parties_data[ik][0][0][key_name], torch.Tensor):
+                        data_inputs[key_name] = torch.stack( [parties_data[ik][0][i][key_name] for i in range(len(parties_data[ik][0]))] )
                     else:
-                        data_inputs[key_name] =  [parties_data[0][0][i][key_name] for i in range(len(parties_data[0][0]))]
-                self.batch_data = data_inputs
-
+                        data_inputs[key_name] =  [parties_data[ik][0][i][key_name] for i in range(len(parties_data[ik][0]))]
                 self.parties[ik].obtain_local_data(data_inputs)
+                
+                gt_one_hot_label = batch_label[ik]
                 self.parties[ik].gt_one_hot_label = gt_one_hot_label
+                
                 if 'input_ids' in data_inputs.keys() and data_inputs['input_ids']!=None:
                     self.seq_length = data_inputs['input_ids'].shape[-1]
                 else:
                     self.seq_length = 0
 
-            # print('one batch gt_one_hot_label:',len(gt_one_hot_label))
-
             ################ normal vertical federated learning ################
-            # torch.autograd.set_detect_anomaly(True)
-            # =================== Commu ===================
-            if self.args.model_architect == 'MM':
-                final_pred = self.forward(samples = data_inputs, labels = gt_one_hot_label)
-            else:     
-                final_pred = self.forward(**data_inputs)
-            self._clear_past_key_values()
-
-            self.transmit_relevant_gradient(final_pred)
+            # =================== Forward + Intermediate Commu ===================
+            final_pred_dict = {}
+            for client_id in range(self.k-1):
+                self.current_client_id = client_id
+                if self.args.model_architect == 'MM':
+                    final_pred = self.forward(samples = data_inputs, labels = gt_one_hot_label)
+                else:     
+                    final_pred = self.forward(**data_inputs)
+                final_pred_dict[client_id] = final_pred
+                self._clear_past_key_values()
+            
+            # =================== Backward + Gradient Commu ===================
+            self.transmit_relevant_gradient(final_pred_dict)
+            
             # ============= Model Update =============
-
-            # if self.args.vfl_model_slice_num == 3: # vfl_basic_config.num_of_slice
-            #     self.passive_party.optimizer_step(2)
-
-            start_time = time.time()
             self._communication.send_global_backward_message() # active_party.global_backward()
-            end_time = time.time()
-            self.train_party_time[self.args.k - 1] += end_time - start_time
-
             for ik in range(self.k - 1):
-                start_time = time.time()
                 self.parties[ik].local_backward() # passive_party.local_backward
-                end_time = time.time()
-                self.train_party_time[ik] += end_time - start_time
 
             ################ normal vertical federated learning ################
 
@@ -1465,23 +1453,23 @@ def create_main_task(global_model_type: GenerationMixin):
                         batch_input_dicts = []
                         batch_label = []
                         for bs_id in range(len(parties_data[party_id])):
-                            # Input Dict
-                            batch_input_dicts.append(parties_data[party_id][bs_id][0])
-                            # Label
-                            if type(parties_data[party_id][bs_id][1]) != str:
+                            batch_input_dicts.append(parties_data[party_id][bs_id][0]) # Input Dict
+                            if type(parties_data[party_id][bs_id][1]) != str: # Label
                                 batch_label.append(parties_data[party_id][bs_id][1].tolist())
                             else:
                                 batch_label.append(parties_data[party_id][bs_id][1])
                         _parties_data.append([batch_input_dicts, batch_label])
                     self.parties_data = _parties_data
                     
-                    if self.args.model_architect == 'CLS' and self.args.num_classes > 1:  # classification
-                        self.gt_one_hot_label = self.label_to_one_hot(self.parties_data[0][1], self.args.num_classes)
-                    elif self.args.model_architect == 'TQA':
-                        self.gt_one_hot_label = list(self.parties_data[0][1])
-                    else:
-                        self.gt_one_hot_label = self.parties_data[0][1]
-
+                    self.gt_one_hot_label = [] # party_number * party_label
+                    for party_id in range(len(parties_data)):
+                        if self.args.model_architect == 'CLS' and self.args.num_classes > 1:  # classification
+                            self.gt_one_hot_label.append(self.label_to_one_hot(self.parties_data[party_id][1], self.args.num_classes))
+                        elif self.args.model_architect == 'TQA':
+                            self.gt_one_hot_label.append(list(self.parties_data[party_id][1]))
+                        else:
+                            self.gt_one_hot_label.append(self.parties_data[party_id][1])
+                    
                     i += 1
 
                     # passive party call active party global model to a training mode
@@ -1628,11 +1616,10 @@ def create_main_task(global_model_type: GenerationMixin):
                     return {
                         "local_model_head": copy.deepcopy(self.parties[0].local_model).to("cpu") if self.parties[0].local_model != None else None,
                         "local_model_tail": copy.deepcopy(self.parties[0].local_model_tail).to("cpu") if self.parties[0].local_model_tail != None else None,
-                        "active_model_body": copy.deepcopy(self.parties[1].global_model).to("cpu") if self.parties[1].global_model != None else None,
-
                         # "vis_processors": copy.deepcopy(self.parties[0].vis_processors) if self.parties[0].vis_processors != {} else None,
+                        
+                        "active_model_body": copy.deepcopy(self.parties[self.args.k - 1].global_model).to("cpu") if self.parties[self.args.k - 1].global_model != None else None,
 
-                        # "global_model": copy.deepcopy(self.parties[self.args.k - 1].global_model),
                         "model_names": [str(type(self.parties[ik].local_model)).split('.')[-1].split('\'')[-2] for ik in
                                         range(self.args.k)] + [
                                         str(type(self.parties[self.args.k - 1].global_model)).split('.')[-1].split('\'')[
@@ -1640,6 +1627,7 @@ def create_main_task(global_model_type: GenerationMixin):
 
                     }
                 else:
+                    # record info exhcange between attacker(active party) and victim(passive party 0 by default)
                     return {
                         # Batch Label
                         "label": copy.deepcopy(self.gt_one_hot_label),
@@ -1650,16 +1638,16 @@ def create_main_task(global_model_type: GenerationMixin):
                         "passive_predict": self.dict_deepcopy(self.parties[0].output_tensors),
                         "passive_predict_attention_mask": self.dict_deepcopy(self.parties[0].output_attention_mask) ,
 
-                        "active_predict": self.dict_deepcopy(self.parties[1].output_tensors) ,
-                        "active_predict_attention_mask": self.dict_deepcopy(self.parties[1].output_attention_mask) ,
+                        "active_predict": self.dict_deepcopy(self.parties[self.args.k - 1].output_tensors[0]) ,
+                        "active_predict_attention_mask": self.dict_deepcopy(self.parties[self.args.k - 1].output_attention_mask[0]) ,
                         
                         "local_gradient": copy.deepcopy(self.parties[0].local_gradient.detach()) if self.parties[0].local_gradient!= None else None,
-                        "global_gradient": copy.deepcopy(self.parties[1].global_gradient.detach()) if self.parties[1].global_gradient!= None else None,
+                        "global_gradient": copy.deepcopy(self.parties[self.args.k - 1].global_gradient_dict[0].detach()) if self.parties[self.args.k - 1].global_gradient_dict[0] != None else None,
                         
                         # Gradient
                         "local_model_head_gradient": copy.deepcopy(self.parties[0].weights_grad_a),
                         "local_model_tail_gradient": copy.deepcopy(self.parties[0].weights_grad_a_tail) ,
-                        "global_model_body_gradient": copy.deepcopy(self.parties[1].weights_grad_a) ,
+                        "global_model_body_gradient": copy.deepcopy(self.parties[self.args.k - 1].weights_grad_a_list[0]) ,
                         
                         # Result
                         "real_generation_result": self.real_generation_result,
