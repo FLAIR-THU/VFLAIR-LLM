@@ -178,6 +178,12 @@ class BiSR(Attacker):
                                     data_inputs[key_name] = [batch_input_dicts[i][key_name] for i in range(len(batch_input_dicts))]         
                             
                             attacker_optimizer.zero_grad()
+                            
+                            def _tensor_to_device( dict_like:dict, device):
+                                for k,v in dict_like.items():
+                                    if isinstance(v,torch.Tensor):
+                                        dict_like[k] = v.to(device)
+                            _tensor_to_device(data_inputs,local_model.device)
 
                             real_input = data_inputs['input_ids']
                             intermediate = local_model(**data_inputs)['inputs_embeds']

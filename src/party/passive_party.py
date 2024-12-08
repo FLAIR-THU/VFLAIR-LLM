@@ -75,8 +75,7 @@ class PassiveParty_LLM(Party_LLM):
         for _ in range(args.k):
             self.pred_received.append([])
 
-        self.active_intermediate = None
-        
+        self.global_pred = None
         self.global_loss = None
         self.communication_cost = 0
         self.num_total_comms = 0
@@ -239,10 +238,10 @@ class PassiveParty_LLM(Party_LLM):
                 print(f'Passive Party {self.index}: init DP Defense')
 
     def prepare_data(self, args, index):
-        print(f'-- Party {index} preparing data')
         if not args.dataset:
             return None
         super().prepare_data(args, index)  # Party_llm's prepare_data
+
         if args.dataset in ['Alpaca', 'CodeAlpaca']:
             self.train_dst = AlpacaDataset_LLM(args, self.train_data, self.train_label, 'train')
             self.test_dst = AlpacaDataset_LLM(args, self.test_data, self.test_label, 'test')
@@ -281,7 +280,7 @@ class PassiveParty_LLM(Party_LLM):
 
         if (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])
               and (self.index < self.args.k - 1) and "tail" in self.mid_position):
-            global_loss = global_loss + self.tail_mid_loss
+            global_loss = global_loss + self.tail_mid_loss.to(global_loss.device)
         
 
         if self.args.task_type == 'QuestionAnswering':
@@ -314,7 +313,7 @@ class PassiveParty_LLM(Party_LLM):
         '''
         if (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])
               and (self.index < self.args.k - 1) and "tail" in self.mid_position):
-            global_loss = global_loss + self.tail_mid_loss
+            global_loss = global_loss + self.tail_mid_loss.to(self.global_loss.device)
         
         global_gradient_clone=torch.autograd.grad(global_loss,global_intermediate,retain_graph=True)[0]
         self.global_gradient = global_gradient_clone
@@ -502,7 +501,7 @@ class PassiveParty_LLM(Party_LLM):
             if intermediate.shape != adversary_recovered_embedding.shape:
                 adversary_recovered_embedding.transpose(0,1)
             
-            self.head_adversary_attack_loss = self.adversary_crit(adversary_recovered_embedding, real_embedding) / \
+            self.head_adversary_attack_loss = self.adversary_crit(adversary_recovered_embedding.to(real_embedding.device), real_embedding) / \
                                          intermediate.shape[0]
 
             # avrage mapping distance on bs*seq_len   self.origin_pred: bs, seq_len, embed_dim
@@ -512,12 +511,12 @@ class PassiveParty_LLM(Party_LLM):
             # print(f'main_loss={self.global_loss},mapping_distance={self.mapping_distance},adversary_attack_loss={self.adversary_attack_loss}')
 
             # renew global loss function : loss used to update adversarial model mapping
-            self.head_adversarial_model_loss = self.adversary_lambda * self.head_mapping_distance - self.head_adversary_attack_loss
+            self.head_adversarial_model_loss = self.adversary_lambda * self.head_mapping_distance.to(self.global_loss.device) - self.head_adversary_attack_loss.to(self.global_loss.device)
             self.global_loss = self.global_loss + self.head_adversarial_model_loss
         
         elif self.args.apply_mid == True and (self.index in self.args.defense_configs['party']):
             if ("tail" in self.mid_position):
-                self.global_loss = self.global_loss + self.tail_mid_loss
+                self.global_loss = self.global_loss + self.tail_mid_loss.to(self.global_loss.device)
         # ########### Defense on Loss ###############
 
         return self.global_loss
@@ -539,7 +538,7 @@ class PassiveParty_LLM(Party_LLM):
                     self.global_gradient.shape[0] * self.global_gradient.shape[1])
 
             # renew global loss function : loss used to update adversarial model mapping
-            self.tail_adversarial_model_loss = self.adversary_lambda * self.tail_mapping_distance - self.tail_adversary_attack_loss
+            self.tail_adversarial_model_loss = self.adversary_lambda * self.tail_mapping_distance.to(self.global_loss.device) - self.tail_adversary_attack_loss.to(self.global_loss.device)
             self.global_loss = self.global_loss + self.tail_adversarial_model_loss
         # ########### Defense on Loss ###############
 
@@ -570,11 +569,22 @@ class PassiveParty_LLM(Party_LLM):
     @timer()
     def give_pred(self, use_cache=False):
         self.local_data_input['use_cache'] = use_cache
+        if use_cache:
+            self.local_data_input['past_key_values'] = self.past_key_values.get(0)
         # self._tensor_to_device(self.local_data_input , self.models[0].device)
 
         # collect processed labels (only in some cases)
         # model 0 head  / model 1 body(active) / model 2 tail
         intermediate = self.forward(model_index=0, **self.local_data_input)
+        
+        # if not isinstance(intermediate, VFLModelIntermediate):
+        #     _input = self.local_data_input
+        #     intermediate = VFLModelIntermediate(**intermediate).prepare_for_forward(
+        #         attention_mask=_input.get('attention_mask'),
+        #         position_ids=_input.get('position_ids'),
+        #         cache_position=_input.get('cache_position'),
+        #         use_cache=_input.get('use_cache'),
+        #     )
 
         if 'processed_labels' in intermediate.keys():
             self.processed_labels = intermediate['processed_labels']
@@ -618,8 +628,7 @@ class PassiveParty_LLM(Party_LLM):
         ######### Defense Applied on Local Model Tail Prediction Process ###########
         
         resp['inputs_embeds'] = received_pred
-        if self.args.model_type == 'XLNet':
-            resp.setdefault('output_g', None) # compatible with distributed version. todo: need to be removed later
+
         return self.forward(2, **resp)
 
     def local_backward(self):
