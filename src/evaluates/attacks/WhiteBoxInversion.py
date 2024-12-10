@@ -67,6 +67,11 @@ class WhiteBoxInversion(Attacker):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = True
 
+    def _tensor_to_device(self, dict_like:dict, device):
+        for k,v in dict_like.items():
+            if isinstance(v,torch.Tensor):
+                dict_like[k] = v.to(device)
+                
     def attack(self):
         self.set_seed(123)
         print_every = 1
@@ -213,6 +218,8 @@ class WhiteBoxInversion(Attacker):
                             'inputs_embeds':dummy_embedding, \
                             'token_type_ids':dummy_local_batch_token_type_ids
                         }
+                        
+                        self._tensor_to_device(dummy_input,local_model.device)
                         dummy_intermediate_dict = local_model(**dummy_input)
                         local_model._clear_past_key_values()
 

@@ -107,6 +107,11 @@ class VanillaModelInversion_WhiteBox(Attacker):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = True
 
+    def _tensor_to_device(self, dict_like:dict, device):
+        for k,v in dict_like.items():
+            if isinstance(v,torch.Tensor):
+                dict_like[k] = v.to(device)
+        
     def attack(self):
         self.set_seed(123)
         print_every = 1
@@ -226,6 +231,7 @@ class VanillaModelInversion_WhiteBox(Attacker):
                             'input_ids':None, 'attention_mask':dummy_attention_mask,\
                             'inputs_embeds':dummy_embedding, 'token_type_ids':dummy_local_batch_token_type_ids
                         }
+                        self._tensor_to_device(dummy_input,local_model.device)
                         dummy_intermediate_dict = local_model(**dummy_input)
                         local_model._clear_past_key_values()
 
@@ -268,19 +274,11 @@ class VanillaModelInversion_WhiteBox(Attacker):
 
                     predicted_indexs = []
                     for i in range(dummy_embedding.shape[0]):
-                        _dum = dummy_embedding[i]
+                        _dum = dummy_embedding[i].to(local_model.device)
                         # print(_dum.unsqueeze(0).shape)
                         if self.args.model_type  in ['Bert','Roberta']:
                             cos_similarities = nn.functional.cosine_similarity\
                                             (local_model.embeddings.word_embeddings.weight, _dum.unsqueeze(0), dim=1) # .unsqueeze(0)
-                        # elif self.args.model_type == 'Llama':
-                        #     cos_similarities = nn.functional.cosine_similarity\
-                        #                     (local_model.embed_tokens.weight, _dum.unsqueeze(0), dim=1) # .unsqueeze(0)
-                        #     # print('local_model.embed_tokens.weight:',local_model.embed_tokens.weight.shape)
-                        #     # [32000, 4096] [vocab_size, embed_dim]
-                        # elif self.args.model_type == 'GPT2':
-                        #     cos_similarities = nn.functional.cosine_similarity\
-                        #                     (local_model.wte.weight, _dum.unsqueeze(0), dim=1) # .unsqueeze(0)
                         else:
                             cos_similarities = nn.functional.cosine_similarity\
                                                 (local_model.get_input_embeddings().weight, _dum.unsqueeze(0), dim=1) # .unsqueeze(0)

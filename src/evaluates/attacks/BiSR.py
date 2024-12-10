@@ -93,7 +93,12 @@ class BiSR(Attacker):
         # do not shift
         loss_fct = nn.CrossEntropyLoss()
         return loss_fct(lm_logits.view(-1, lm_logits.size(-1)), labels.view(-1))
-                            
+    
+    def _tensor_to_device(self, dict_like:dict, device):
+        for k,v in dict_like.items():
+            if isinstance(v,torch.Tensor):
+                dict_like[k] = v.to(device)
+        
     def attack(self):
         self.set_seed(123)
         print_every = 1
@@ -179,12 +184,8 @@ class BiSR(Attacker):
                             
                             attacker_optimizer.zero_grad()
                             
-                            def _tensor_to_device( dict_like:dict, device):
-                                for k,v in dict_like.items():
-                                    if isinstance(v,torch.Tensor):
-                                        dict_like[k] = v.to(device)
-                            _tensor_to_device(data_inputs,local_model.device)
-
+                            
+                            self._tensor_to_device(data_inputs,local_model.device)
                             real_input = data_inputs['input_ids']
                             intermediate = local_model(**data_inputs)['inputs_embeds']
 
@@ -241,6 +242,7 @@ class BiSR(Attacker):
                                     noise_scale = random_choose_noise(expert_scales, mode=noise_mode)
                                 perturber = DxPrivacy(embedding_layer,self.vocab_size,noise_scale)
                                 
+                                self._tensor_to_device(data_inputs,local_model.device)
                                 intermediate = local_model(**data_inputs)['inputs_embeds']
 
                                 #### Noise Aware ####
@@ -295,6 +297,7 @@ class BiSR(Attacker):
                             perturber = DxPrivacy(embedding_layer,self.vocab_size,random_noise_scale)
                             
                             real_input = data_inputs['input_ids']
+                            self._tensor_to_device(data_inputs,local_model.device)
                             intermediate = local_model(**data_inputs)['inputs_embeds']
 
                             #### Noise Aware ####
@@ -341,6 +344,7 @@ class BiSR(Attacker):
 
 
                             real_input = data_inputs['input_ids']
+                            self._tensor_to_device(data_inputs,local_model.device)
                             intermediate = local_model(**data_inputs)['inputs_embeds']
 
                             #### Noise Aware ####
@@ -462,6 +466,7 @@ class BiSR(Attacker):
                             'input_ids':None, 'attention_mask':dummy_attention_mask,\
                             'inputs_embeds':dummy_embedding, 'token_type_ids':dummy_local_batch_token_type_ids
                         }
+                        self._tensor_to_device(dummy_input,local_model.device)
                         dummy_intermediate_dict = local_model(**dummy_input)
                         local_model._clear_past_key_values()
 
