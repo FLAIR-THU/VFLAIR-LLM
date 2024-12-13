@@ -93,12 +93,12 @@ class BiSR(Attacker):
         # do not shift
         loss_fct = nn.CrossEntropyLoss()
         return loss_fct(lm_logits.view(-1, lm_logits.size(-1)), labels.view(-1))
-    
+        
     def _tensor_to_device(self, dict_like:dict, device):
         for k,v in dict_like.items():
             if isinstance(v,torch.Tensor):
                 dict_like[k] = v.to(device)
-        
+                   
     def attack(self):
         self.set_seed(123)
         print_every = 1
@@ -186,8 +186,8 @@ class BiSR(Attacker):
                             
                             
                             self._tensor_to_device(data_inputs,local_model.device)
-                            real_input = data_inputs['input_ids']
                             intermediate = local_model(**data_inputs)['inputs_embeds']
+                            real_input = data_inputs['input_ids']
 
                             recovered_input = attacker_model(intermediate)
 
@@ -209,6 +209,7 @@ class BiSR(Attacker):
 
                     # 1. Expert Learning
                     print('---- 1-Expert Learning')
+                    torch.cuda.empty_cache()
                     attacker_model.freeze_parts(experts=False, freeze=True)  # freeze gating
                     attacker_model.freeze_parts(experts=True, freeze=False)  # freeze gating
                     attacker_optimizer = torch.optim.Adam([p for p in attacker_model.parameters() if p.requires_grad], lr=self.phase1_lr)
@@ -242,12 +243,11 @@ class BiSR(Attacker):
                                     noise_scale = random_choose_noise(expert_scales, mode=noise_mode)
                                 perturber = DxPrivacy(embedding_layer,self.vocab_size,noise_scale)
                                 
-                                self._tensor_to_device(data_inputs,local_model.device)
+                                self._tensor_to_device(data_inputs, local_model.device)
                                 intermediate = local_model(**data_inputs)['inputs_embeds']
 
                                 #### Noise Aware ####
                                 intermediate = perturber(intermediate)
-
                                 inters.append(intermediate)
 
                             exp_logits = attacker_model.train_exp_forward(inters)
@@ -263,13 +263,16 @@ class BiSR(Attacker):
                             
                         print(f'Epoch {_epoch}: loss={loss.item()}')
                     
+                    
                     # 2. Gate Learning
                     print('---- 2-Gate Learning')
+                    torch.cuda.empty_cache()
                     attacker_model.freeze_parts(experts=True, freeze=False)  # activate experts
                     attacker_model.freeze_parts(experts=False, freeze=False)  # activate gating
                     attacker_optimizer = torch.optim.Adam([p for p in attacker_model.parameters() if p.requires_grad], lr=self.phase1_lr)
                     for _epoch in range(gate_epoch):
                         for origin_input in attack_train_loader:
+                            
                             ## origin_input: list of bs * (input_discs, label)
                             batch_input_dicts = []
                             batch_label = []
@@ -297,13 +300,13 @@ class BiSR(Attacker):
                             perturber = DxPrivacy(embedding_layer,self.vocab_size,random_noise_scale)
                             
                             real_input = data_inputs['input_ids']
-                            self._tensor_to_device(data_inputs,local_model.device)
+                            self._tensor_to_device(data_inputs, local_model.device)
                             intermediate = local_model(**data_inputs)['inputs_embeds']
 
                             #### Noise Aware ####
                             intermediate = perturber(intermediate)
-                            
                             logits = attacker_model(intermediate)
+                            
                             loss = self.calc_unshift_loss(logits, real_input)
                             # res, _, _ = evaluate_attacker_rouge(tokenizer, logits, batch)
                             # rougeL_total += res['rouge-l']['f']
@@ -313,6 +316,7 @@ class BiSR(Attacker):
                     
                     # 3. Full Learning
                     print('---- 3-Full Learning')
+                    torch.cuda.empty_cache()
                     attacker_model.freeze_parts(experts=True, freeze=False)  # freeze experts
                     attacker_model.freeze_parts(experts=False, freeze=False)  # freeze gating
                     attacker_optimizer = torch.optim.Adam([p for p in attacker_model.parameters() if p.requires_grad], lr=self.phase1_lr)
@@ -342,15 +346,14 @@ class BiSR(Attacker):
                             random_noise_scale = random_choose_noise(expert_scales, mode=noise_mode)
                             perturber = DxPrivacy(embedding_layer,self.vocab_size,random_noise_scale)
 
-
                             real_input = data_inputs['input_ids']
-                            self._tensor_to_device(data_inputs,local_model.device)
+                            self._tensor_to_device(data_inputs, local_model.device)
                             intermediate = local_model(**data_inputs)['inputs_embeds']
 
                             #### Noise Aware ####
                             intermediate = perturber(intermediate)
-                            
                             logits = attacker_model(intermediate)
+                            
                             loss = self.calc_unshift_loss(logits, real_input)
 
                             loss.backward()
@@ -369,6 +372,7 @@ class BiSR(Attacker):
             print('########## Phase 2: BRE ############')
             test_data = self.vfl_info["test_data"][0] 
             test_label = self.vfl_info["test_label"][0] 
+            torch.cuda.empty_cache()
             
             if len(test_data) > self.attack_sample_num:
                 test_data = test_data[:self.attack_sample_num]
@@ -419,7 +423,7 @@ class BiSR(Attacker):
                 self.top_vfl.parties[attacked_party].obtain_local_data(data_inputs)
                 self.top_vfl.parties[attacked_party].gt_one_hot_label = batch_label
 
-                real_results = self.top_vfl.pred_transmit()
+                real_results = self.top_vfl.pred_transmit()[attacked_party]
                 self.top_vfl._clear_past_key_values()
 
 
@@ -473,11 +477,8 @@ class BiSR(Attacker):
                         dummy_intermediate = dummy_intermediate_dict.get('inputs_embeds')
                         if dummy_intermediate.shape[1] != seq_length:
                             dummy_intermediate = dummy_intermediate.transpose(0,1)
-                        # print('dummy_intermediate:',dummy_intermediate.shape) # 1, seq_len, embed_dim
-                        # print('received_intermediate:',received_intermediate.shape)
-                    
-                        # crit = nn.CrossEntropyLoss()
-                        _cost = self.criterion(dummy_intermediate, received_intermediate)
+                        
+                        _cost = self.criterion(dummy_intermediate, received_intermediate.to(dummy_intermediate.device))
                         return _cost
         
                     cost_function = torch.tensor(10000000)
@@ -509,19 +510,10 @@ class BiSR(Attacker):
 
                     predicted_indexs = []
                     for i in range(dummy_embedding.shape[0]):
-                        _dum = dummy_embedding[i]
-                        # print(_dum.unsqueeze(0).shape)
+                        _dum = dummy_embedding[i].to(local_model.device)
                         if self.args.model_type  in ['Bert','Roberta']:
                             cos_similarities = nn.functional.cosine_similarity\
                                             (local_model.embeddings.word_embeddings.weight, _dum.unsqueeze(0), dim=1) # .unsqueeze(0)
-                        # elif self.args.model_type == 'Llama':
-                        #     cos_similarities = nn.functional.cosine_similarity\
-                        #                     (local_model.embed_tokens.weight, _dum.unsqueeze(0), dim=1) # .unsqueeze(0)
-                        #     # print('local_model.embed_tokens.weight:',local_model.embed_tokens.weight.shape)
-                        #     # [32000, 4096] [vocab_size, embed_dim]
-                        # elif self.args.model_type == 'GPT2':
-                        #     cos_similarities = nn.functional.cosine_similarity\
-                        #                     (local_model.wte.weight, _dum.unsqueeze(0), dim=1) # .unsqueeze(0)
                         else:
                             cos_similarities = nn.functional.cosine_similarity\
                                                 (local_model.get_input_embeddings().weight, _dum.unsqueeze(0), dim=1) # .unsqueeze(0)

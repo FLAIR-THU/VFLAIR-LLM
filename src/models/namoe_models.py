@@ -235,6 +235,9 @@ class MOEDRInverter(SIPInverter):
         assert len(inters) == len(self.experts)
         outputs = []
         for inter, exp in zip(inters, self.experts):
+            # print(f'exp:{next(exp.parameters()).device} inter:{inter.device}')
+            inter.to(next(exp.parameters()).device)
+            # print(f'aftre inter:{inter.device}')
             if inter is None:
                 outputs.append(None)
                 continue
@@ -242,8 +245,8 @@ class MOEDRInverter(SIPInverter):
                 inter = inter.permute(1, 0, 2)
             if inter.dtype == torch.float16:
                 inter = inter.float()
-            hidden = torch.dropout(exp(inter)[0], p=self.dropout, train=self.training)
-            outputs.append(self.mlp(hidden))
+            hidden = torch.dropout(exp(inter.to(next(exp.parameters()).device))[0], p=self.dropout, train=self.training)
+            outputs.append(self.mlp(hidden.to(next(self.mlp.parameters()).device)))
         return outputs
 
     def freeze_parts(self, experts=False, freeze=True):
@@ -257,13 +260,16 @@ class MOEDRInverter(SIPInverter):
             self.gating_mlp2.requires_grad_(not freeze)
 
     def forward(self, x) -> Tensor:
+        # x.to(self.mlp.weight.device)
+        # x.to(next(self.experts[0].parameters()).device)
+        
         x = super().forward(x)
-        exp_outputs = [torch.dropout(exp(x)[0], p=self.dropout, train=self.training) for exp in self.experts]
+        exp_outputs = [torch.dropout(exp(x.to(next(exp.parameters()).device))[0], p=self.dropout, train=self.training) for exp in self.experts]
         exp_outputs = torch.stack(exp_outputs, dim=1)  # [batch_size, len(experts), seq_len, hidden_size]
-        qkv = self.gating_mlp(x)
+        qkv = self.gating_mlp(x.to(next(self.gating_mlp.parameters()).device)).to(next(self.gating_attn.parameters()).device)
         gating_hidden, _ = self.gating_attn(qkv, qkv, qkv)  # [batch_size, seq_len, hidden_size]
         gating_hidden = torch.mean(self.gating_mlp2(gating_hidden), dim=1)  # [batch_size, hidden_size]
         weights = torch.softmax(gating_hidden, dim=-1)  # [batch_size, len(experts)]
         output = torch.einsum('besh,be->bsh', exp_outputs, weights)  # [batch_size, seq_len, hidden_size]
-        return self.mlp(output)  # [batch_size, seq_len, vocab_size]
+        return self.mlp(output.to(next(self.mlp.parameters()).device))  # [batch_size, seq_len, vocab_size]
 

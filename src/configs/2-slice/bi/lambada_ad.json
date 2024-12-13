@@ -1,8 +1,8 @@
 {
-    "epochs": 1,
+    "epochs": 50,
     "lr": 0.001,
     "k": 2,
-    "batch_size": 2,
+    "batch_size": 32,
     "test_batch_size": 1,
     "early_stop_threshold": 1,
     "pipeline": "finetune",
@@ -17,7 +17,7 @@
         }
     },
     "dataset":{
-        "dataset_name": "Lambada_test",
+        "dataset_name": "Lambada",
         "num_classes": 1,
         "use_prompt": 1
     },
@@ -26,7 +26,7 @@
         "padding_type": "outside",
         "pad_token": "[PAD]",
         "truncation": "longest_first",
-        "max_length": 300,
+        "max_length": 512,
         "padding_side": "left",
         "add_special_tokens": 1
     },

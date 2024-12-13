@@ -107,34 +107,31 @@ class VanillaModelInversion_WhiteBox(Attacker):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = True
 
-    def _tensor_to_device(self, dict_like:dict, device):
-        for k,v in dict_like.items():
-            if isinstance(v,torch.Tensor):
-                dict_like[k] = v.to(device)
-        
     def attack(self):
         self.set_seed(123)
         print_every = 1
 
         for attacker_ik in self.party: # attacker party #attacker_ik
             assert attacker_ik == (self.k - 1), 'Only Active party launch input inference attack'
+
+            attacked_party_list = [ik for ik in range(self.k)]
+            attacked_party_list.remove(attacker_ik)
             attacked_party = 0
-            self.top_vfl.current_client_id = attacked_party
+            index = attacker_ik
 
             # collect necessary information
-            local_model = self.top_vfl.parties[attacked_party].local_model#.to(self.device)
-            #self.vfl_info['local_model_head'].to(self.device) # Passive
+            local_model = self.top_vfl.parties[0].local_model#.to(self.device)
             local_model.eval()
 
             if self.args.model_architect == 'MM':
-                vis_processor = self.top_vfl.parties[attacked_party].vis_processors['eval']
+                vis_processor = self.top_vfl.parties[0].vis_processors['eval']
                 #self.vfl_info['vis_processors']['eval']
 
             batch_size = self.attack_batch_size
 
             attack_result = pd.DataFrame(columns = ['Pad_Length','Length','Precision', 'Recall'])
 
-            # attack_test_dataset = self.top_vfl.parties[attacked_party].test_dst
+            # attack_test_dataset = self.top_vfl.parties[0].test_dst
             test_data = self.vfl_info["test_data"][0] 
             test_label = self.vfl_info["test_label"][0] 
             
@@ -183,13 +180,17 @@ class VanillaModelInversion_WhiteBox(Attacker):
                         data_inputs[key_name] = [batch_input_dicts[i][key_name] for i in range(len(batch_input_dicts))]         
 
 
+                # print('VMI data_inputs:',data_inputs.keys())
+                # print('data_inputs input_ids:',data_inputs['input_ids'].shape) #1,160
+                # self.top_vfl.parties[0].set_is_first_forward_iter(1)
+                # self.top_vfl.parties[1].set_is_first_forward_iter(1)
                 self.top_vfl.set_is_first_forward_epoch(1)
 
                 # real received intermediate result
-                self.top_vfl.parties[attacked_party].obtain_local_data(data_inputs)
-                self.top_vfl.parties[attacked_party].gt_one_hot_label = batch_label
+                self.top_vfl.parties[0].obtain_local_data(data_inputs)
+                self.top_vfl.parties[0].gt_one_hot_label = batch_label
 
-                real_results = self.top_vfl.pred_transmit()
+                real_results = self.top_vfl.pred_transmit()[attacked_party]
                 self.top_vfl._clear_past_key_values()
 
 
@@ -231,9 +232,15 @@ class VanillaModelInversion_WhiteBox(Attacker):
                             'input_ids':None, 'attention_mask':dummy_attention_mask,\
                             'inputs_embeds':dummy_embedding, 'token_type_ids':dummy_local_batch_token_type_ids
                         }
-                        self._tensor_to_device(dummy_input,local_model.device)
+                        def _tensor_to_device(dict_like:dict, device):
+                            for k,v in dict_like.items():
+                                if isinstance(v,torch.Tensor):
+                                    dict_like[k] = v.to(device)
+                        _tensor_to_device(dummy_input, local_model.device)
                         dummy_intermediate_dict = local_model(**dummy_input)
                         local_model._clear_past_key_values()
+                        # _tensor_to_device(dummy_intermediate_dict, self.device)
+                        
 
                         dummy_intermediate = dummy_intermediate_dict.get('inputs_embeds')
                         if dummy_intermediate.shape[1] != seq_length:
@@ -242,7 +249,7 @@ class VanillaModelInversion_WhiteBox(Attacker):
                         # print('received_intermediate:',received_intermediate.shape)
                     
                         # crit = nn.CrossEntropyLoss()
-                        _cost = self.criterion(dummy_intermediate, received_intermediate)
+                        _cost = self.criterion(dummy_intermediate, received_intermediate.to(dummy_intermediate.device))
                         return _cost
         
                     cost_function = torch.tensor(10000000)

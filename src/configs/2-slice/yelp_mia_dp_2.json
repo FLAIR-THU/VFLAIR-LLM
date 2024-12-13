@@ -60,12 +60,29 @@
         "name": "LaplaceDP",
         "parameters": {
         "party": [0],
-        "type": "pred",
+        "type": ["pred"],
         "epsilon": 50
         }
     },
     "attack_list": {
-        "0": {
+        "0":{
+            "name": "BiSR",
+          "parameters": {
+              "party": [1],
+              "attacker_model_name": "NaMoE",
+              "expert_scales": [0, 10.0, 7.5, 5.0],
+              "expert_epoch": 20,
+              "gate_epoch": 15,
+              "full_epoch": 4,
+              "phase1_lr":0.001,
+              "lr": 0.01,
+              "batch_size": 6,
+              "epochs": 100,
+              "auxiliary_data_num": 100,
+              "attack_sample_num": 1000
+          }
+        },
+        "1": {
             "name": "VanillaModelInversion_WhiteBox",
             "parameters": {
                 "party": [1],
@@ -76,7 +93,7 @@
                 "attack_sample_num": 1000
             }
         },
-        "1": {
+        "2": {
             "name": "WhiteBoxInversion",
             "parameters": {
                 "party": [1],
@@ -88,6 +105,7 @@
                 "attack_sample_num": 1000
             }
         }
+    
     
     }
 }

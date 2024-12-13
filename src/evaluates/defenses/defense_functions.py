@@ -557,7 +557,7 @@ def LaplaceDP_for_llm_pred(args, original_object):
         new_object = []
         for ik in range(len(original_object)):
             dist_a = torch.distributions.laplace.Laplace(location, scale)
-            new_object.append(original_object[ik] + dist_a.sample(original_object[ik].shape).to(args.device))
+            new_object.append(original_object[ik] + dist_a.sample(original_object[ik].shape).to(original_object[ik].device))
 
         # print("norm of gradients after laplace:", torch.norm(original_object, dim=1), torch.max(torch.norm(original_object, dim=1)))
     # print('new:')
@@ -591,13 +591,12 @@ def LaplaceDP_for_llm_grad(args, original_object):
             scale = dp_strength
             # clip 2-norm per sample
             # print("norm of gradients:", torch.norm(original_object[ik], dim=1), torch.max(torch.norm(original_object[ik], dim=1)))
-            original_object = original_object.to(args.device) # compatible with distributed version
             norm_factor_a = torch.div(torch.max(torch.norm(original_object, dim=1)),
                                         threshold + 1e-6).clamp(min=1.0)
             # add laplace noise
             dist_a = torch.distributions.laplace.Laplace(location, scale)
             new_object = torch.div(original_object, norm_factor_a) + \
-                                dist_a.sample(original_object.shape).to(args.device)
+                                dist_a.sample(original_object.shape).to(original_object.device)
             # print("norm of gradients after laplace:", torch.norm(original_object, dim=1), torch.max(torch.norm(original_object, dim=1)))
         
         return new_object

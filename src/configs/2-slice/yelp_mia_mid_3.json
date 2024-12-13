@@ -31,7 +31,7 @@
       "kwargs_model_loading":{
       },
       "0": {
-        "path": "/home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification",
+        "path": "/shared/model/Shunianyelp_review_classification",
 
           "head":{
               "trainable": 0,
@@ -42,7 +42,7 @@
           
       },
       "1": {
-        "path": "/home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification",
+        "path": "/shared/model/Shunianyelp_review_classification",
           "tail":{
               "head_layer_trainable": 1,
               "encoder_trainable": 0,
@@ -63,36 +63,29 @@
             "mid_model_name":"MIDModel_Linear",
             "lr": 0.0001,
             "lambda": 0.5,
-            "mid_position": "head",
+            "mid_position": ["head"],
             "current_bottleneck_scale": 1,
             "seq_length": 384,
             "embed_dim": 768
         }
     },
     "attack_list": {
-        "0": {
-            "name": "VanillaModelInversion_WhiteBox",
-            "parameters": {
-                "party": [1],
-                "loss_type":"cross_entropy",
-                "lr": 0.01,
-                "epochs": 100,
-                "batch_size": 32,
-                "attack_sample_num": 1000
-            }
-        },
-        "1": {
-            "name": "WhiteBoxInversion",
-            "parameters": {
-                "party": [1],
-                "loss_type":"cross_entropy",
-                "T": 0.05,
-                "lr": 0.005,
-                "epochs": 500,
-                "batch_size": 32,
-                "attack_sample_num": 1000
-            }
+        "0":{
+            "name": "BiSR",
+          "parameters": {
+              "party": [1],
+              "attacker_model_name": "NaMoE",
+              "expert_scales": [0, 10.0, 7.5, 5.0],
+              "expert_epoch": 20,
+              "gate_epoch": 15,
+              "full_epoch": 4,
+              "phase1_lr":0.001,
+              "lr": 0.01,
+              "batch_size": 6,
+              "epochs": 100,
+              "auxiliary_data_num": 100,
+              "attack_sample_num": 1000
+          }
         }
-    
     }
 }
