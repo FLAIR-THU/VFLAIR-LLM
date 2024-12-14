@@ -10,18 +10,20 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pad_sequence
 from loguru import logger
 
-from utils.basic_functions import cross_entropy_for_onehot, tf_distance_cov_cor
 from party.party import Party
 from party.llm_party import Party as Party_LLM
 
 from dataset.party_dataset import *
+from evaluates.defenses.defense_api import apply_defense
+from dataset.party_dataset import ActiveDataset
+
 from load.LoadModels import load_models_per_party, QuestionAnsweringModelOutput
 from utils import timer
 from utils.squad_utils import normalize_answer, _get_best_indexes, compute_exact, compute_f1
 from utils.communication_protocol_funcs import get_size_of
-from evaluates.defenses.defense_api import apply_defense
-from dataset.party_dataset import ActiveDataset
 from utils.communication_protocol_funcs import compress_pred
+from utils.basic_functions import cross_entropy_for_onehot, tf_distance_cov_cor
+from utils.cluster_utils import run_cluster, redivide_cluster, CenterLoss, load_cluster_results, save_cluster_results
 
 from models.imagined_adversary_models import *
 from models.adversarial_model import *
@@ -33,6 +35,7 @@ from config import vfl_basic_config
 import time
 import numpy as np
 import pickle
+from torch.distributions.laplace import Laplace
 
 
 class PassiveParty(Party):
@@ -156,7 +159,6 @@ class PassiveParty_LLM(Party_LLM):
                     self.tail_imagined_adversary_optimizer = torch.optim.Adam(list(self.tail_imagined_adversary.parameters()),
                                                                     lr=self.imagined_adversary_lr)
 
-
             elif self.args.apply_mid and (self.index in self.args.defense_configs["party"]):
                 print(f'Passive Party {self.index}: init MID Defense')
                 self.mid_lambda = self.args.defense_configs['lambda']
@@ -236,6 +238,31 @@ class PassiveParty_LLM(Party_LLM):
 
             elif self.args.apply_dp and (self.index in defense_configs["party"]):
                 print(f'Passive Party {self.index}: init DP Defense')
+            
+            elif self.args.apply_textobfuscator and (self.index in defense_configs["party"]):
+                print(f'Passive Party {self.index}: init TextObfuscate Defense')
+                ## Clustering
+                clustering_file_path = f'./models/model_parameters/clustering_models/{self.args.dataset}/cluster_num_{self.args.cluster_num}/'
+                if not os.path.exists(clustering_file_path):
+                    os.makedirs(clustering_file_path)
+                if os.path.exists(clustering_file_path+'/cluster_center.pt') and os.path.exists(clustering_file_path+'/token2cluster.json'):
+                    print(f'load cluster model from {clustering_file_path}')
+                    self.token2cluster, self.cluster_center = load_cluster_results(clustering_file_path)
+                else:
+                    print(f'do clustering, save cluster model into {clustering_file_path}')
+                    self.token2cluster, self.cluster_center = run_cluster(\
+                        self.local_model, self.train_loader, cluster_num = self.args.cluster_num, cluster_method=self.args.cluster_method)
+                    save_cluster_results(token2cluster=self.token2cluster, cluster_center=self.cluster_center, \
+                        data_dir=clustering_file_path)
+                
+                ## Init Privacy Loss
+                self.obfuscator_privacy_loss_func = CenterLoss(cluster_num=self.args.cluster_num, hidden_size = self.args.model_embedded_dim,\
+                    w_cluster_close = self.args.w_cluster_close , w_cluster_away=self.args.w_cluster_away).to(self.local_model.device)
+                self.obfuscator_privacy_loss_func.cluster_embedding.weight.data = self.cluster_center.type_as(self.obfuscator_privacy_loss_func.cluster_embedding.weight.data)
+                
+                self.obfuscator = Laplace(loc=torch.tensor(0, device=self.local_model.device, dtype=float), \
+                    scale=torch.tensor(1/self.args.epsilon, device=self.local_model.device, dtype=float))
+                
 
     def prepare_data(self, args, index):
         if not args.dataset:
@@ -517,6 +544,19 @@ class PassiveParty_LLM(Party_LLM):
         elif self.args.apply_mid == True and (self.index in self.args.defense_configs['party']):
             if ("tail" in self.mid_position):
                 self.global_loss = self.global_loss + self.tail_mid_loss.to(self.global_loss.device)
+        
+        elif self.args.apply_textobfuscator == True and (self.index in self.args.defense_configs['party']):
+            valid_ids = (self.local_data_input['attention_mask']==1) & (self.local_data_input['input_ids']!=2) & (self.local_data_input['input_ids']!=0) # [bs, seq_len]
+            client_hidden_states = self.origin_pred[valid_ids] # valid model head output [id_num, embed_dim]
+            cluster_ids = torch.tensor([ [  self.token2cluster[ids.item()] if (ids.item() in self.token2cluster.keys()) else 0  for ids in batch_ids] for batch_ids in self.local_data_input['input_ids']], device=self.local_data_input['input_ids'].device)
+            cluster_ids = cluster_ids[valid_ids] # [id_num]
+            privacy_loss_dict = self.obfuscator_privacy_loss_func(client_hidden_states, cluster_ids)
+            
+            self.obfuscator_privacy_loss = 0
+            if privacy_loss_dict != None:
+                for loss_item in privacy_loss_dict.values():
+                    self.obfuscator_privacy_loss += loss_item
+            self.global_loss = self.global_loss + self.obfuscator_privacy_loss.to(self.global_loss.device)
         # ########### Defense on Loss ###############
 
         return self.global_loss
@@ -571,7 +611,6 @@ class PassiveParty_LLM(Party_LLM):
         self.local_data_input['use_cache'] = use_cache
         if use_cache:
             self.local_data_input['past_key_values'] = self.past_key_values.get(0)
-        # self._tensor_to_device(self.local_data_input , self.models[0].device)
 
         # collect processed labels (only in some cases)
         # model 0 head  / model 1 body(active) / model 2 tail
@@ -607,6 +646,12 @@ class PassiveParty_LLM(Party_LLM):
                 and ('head' in self.ad_position):
                 self.origin_pred = self.output_tensors[0].clone().to(next(self.head_adversarial_model.parameters()).device)
                 self.output_tensors[0] = self.head_adversarial_model(self.origin_pred)
+                self.local_pred_clone = self.output_tensors[0].detach().clone()
+            
+            elif self.args.apply_textobfuscator == True and (self.index in self.args.defense_configs["party"]):
+                self.origin_pred = self.output_tensors[0].clone()
+                target_noise =  self.obfuscator.sample(self.output_tensors[0].shape).type_as(self.output_tensors[0])
+                self.output_tensors[0] =  self.output_tensors[0] + target_noise
                 self.local_pred_clone = self.output_tensors[0].detach().clone()
         ######### Defense Applied on Local Model Prediction Process ###########
 

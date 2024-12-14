@@ -24,7 +24,8 @@ from utils import recorder
 
 import warnings
 warnings.filterwarnings("ignore")
-
+import os 
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:2000"
 
 def set_seed(seed=0):
     random.seed(seed)
@@ -44,7 +45,7 @@ def evaluate_no_attack_pretrained(args):
     vfl = MainTaskVFL_LLM(args)
     vfl.init_communication()
 
-    exp_result, metric_val = vfl.inference()
+    exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
 
     # # Save record 
     exp_result = f"NoAttack|{args.pad_info}|seed={args.current_seed}|K={args.k}" + exp_result
@@ -67,7 +68,7 @@ def evaluate_no_attack_finetune(args):
     # attack_metric_name = 'acc_loss'
 
     # # Save record 
-    exp_result = f"NoAttack|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|" \
+    exp_result = f"NoAttack|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|early_stop_threshold={args.early_stop_threshold}|headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|" \
                  + exp_result
     print(exp_result)
 
@@ -97,7 +98,7 @@ def evaluate_inversion_attack(args):
             if args.pipeline == 'finetune':
                 _exp_result, metric_val, training_time = vfl.train_vfl()
             elif args.pipeline == 'pretrained':
-                _exp_result, metric_val = vfl.inference()
+                _exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
             main_tack_acc = metric_val
             print(_exp_result)
 
@@ -107,7 +108,7 @@ def evaluate_inversion_attack(args):
         inference_party_time = vfl.inference_party_time
         precision, recall , attack_total_time= vfl.evaluate_attack()
 
-        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|precision={precision}|recall={recall}|training_time={training_time}|attack_time={attack_total_time}|"
+        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|early_stop_threshold={args.early_stop_threshold}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|precision={precision}|recall={recall}|training_time={training_time}|attack_time={attack_total_time}|"
         print(exp_result)
         append_exp_res(args.exp_res_path, exp_result)
     return precision, recall
@@ -133,7 +134,7 @@ def evaluate_label_inference_attack(args):
             if args.pipeline == 'finetune':
                 _exp_result, metric_val, training_time = vfl.train_vfl()
             elif args.pipeline == 'pretrained':
-                _exp_result, metric_val = vfl.inference()
+                _exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
             main_tack_acc = metric_val
             print(_exp_result)
 
@@ -141,9 +142,21 @@ def evaluate_label_inference_attack(args):
         training_time = vfl.training_time
         train_party_time = vfl.train_party_time
         inference_party_time = vfl.inference_party_time
-        rec_rate , attack_total_time= vfl.evaluate_attack()
 
-        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|"
+        rec_rate , attack_total_time= vfl.evaluate_attack()
+        if isinstance(rec_rate, dict):
+            gen_score = rec_rate['gen_score']
+            label_score = rec_rate['label_score']
+            exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|"+\
+            f"seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|"+\
+            f"num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|early_stop_threshold={args.early_stop_threshold}|final_epoch={vfl.final_epoch}|"+\
+            f"headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|"+\
+            f"local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|"+\
+            f"main_task_acc={main_tack_acc}|gen_score={gen_score}|label_score={label_score}|"+\
+            f"training_time={training_time}|attack_time={attack_total_time}|"
+        else:
+            exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|early_stop_threshold={args.early_stop_threshold}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|"
+        
         print(exp_result)
         append_exp_res(args.exp_res_path, exp_result)
     # return rec_rate
@@ -191,25 +204,8 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
     return target_cls
 
 
-# def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
-#     if model_type == 'chatglm':
-#         from models.llm_models import chatglm
-#         target_cls = getattr(chatglm, "ChatGLMForConditionalGeneration")
-#     elif model_type == 'baichuan':
-#         from models.llm_models import baichuan
-#         target_cls = getattr(baichuan, "BaiChuanForCausalLM")
-#     else:
-#         from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, \
-#             MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES, MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES
-#         target_module = __import__('transformers')
-#         aa = {"CLM": MODEL_FOR_CAUSAL_LM_MAPPING_NAMES,
-#               "TQA": MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES,
-#               "CLS": MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES}[architecture][model_type]
-#         target_cls = getattr(target_module, aa)
-#     return target_cls
-
 def create_exp_dir_and_file(dataset, vfl_model_slice_num, split_info, model_name, pipeline, defense_name='', defense_param=''):
-    exp_res_dir = f'exp_result/{dataset}/{str(vfl_model_slice_num)}-slice/{split_info}/'
+    exp_res_dir = f'exp_result/test/{dataset}/{str(vfl_model_slice_num)}-slice/{split_info}/'
     if not os.path.exists(exp_res_dir):
         os.makedirs(exp_res_dir)
     if pipeline == 'pretrained':
@@ -226,6 +222,8 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=97, help='random seed')
     parser.add_argument('--configs', type=str, default='basic_configs_news', help='configure json file path')
     parser.add_argument('--save_model', type=bool, default=False, help='whether to save the trained model')
+    parser.add_argument('--attack_only', type=bool, default=False, help='attack_only')
+    
     args = parser.parse_args()
 
     # for seed in range(97,102): # test 5 times

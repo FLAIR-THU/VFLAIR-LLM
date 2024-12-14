@@ -77,6 +77,8 @@ class WhiteBoxInversion(Attacker):
             attacked_party_list = [ik for ik in range(self.k)]
             attacked_party_list.remove(attacker_ik)
             attacked_party = 0
+            self.top_vfl.current_client_id = attacked_party
+            
             index = attacker_ik
 
             # collect necessary information
@@ -133,7 +135,7 @@ class WhiteBoxInversion(Attacker):
                 for bs_id in range(len(origin_input)):
                     # Input Dict
                     batch_input_dicts.append(origin_input[bs_id][0])
-                        # Label
+                    # Label
                     if type(origin_input[bs_id][1]) != str:
                         batch_label.append(origin_input[bs_id][1].tolist())
                     else:
@@ -146,17 +148,14 @@ class WhiteBoxInversion(Attacker):
                     else:
                         data_inputs[key_name] = [batch_input_dicts[i][key_name] for i in range(len(batch_input_dicts))] 
 
-                # self.top_vfl.parties[0].set_is_first_forward_iter(1)
-                # self.top_vfl.parties[1].set_is_first_forward_iter(1)
                 self.top_vfl.set_is_first_forward_epoch(1)
 
-
                 # real received intermediate result
-                self.top_vfl.parties[0].obtain_local_data(data_inputs)
-                self.top_vfl.parties[0].gt_one_hot_label = batch_label
+                self.top_vfl.parties[attacked_party].obtain_local_data(data_inputs)
+                self.top_vfl.parties[attacked_party].gt_one_hot_label = batch_label
 
 
-                real_results = self.top_vfl.pred_transmit()[attacked_party]
+                real_results = self.top_vfl.pred_transmit()#[attacked_party]
                 self.top_vfl._clear_past_key_values()
 
                 vocab_size = local_model.config.vocab_size # 30522
@@ -249,8 +248,8 @@ class WhiteBoxInversion(Attacker):
 
                         _iter+=1 
 
-                        if _iter%50 == 0:
-                            print(f'iter={_iter} loss={cost_function.item()} ')
+                        # if _iter%50 == 0:
+                        #     print(f'iter={_iter} loss={cost_function.item()} ')
                         # if _iter%50 == 0:
                         #     # if last_cost.item() < cost_function.item():
                         #     #     break

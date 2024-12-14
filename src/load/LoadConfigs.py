@@ -701,6 +701,7 @@ def do_load_basic_configs_llm(config_dict, args):
     args.apply_dp = False
     args.apply_gs = False
     args.apply_mid = False  # mid defense
+    args.apply_textobfuscator = False
     args.apply_cae = False  # cae defense
     args.apply_dcae = False  # dcae defense
     args.apply_adversarial = False  # adversarial
@@ -732,6 +733,8 @@ def do_load_basic_configs_llm(config_dict, args):
                 args.apply_dp = True
             elif ('gradientsparsification' in args.defense_name.casefold()):
                 args.apply_gs = True
+            elif ('textobfuscator' in args.defense_name.casefold()):
+                args.apply_textobfuscator = True
         else:
             assert 'name' in config_dict['defense'], "missing defense name"
     else:
@@ -785,9 +788,15 @@ def do_load_basic_configs_llm(config_dict, args):
             args.gs_add_position = str(args.defense_configs['position']) if 'position' in args.defense_configs else ['grad']
             args.defense_param_name = 'gradient_sparse_rate'
         
-        elif args.defense_name == "GradPerturb":
-            args.defense_param = args.defense_configs['perturb_epsilon']
-            args.defense_param_name = 'perturb_epsilon'
+        elif args.defense_name == "TextObfuscator":
+            args.defense_param = args.defense_configs['epsilon']
+            args.defense_param_name = 'epsilon'
+            args.cluster_method = args.defense_configs['cluster_method']
+            args.cluster_num = args.defense_configs['cluster_num']
+            args.w_cluster_close = args.defense_configs['w_cluster_close']
+            args.w_cluster_away = args.defense_configs['w_cluster_away']
+            args.epsilon = args.defense_configs['epsilon']
+            
         else:
             args.defense_param = 'None'
             args.defense_param_name = 'No_Defense'
@@ -888,6 +897,7 @@ def do_load_basic_configs_llm(config_dict, args):
         args.apply_cae = False
         args.apply_dcae = False
         args.apply_dp = False
+        args.apply_textobfuscator = False
         args.Q = 1
         # return args
 

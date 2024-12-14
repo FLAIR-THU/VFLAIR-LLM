@@ -423,7 +423,7 @@ class BiSR(Attacker):
                 self.top_vfl.parties[attacked_party].obtain_local_data(data_inputs)
                 self.top_vfl.parties[attacked_party].gt_one_hot_label = batch_label
 
-                real_results = self.top_vfl.pred_transmit()[attacked_party]
+                real_results = self.top_vfl.pred_transmit()#[attacked_party]
                 self.top_vfl._clear_past_key_values()
 
 

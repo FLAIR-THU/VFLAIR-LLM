@@ -1228,7 +1228,7 @@ def create_main_task(global_model_type: GenerationMixin):
 
             # print(' ========= Inference ==========')
             for ik in range(self.k - 1):
-                self.parties[ik].prepare_data_loader()
+                # self.parties[ik].prepare_data_loader()
                 self.parties[ik].eval()
             self.parties[self.k - 1].eval()
 

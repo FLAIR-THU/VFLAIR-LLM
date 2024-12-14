@@ -184,9 +184,13 @@ class BertModelHead(BertModelSplitter):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-
-        return {'inputs_embeds': encoder_intermediate.last_hidden_state,
-                'attention_mask': attention_mask}
+        if output_hidden_states:
+            return {'inputs_embeds': encoder_intermediate.last_hidden_state,
+                    'hidden_states': encoder_intermediate.hidden_states,
+                    'attention_mask': attention_mask}
+        else:
+            return {'inputs_embeds': encoder_intermediate.last_hidden_state,
+                    'attention_mask': attention_mask}
 
 
 class BertModelBody(BertModelSplitter):

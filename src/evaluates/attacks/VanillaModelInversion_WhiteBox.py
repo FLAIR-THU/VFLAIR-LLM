@@ -117,6 +117,8 @@ class VanillaModelInversion_WhiteBox(Attacker):
             attacked_party_list = [ik for ik in range(self.k)]
             attacked_party_list.remove(attacker_ik)
             attacked_party = 0
+            self.top_vfl.current_client_id = attacked_party
+            
             index = attacker_ik
 
             # collect necessary information
@@ -187,10 +189,10 @@ class VanillaModelInversion_WhiteBox(Attacker):
                 self.top_vfl.set_is_first_forward_epoch(1)
 
                 # real received intermediate result
-                self.top_vfl.parties[0].obtain_local_data(data_inputs)
-                self.top_vfl.parties[0].gt_one_hot_label = batch_label
+                self.top_vfl.parties[attacked_party].obtain_local_data(data_inputs)
+                self.top_vfl.parties[attacked_party].gt_one_hot_label = batch_label
 
-                real_results = self.top_vfl.pred_transmit()[attacked_party]
+                real_results = self.top_vfl.pred_transmit()#[attacked_party]
                 self.top_vfl._clear_past_key_values()
 
 

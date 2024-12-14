@@ -108,14 +108,13 @@ class Party(object):
         
         # attack and defense
         # self.attacker = None
-        self.defender = None
+        # self.defender = None
 
         # Data
         if need_data:
             self.prepare_data(args, index)
-        # self.prepare_attacker(args, index)
-        # self.prepare_defender(args, index)
-
+            self.prepare_data_loader()
+            
         self.local_gradient = None
         self.local_pred = None
         self.local_pred_clone = None
