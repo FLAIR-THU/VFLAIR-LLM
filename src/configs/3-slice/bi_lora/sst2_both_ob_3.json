@@ -1,11 +1,11 @@
 {
-    "epochs": 20,
+    "epochs": 40,
     "lr": 0.0001,
     "k": 2,
-    "batch_size": 128,
+    "batch_size": 16,
+    "early_stop_threshold": 2,
     "pipeline": "finetune",
     "model_architect":"CLS",
-    "early_stop_threshold": 1,
     "communication":{
         "communication_protocol": "FedSGD",
         "iteration_per_aggregation": 1
@@ -24,7 +24,7 @@
       "add_special_tokens": 1
     },
     "finetune_configs":{
-        "name":"Vanilla",
+        "name":"LoRA",
         "configs":{}
     },
     "model_list":{
@@ -35,21 +35,25 @@
         "kwargs_model_loading":{
         },
         "0": {
-          "path": "/shared/model/bert-base-uncased-SST-2",
+          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
 
             "head":{
-                "trainable": 0,
+                "trainable": 1,
                 "embedding_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
+            },
+            "tail":{
+                "trainable": 1,
+                "head_layer_trainable": 0,
+                "encoder_trainable": 0,
+                "encoder_trainable_ids":[]
             }
-            
         },
         "1": {
-          "path": "/shared/model/bert-base-uncased-SST-2",
-            "tail":{
-                "trainable": 0,
-                "head_layer_trainable": 1,
+          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
+            "body":{
+                "trainable": 1,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
             }
@@ -57,40 +61,36 @@
         "task":{
             "task_type": "SequenceClassification"
         },
-        "vfl_model_slice_num": 2,
+        "vfl_model_slice_num": 3,
         "local_encoders_num": 3,
-        "local_tail_encoders_num": 0
+        "local_tail_encoders_num": 3
     },
     "defense": {
         "name": "TextObfuscator",
         "parameters": {
             "party": [0],
             "cluster_method": "kmeans",
-            "cluster_num": 100,
+            "cluster_num": 50,
             "epsilon": 1,
             "w_cluster_away": 0.5,
             "w_cluster_close": 0.1
         }
-  },
-  "attack_list": {
+    },
+    "attack_list": {
       "0":{
-          "name": "VanillaModelInversion_WhiteBox",
+          "name": "BiSR",
           "parameters": {
               "party": [1],
+              "attacker_model_name": "NaMoE",
+              "expert_scales": [0, 10.0, 7.5, 5.0],
+              "expert_epoch": 20,
+              "gate_epoch": 15,
+              "full_epoch": 4,
+              "phase1_lr":0.001,
               "lr": 0.01,
+              "batch_size": 6,
               "epochs": 100,
-              "batch_size": 32,
-              "attack_sample_num": 100
-          }
-      },
-      "1":{
-          "name": "WhiteBoxInversion",
-          "parameters": {
-              "party": [1],
-              "T": 0.05,
-              "lr": 0.005,
-              "epochs": 500,
-              "batch_size": 32,
+            "auxiliary_data_num": 100,
               "attack_sample_num": 100
           }
       }

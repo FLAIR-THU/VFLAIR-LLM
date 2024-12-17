@@ -789,8 +789,8 @@ def do_load_basic_configs_llm(config_dict, args):
             args.defense_param_name = 'gradient_sparse_rate'
         
         elif args.defense_name == "TextObfuscator":
-            args.defense_param = args.defense_configs['epsilon']
-            args.defense_param_name = 'epsilon'
+            args.defense_param = args.defense_configs['cluster_num']
+            args.defense_param_name = 'cluster_num'
             args.cluster_method = args.defense_configs['cluster_method']
             args.cluster_num = args.defense_configs['cluster_num']
             args.w_cluster_close = args.defense_configs['w_cluster_close']
