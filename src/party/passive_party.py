@@ -24,6 +24,7 @@ from utils.communication_protocol_funcs import get_size_of
 from utils.communication_protocol_funcs import compress_pred
 from utils.basic_functions import cross_entropy_for_onehot, tf_distance_cov_cor
 from utils.cluster_utils import run_cluster, redivide_cluster, CenterLoss, load_cluster_results, save_cluster_results
+from utils.inferdpt_utils import *
 
 from models.imagined_adversary_models import *
 from models.adversarial_model import *
@@ -36,7 +37,7 @@ import time
 import numpy as np
 import pickle
 from torch.distributions.laplace import Laplace
-
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 class PassiveParty(Party):
     def __init__(self, args, index):
@@ -263,7 +264,54 @@ class PassiveParty_LLM(Party_LLM):
                 self.obfuscator = Laplace(loc=torch.tensor(0, device=self.local_model.device, dtype=float), \
                     scale=torch.tensor(1/self.args.epsilon, device=self.local_model.device, dtype=float))
                 
+            elif self.args.apply_inferdpt and (self.index in defense_configs["party"]):
+                print(f'Passive Party {self.index}: init InferDPT Defense')
+                infer_dpt_kit_dir = f'./models/model_parameters/inferdpt_kit/{self.args.dataset}/'
+                if not os.path.exists(infer_dpt_kit_dir):
+                    os.makedirs(infer_dpt_kit_dir)
+                
+                # Init InferDPT Kit: token_to_vector_dict / sorted_similarities / delta_f
+                if not os.path.exists(infer_dpt_kit_dir + '/token_2_vector.json'):
+                    #### Generate InferDPT
+                    embeddings = self.args.tokenizer.get_vocab()
+                    print('embeddings:',type(embeddings),len(embeddings))
+                    dtype = np.float32
+                    embedding_weights = self.local_model.get_input_embeddings().weight
+                    embedding_weights_np = embedding_weights.detach().cpu().numpy().astype(dtype)
+                    filtered_index2token = filter_tokens(embeddings)
+                    used_num_tokens = len(filtered_index2token)
+                    print('used_num_tokens:',used_num_tokens)
+                    
+                    token_2_embedding = {}
+                    for idx, token in filtered_index2token.items():
+                        token_2_embedding[token] = embedding_weights_np[idx].tolist()
+                    token_list = list(token_2_embedding.keys())
+                    embedding_matrix = np.array(list(token_2_embedding.values()), dtype=dtype)
+                    print('token_list:',len(token_list))
+                    print('embedding_matrix:',embedding_matrix.shape)
+                    self.token_to_vector_dict, self.sorted_similarities, self.delta_f = generate_inferdpt_kit(embedding_matrix,token_list)
 
+                    # Save InferDPT kit
+                    with open(infer_dpt_kit_dir+'/token_2_vector.json', 'w', encoding='utf8') as f:
+                        json.dump(self.token_to_vector_dict, f, ensure_ascii=False, cls=NumpyEncoder)
+                    with open(infer_dpt_kit_dir+'/sorted_similarities.json', 'w') as f:
+                        json.dump(self.sorted_similarities, f, cls=NumpyEncoder)
+                    with open(infer_dpt_kit_dir+'/delta_f.json', 'w') as f:
+                        json.dump(self.delta_f, f, cls=NumpyEncoder)
+                    print(f'Save InferDPTkit into:',infer_dpt_kit_dir)
+                else:
+                    print(f'Load InferDPTkit from:',infer_dpt_kit_dir)
+                    with open(infer_dpt_kit_dir+'/token_2_vector.json', 'r', encoding='utf8') as f:
+                        self.token_to_vector_dict = json.load(f)
+                    with open(infer_dpt_kit_dir+'/sorted_similarities.json', 'r') as f:
+                        self.sorted_similarities = json.load(f)
+                    with open(infer_dpt_kit_dir+'/delta_f.json', 'r') as f:
+                        self.delta_f = np.array(json.load(f))
+                       
+                if self.args.decode_model_path != "":
+                    self.decode_model = AutoModelForCausalLM.from_pretrained(self.args.decode_model_path,**self.args.decode_model_load_kwargs)
+                    self.decode_template = """Your task is to extend the "Prefix Text". Use the "Perturbed Generation" as your primary writing material for your extension. Extract coherent and consistent text from the "Perturbed Generation" and integrate them into your continuation. Ensure a seamless alignment with the context established by the "Prefix Text". Provide only your "Extended Text"\n——"Prefix Text":{prefix}\n——"Perturbed Generation":{perturbed_answer}\n——"Extended Text":"""
+                
     def prepare_data(self, args, index):
         if not args.dataset:
             return None
@@ -556,6 +604,7 @@ class PassiveParty_LLM(Party_LLM):
             if privacy_loss_dict != None:
                 for loss_item in privacy_loss_dict.values():
                     self.obfuscator_privacy_loss += loss_item
+            # print('self.obfuscator_privacy_loss:',self.obfuscator_privacy_loss)
             self.global_loss = self.global_loss + self.obfuscator_privacy_loss.to(self.global_loss.device)
         # ########### Defense on Loss ###############
 
@@ -612,6 +661,55 @@ class PassiveParty_LLM(Party_LLM):
         if use_cache:
             self.local_data_input['past_key_values'] = self.past_key_values.get(0)
 
+        ######### Defense Applied on Text Input ###########
+        if self.args.apply_inferdpt and (self.index in self.args.defense_configs["party"]):
+            input_device = self.local_data_input['input_ids'].device
+            new_input_ids = []
+            for original_input_ids in self.local_data_input['input_ids']: #[bs, seq_len]
+                assert self.args.epsilon > 0, "epsilon should be greater than 0"
+                tokens = self.args.tokenizer.convert_ids_to_tokens(original_input_ids)
+                # print('before tokens:',len(tokens))
+                # print(tokens)
+                new_tokens = []
+                Delta_u = 1.0  
+                exp_factor = self.args.epsilon / (2 * Delta_u)
+                for origin_token in tokens:
+                    if origin_token[0] == ' ':
+                        origin_token = origin_token[1:]
+                    origin_embed = self.token_to_vector_dict.get(origin_token, None)
+                    if origin_embed is None:
+                        new_tokens.append(origin_token)
+                        continue
+                    noise_embed = add_laplace_noise_to_vector(origin_embed, self.args.epsilon, self.delta_f)
+                    similarity = cosine_similarity_vectors(origin_embed, noise_embed)
+                    sorted_distances_for_token = self.sorted_similarities.get(origin_token, None)
+                    if sorted_distances_for_token is None:
+                        continue
+                    token_only = sorted_distances_for_token[0]
+                    similarity_only = sorted_distances_for_token[1]
+                    arr = np.flip(similarity_only)
+                    index = np.searchsorted(arr, similarity)
+                    index = len(arr) - index
+                    close_tokens = token_only[:index]
+                    close_similarities = similarity_only[:index]
+                    if len(close_tokens) == 0:
+                        continue
+                    unnormalized_probabilities = np.exp(exp_factor * np.array(close_similarities))
+                    total_unnormalized_prob = np.sum(unnormalized_probabilities)
+                    probabilities = unnormalized_probabilities / total_unnormalized_prob
+                    selected_token = np.random.choice(close_tokens, p=probabilities)
+                    new_tokens.append(selected_token)
+                new_token_ids = self.args.tokenizer.convert_tokens_to_ids(new_tokens)
+                # sentence = self.args.tokenizer.decode(new_token_ids)
+                # print('after:',sentence)
+                new_input_ids.append(torch.tensor(new_token_ids))
+            new_input_ids = torch.stack(new_input_ids) # [bs, seq_len]
+            
+            self.local_data_input['input_ids'] = new_input_ids.to(input_device)
+        
+        
+        ######### Defense Applied on Text Input ###########
+        
         # collect processed labels (only in some cases)
         # model 0 head  / model 1 body(active) / model 2 tail
         intermediate = self.forward(model_index=0, **self.local_data_input)
@@ -662,6 +760,17 @@ class PassiveParty_LLM(Party_LLM):
             intermediate['attention_mask'] = self.local_attention_mask
 
         return intermediate
+    
+    def inferdpt_decode(self, original_prompt, pertrubed_answer):
+        decode_input = self.decode_template.format(prefix=original_prompt ,perturbed_answer=pertrubed_answer)
+        print('Extraction Input:')
+        print(decode_input)
+        
+        decode_input_ids = self.args.tokenizer.tokenize(decode_input,return_tensors='pt')
+        print('decode_input_ids:',len(decode_input_ids))
+        extracted_answer = self.decode_model.generate(decode_input, **self.args.decode_generation_kwargs)
+        print('extracted_answer:',type(extracted_answer),len(extracted_answer))
+        return extracted_answer
     
     def give_final_pred(self, resp):
         received_pred = resp['inputs_embeds'] 

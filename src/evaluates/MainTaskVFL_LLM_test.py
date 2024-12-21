@@ -143,6 +143,7 @@ def create_main_task(global_model_type: GenerationMixin):
 
             ###### init Parties ######
             self.parties = args.parties
+            self.current_client_id = 0
 
 
             ### Results 
@@ -440,6 +441,7 @@ def create_main_task(global_model_type: GenerationMixin):
                     
                     if self.args.model_architect == 'CLS':  # task_type == "SequenceClassification":  # and self.args.num_classes > 1: # classification
                         for party_id in range(self.args.k-1):
+                            self.current_client_id = party_id
                             party_global_output = self.forward(**data_input_list[party_id])
                             batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(party_global_output,
                                                                                             self.gt_one_hot_label[party_id])
@@ -450,6 +452,7 @@ def create_main_task(global_model_type: GenerationMixin):
                     
                     elif self.args.model_architect == 'TQA':  # task_type == "QuestionAnswering":
                         for party_id in range(self.args.k-1):
+                            self.current_client_id = party_id
                             party_global_output = self.forward(**data_input_list[party_id])
                             feature_list = data_input_list[party_id]['feature']
                             batch_nbest, batch_gold_ans, sample_cnt = self.generate_result(party_global_output, self.gt_one_hot_label[party_id], feature_list)
@@ -460,10 +463,27 @@ def create_main_task(global_model_type: GenerationMixin):
                     
                     elif self.args.model_architect=='CLM': #task_type == "CausalLM":
                         for party_id in range(self.args.k-1):
+                            self.current_client_id = party_id
                             if not (self.args.max_new_tokens==1):
                                 self.set_is_first_forward_epoch(1)
                                 party_generation_output = self.generate(**data_input_list[party_id], \
                                         generation_config = self.generation_config)
+                                if self.args.apply_inferdpt and (party_id in self.args.defense_configs['party']):
+                                    original_prompt_ids = data_input_list[party_id]['input_ids']
+                                    print('original_prompt_ids:',type(original_prompt_ids),original_prompt_ids.shape)
+                                    
+                                    original_prompt = self.args.tokenizer.batch_decode(original_prompt_ids,skip_special_tokens=True)
+                                    print('original_prompt:',type(original_prompt),len(original_prompt))
+                                    print(original_prompt)
+                                    
+                                    print('raw party_generation_output:',type(party_generation_output),party_generation_output.shape)
+                                    perturbed_answer = self.args.tokenizer.batch_decode(party_generation_output)
+                                    print('perturbed_answer:',type(perturbed_answer),len(perturbed_answer))
+                                    print(perturbed_answer)
+                                    
+                                    party_generation_output = self.parties[party_id].inferdpt_decode(original_prompt,perturbed_answer)
+                                    print('after party_generation_output:',type(party_generation_output),party_generation_output.shape)
+
                             else:  # next token prediction
                                 party_generation_output = self.forward(**data_input_list[party_id])
                             
@@ -484,6 +504,7 @@ def create_main_task(global_model_type: GenerationMixin):
                     
                     elif self.args.model_architect=='MM':
                         for party_id in range(self.args.k-1):
+                            self.current_client_id = party_id
                             if not (self.args.max_new_tokens==1):
                                 self.set_is_first_forward_epoch(1)
                                 if self.args.generation_method == 'chat':
@@ -1642,7 +1663,7 @@ def create_main_task(global_model_type: GenerationMixin):
                         "active_predict_attention_mask": self.dict_deepcopy(self.parties[self.args.k - 1].output_attention_mask[0]) ,
                         
                         "local_gradient": copy.deepcopy(self.parties[0].local_gradient.detach()) if self.parties[0].local_gradient!= None else None,
-                        "global_gradient": copy.deepcopy(self.parties[self.args.k - 1].global_gradient_dict[0].detach()) if self.parties[self.args.k - 1].global_gradient_dict[0] != None else None,
+                        "global_gradient": copy.deepcopy(self.parties[self.args.k - 1].global_gradient_dict[0].detach()) if 0 in self.parties[self.args.k - 1].global_gradient_dict.keys() else None,
                         
                         # Gradient
                         "local_model_head_gradient": copy.deepcopy(self.parties[0].weights_grad_a),

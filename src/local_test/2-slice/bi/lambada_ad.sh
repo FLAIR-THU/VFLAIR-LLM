@@ -6,8 +6,8 @@
 #SBATCH --mem 100000MB
 
 # 0.001
-for seed in 60 
-    # 61 62
+for seed in 61 #62
+    # 62
     do
     python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/bi/lambada_ad
 done
@@ -15,7 +15,7 @@ done
 
 # 0.01
 sed -i 's/"lambda": 0.001/"lambda": 0.01/g' ./configs/2-slice/bi/lambada_ad.json
-for seed in 60 
+for seed in 61 #62
     #61 62
     do
     python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/bi/lambada_ad
@@ -23,7 +23,7 @@ done
 
 # 0.1
 sed -i 's/"lambda": 0.01/"lambda": 0.1/g' ./configs/2-slice/bi/lambada_ad.json
-for seed in 61 
+for seed in 62 #63
     # 62 63
     do
     python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/bi/lambada_ad
@@ -31,7 +31,7 @@ done
 
 # 1
 sed -i 's/"lambda": 0.1/"lambda": 1.0/g' ./configs/2-slice/bi/lambada_ad.json
-for seed in 60 
+for seed in 61 #62
     #61 62
     do
     python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/bi/lambada_ad
@@ -40,7 +40,7 @@ done
 
 # 5
 sed -i 's/"lambda": 1.0/"lambda": 5.0/g' ./configs/2-slice/bi/lambada_ad.json
-for seed in 60 61
+for seed in 61
     do
     python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/bi/lambada_ad
 done

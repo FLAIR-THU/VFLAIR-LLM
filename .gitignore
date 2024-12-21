@@ -9,6 +9,7 @@ __pycache__/
 # model files
 src/models/model_parameters/pretrained_attacker_models
 src/models/model_parameters/clustering_models
+src/models/model_parameters/inferdpt_kit
 
 # dataset files
 # dataset/

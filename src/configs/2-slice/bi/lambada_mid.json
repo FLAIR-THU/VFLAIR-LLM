@@ -70,17 +70,16 @@
         "local_tail_encoders_num": 0
     },
     "defense": {
-          "name": "AdversarialTraining",
+          "name": "MID",
           "parameters": {
-          "party": [0],
-          "position": ["head"],
-          "adversarial_model": "Mapping_MLP3_noflatten",
-          "adversarial_model_lr": 0.001,
-          "imagined_adversary": "ImaginedAdversary_MLP3_noflatten",
-          "imagined_adversary_lr": 0.001,
-          "lambda": 0.001,
-          "seq_length": 512,
-          "embed_dim": 768
+              "party": [0],
+              "mid_model_name":"MIDModel_Linear",
+              "lr": 0.001,
+              "lambda": 0.01,
+              "mid_position": ["head"],
+              "current_bottleneck_scale": 1,
+              "seq_length": 512,
+              "embed_dim": 768
           }
       },
       "attack_list": {

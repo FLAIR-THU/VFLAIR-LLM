@@ -51,6 +51,7 @@ class ActiveParty_LLM(Party_LLM):
         self.global_gradient_dict = {}
         
         self.weights_grad_a = None
+        self.weights_grad_a_list = [ None for _i in range(self.args.k-1)]
 
         self.encoder_hidden_states = None
         self.encoder_attention_mask = None

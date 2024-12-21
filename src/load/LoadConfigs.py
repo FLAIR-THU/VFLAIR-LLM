@@ -702,6 +702,7 @@ def do_load_basic_configs_llm(config_dict, args):
     args.apply_gs = False
     args.apply_mid = False  # mid defense
     args.apply_textobfuscator = False
+    args.apply_inferdpt = False
     args.apply_cae = False  # cae defense
     args.apply_dcae = False  # dcae defense
     args.apply_adversarial = False  # adversarial
@@ -735,6 +736,8 @@ def do_load_basic_configs_llm(config_dict, args):
                 args.apply_gs = True
             elif ('textobfuscator' in args.defense_name.casefold()):
                 args.apply_textobfuscator = True
+            elif ('inferdpt' in args.defense_name.casefold()):
+                args.apply_inferdpt = True
         else:
             assert 'name' in config_dict['defense'], "missing defense name"
     else:
@@ -796,6 +799,14 @@ def do_load_basic_configs_llm(config_dict, args):
             args.w_cluster_close = args.defense_configs['w_cluster_close']
             args.w_cluster_away = args.defense_configs['w_cluster_away']
             args.epsilon = args.defense_configs['epsilon']
+        
+        elif args.defense_name == "InferDPT":
+            args.defense_param = args.defense_configs['epsilon']
+            args.defense_param_name = 'epsilon'
+            args.epsilon = args.defense_configs['epsilon']
+            args.decode_model_path = args.defense_configs['decode_model_path']
+            args.decode_model_load_kwargs = args.defense_configs['decode_model_load_kwargs']
+            args.decode_generation_kwargs = args.defense_configs['decode_generation_kwargs']
             
         else:
             args.defense_param = 'None'
@@ -898,6 +909,7 @@ def do_load_basic_configs_llm(config_dict, args):
         args.apply_dcae = False
         args.apply_dp = False
         args.apply_textobfuscator = False
+        args.apply_inferdpt = False
         args.Q = 1
         # return args
 
