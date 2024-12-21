@@ -56,7 +56,10 @@ class GMS8KEval:
                 return None
         
         def wash(token_id_list, washed_ids):
+            if token_id_list == []:
+                return []
             washed_token_id_list = []
+            print(token_id_list)
             for token_ids in token_id_list:
                 token_ids = list(token_ids)
                 for washed_id in washed_ids:

@@ -464,25 +464,27 @@ def create_main_task(global_model_type: GenerationMixin):
                     elif self.args.model_architect=='CLM': #task_type == "CausalLM":
                         for party_id in range(self.args.k-1):
                             self.current_client_id = party_id
+                            
                             if not (self.args.max_new_tokens==1):
                                 self.set_is_first_forward_epoch(1)
                                 party_generation_output = self.generate(**data_input_list[party_id], \
                                         generation_config = self.generation_config)
                                 if self.args.apply_inferdpt and (party_id in self.args.defense_configs['party']):
+                                    origin_device = party_generation_output.device
                                     original_prompt_ids = data_input_list[party_id]['input_ids']
-                                    print('original_prompt_ids:',type(original_prompt_ids),original_prompt_ids.shape)
-                                    
                                     original_prompt = self.args.tokenizer.batch_decode(original_prompt_ids,skip_special_tokens=True)
-                                    print('original_prompt:',type(original_prompt),len(original_prompt))
-                                    print(original_prompt)
                                     
-                                    print('raw party_generation_output:',type(party_generation_output),party_generation_output.shape)
+                                    party_generation_output = party_generation_output[:,self.seq_length:]
                                     perturbed_answer = self.args.tokenizer.batch_decode(party_generation_output)
-                                    print('perturbed_answer:',type(perturbed_answer),len(perturbed_answer))
-                                    print(perturbed_answer)
+                                    # print('perturbed_answer:',type(perturbed_answer),len(perturbed_answer))
+                                    # print(perturbed_answer)
                                     
                                     party_generation_output = self.parties[party_id].inferdpt_decode(original_prompt,perturbed_answer)
-                                    print('after party_generation_output:',type(party_generation_output),party_generation_output.shape)
+                                    party_generation_output.to(origin_device) #[bs, newlen]
+                                    
+                                    # extracted_answer = self.args.tokenizer.batch_decode(party_generation_output)
+                                    # print('extracted_answer:',type(extracted_answer),len(extracted_answer))
+                                    # print(extracted_answer)
 
                             else:  # next token prediction
                                 party_generation_output = self.forward(**data_input_list[party_id])
@@ -494,14 +496,7 @@ def create_main_task(global_model_type: GenerationMixin):
                             predict_word_list.extend(batch_predict_word)
                             if sample_cnt is not None:
                                 total_sample_cnt += sample_cnt
-                        # else:
-                        #     global_output = self.forward(**data_inputs)
-                        #     batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(global_output, self.gt_one_hot_label)
-                        #     predict_label_list.extend(batch_predict_label)
-                        #     actual_label_list.extend(batch_actual_label)
-                        #     if sample_cnt is not None:
-                        #         total_sample_cnt += sample_cnt
-                    
+                       
                     elif self.args.model_architect=='MM':
                         for party_id in range(self.args.k-1):
                             self.current_client_id = party_id
@@ -600,94 +595,89 @@ def create_main_task(global_model_type: GenerationMixin):
                 if self.args.task_type == "CausalLM":
                     predict_word_list = predict_list # bs, seq_len, vocab_size
                     target_word_list = label_list # bs, seq_len
-
-                    if len(target_word_list[0].shape)>0: # long text generation, not next token prediction   
-                        # print('target_word_list:',len(target_word_list),target_word_list[0].shape)
-                        # print('predict_word_list:',len(predict_word_list),predict_word_list[0].shape)
+                    print('target_word_list:',target_word_list[0].shape)
+                    print('predict_word_list:',predict_word_list[0].shape)
+                    
+                    if self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
+                        self.evaluator = GMS8KEval(self.args)
+                        acc = self.evaluator.evaluate(predict_word_list,target_word_list )
+                    
+                    elif self.args.dataset=='MATH':
+                        # print('predict_word_list:',type(predict_word_list),len(predict_word_list),predict_word_list[0].shape)
                         
-                        if self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
-                            self.evaluator = GMS8KEval(self.args)
-                            acc = self.evaluator.evaluate(predict_word_list,target_word_list )
+                        def wash(token_id_list, washed_ids):
+                            washed_token_id_list = []
+                            for token_ids in token_id_list:
+                                token_ids = list(token_ids)
+                                for washed_id in washed_ids:
+                                    while washed_id in token_ids:
+                                        token_ids.remove(washed_id)
+                                
+                                washed_token_id_list.append(torch.tensor(token_ids) )
+                            return washed_token_id_list
+
+                        washed_ids = [self.args.tokenizer.pad_token_id, self.args.tokenizer.eos_token_id, self.args.tokenizer.bos_token_id]
+                        predict_word_list = wash(predict_word_list,washed_ids )
+                        target_word_list = wash(target_word_list,washed_ids )
+
+                        predict_word_list = [
+                            self.args.tokenizer.decode(_ids)
+                            for _ids in list(predict_word_list)]
+
+                        target_word_list = [
+                            self.args.tokenizer.decode(_ids)
+                            for _ids in list(target_word_list)]
                         
-                        elif self.args.dataset=='MATH':
-                            # print('predict_word_list:',type(predict_word_list),len(predict_word_list),predict_word_list[0].shape)
-                            
-                            def wash(token_id_list, washed_ids):
-                                washed_token_id_list = []
-                                for token_ids in token_id_list:
-                                    token_ids = list(token_ids)
-                                    for washed_id in washed_ids:
-                                        while washed_id in token_ids:
-                                            token_ids.remove(washed_id)
-                                    
-                                    washed_token_id_list.append(torch.tensor(token_ids) )
-                                return washed_token_id_list
+                        def is_equiv(str1, str2, verbose=False):
+                            if str1 is None and str2 is None:
+                                print("WARNING: Both None")
+                                return True
+                            if str1 is None or str2 is None:
+                                return False
 
-                            washed_ids = [self.args.tokenizer.pad_token_id, self.args.tokenizer.eos_token_id, self.args.tokenizer.bos_token_id]
-                            predict_word_list = wash(predict_word_list,washed_ids )
-                            target_word_list = wash(target_word_list,washed_ids )
-
-                            predict_word_list = [
-                                self.args.tokenizer.decode(_ids)
-                                for _ids in list(predict_word_list)]
-
-                            target_word_list = [
-                                self.args.tokenizer.decode(_ids)
-                                for _ids in list(target_word_list)]
-                            
-                            def is_equiv(str1, str2, verbose=False):
-                                if str1 is None and str2 is None:
-                                    print("WARNING: Both None")
-                                    return True
-                                if str1 is None or str2 is None:
-                                    return False
-
-                                try:
-                                    ss1 = strip_string(str1)
-                                    ss2 = strip_string(str2)
-                                    #pdb.set_trace()
-                                    if verbose:
-                                        print(ss1, ss2)
-                                    return ss1 == ss2
-                                except Exception:
-                                    return str1 == str2
-                            
-                            def process_results(completion, answer): # doc
-                                split_ans = completion.split('The answer is: ')
-                                if len(split_ans) > 1:
-                                    ans = split_ans[-1]
-                                    extract_ans_temp = ans.split('.\n')[0]
-                                    extract_ans_temp = extract_ans_temp.strip()
-                                    if len(extract_ans_temp)>0 and extract_ans_temp[-1] == '.':
-                                        extract_ans = extract_ans_temp[0:-1]
-                                    else:
-                                        extract_ans = extract_ans_temp
-                                    extract_ans = extract_ans.strip()
-                                    
-                                    # print('extract_ans:',extract_ans)
-                                    # print('answer:',answer)
-
-                                    if is_equiv(extract_ans, answer):
-                                        return True
-                                    else:
-                                        return False
+                            try:
+                                ss1 = strip_string(str1)
+                                ss2 = strip_string(str2)
+                                #pdb.set_trace()
+                                if verbose:
+                                    print(ss1, ss2)
+                                return ss1 == ss2
+                            except Exception:
+                                return str1 == str2
+                        
+                        def process_results(completion, answer): # doc
+                            split_ans = completion.split('The answer is: ')
+                            if len(split_ans) > 1:
+                                ans = split_ans[-1]
+                                extract_ans_temp = ans.split('.\n')[0]
+                                extract_ans_temp = extract_ans_temp.strip()
+                                if len(extract_ans_temp)>0 and extract_ans_temp[-1] == '.':
+                                    extract_ans = extract_ans_temp[0:-1]
                                 else:
-                                    # temp = {'question': doc, 'output': completion, 'answer': answer}
-                                    # invalid_outputs.append(temp)
+                                    extract_ans = extract_ans_temp
+                                extract_ans = extract_ans.strip()
+                                
+                                if is_equiv(extract_ans, answer):
+                                    return True
+                                else:
                                     return False
+                            else:
+                                # temp = {'question': doc, 'output': completion, 'answer': answer}
+                                # invalid_outputs.append(temp)
+                                return False
 
-                            results = []
-                            for i in range(len(target_word_list)):
-                                res = process_results(predict_word_list[i],target_word_list[i])
-                                # print('-'*100)
-                                # print('PRED:',predict_word_list[i])
-                                # print('GOLD:',target_word_list[i])
-                                # print('SCORE:',res)
-                                results.append(res)
-                            acc = sum(results) / len(results)
-
-                        else:
-                            
+                        results = []
+                        for i in range(len(target_word_list)):
+                            res = process_results(predict_word_list[i],target_word_list[i])
+                            # print('-'*100)
+                            # print('PRED:',predict_word_list[i])
+                            # print('GOLD:',target_word_list[i])
+                            # print('SCORE:',res)
+                            results.append(res)
+                        acc = sum(results) / len(results)
+                    
+                    else: # normal generation tasks
+                        if len(target_word_list[0].shape)>0: # long text generation, not next token prediction   
                             def calculate_token_precision_recall(reference_ids, candidate_ids):
                                 reference_ids = reference_ids.tolist()
                                 candidate_ids = candidate_ids.tolist()
@@ -722,22 +712,22 @@ def create_main_task(global_model_type: GenerationMixin):
                             score = score/len(target_word_list)
                             acc = score
                                 
-                    else:
-                        if self.args.metric_type == "best_pred":
-                            suc_cnt = 0
-                            for i in range(len(target_word_list)):
-                                if target_word_list[i] == predict_word_list[i]:
-                                    suc_cnt += 1
-                            acc = suc_cnt / float(len(target_word_list))
-                        elif self.args.metric_type == "n_best":
-                            suc_cnt = 0
-                            for i in range(len(target_word_list)):
-                                if target_word_list[i] in predict_word_list[i]:
-                                    suc_cnt += 1
-                            acc = suc_cnt / float(len(target_word_list))  # ACC
                         else:
-                            assert 1 > 2, 'metric type not supported'
-                        
+                            if self.args.metric_type == "best_pred":
+                                suc_cnt = 0
+                                for i in range(len(target_word_list)):
+                                    if target_word_list[i] == predict_word_list[i]:
+                                        suc_cnt += 1
+                                acc = suc_cnt / float(len(target_word_list))
+                            elif self.args.metric_type == "n_best":
+                                suc_cnt = 0
+                                for i in range(len(target_word_list)):
+                                    if target_word_list[i] in predict_word_list[i]:
+                                        suc_cnt += 1
+                                acc = suc_cnt / float(len(target_word_list))  # ACC
+                            else:
+                                assert 1 > 2, 'metric type not supported'
+                            
                     return {'acc':acc}
                 else:
                     predict_labels = predict_list

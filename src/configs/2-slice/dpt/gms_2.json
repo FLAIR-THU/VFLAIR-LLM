@@ -66,7 +66,6 @@
                 "temperature":1.0,
                 "top_k": -1,
                 "top_p": 1.0,
-                "stop": ["<|im_end|>", "<end>", "<end>\n", "<end>\n\n", ".\n\n\n\n\n", "<|end_of_text|>", ">\n\n\n"],
                 "max_new_tokens": 160
             },
             "max_new_tokens": 160
@@ -86,7 +85,8 @@
             "decode_generation_kwargs":{
                 "temperature":1.0,
                 "top_k": -1,
-                "top_p": 1.0
+                "top_p": 1.0,
+                "max_new_tokens": 160
             }
         }
     

@@ -50,8 +50,8 @@ from utils.cora_utils import *
 from utils.graph_functions import load_data1, split_graph
 
 
-# DATA_PATH = '../../../share_dataset/'
-DATA_PATH = '/shared/data/'
+DATA_PATH = '../../../share_dataset/'
+# DATA_PATH = '/shared/data/'
 
 IMAGE_DATA = ['mnist', 'cifar10', 'cifar100', 'cifar20', 'utkface', 'facescrub', 'places365']
 TABULAR_DATA = ['breast_cancer_diagnose', 'diabetes', 'adult_income', 'criteo', 'credit', 'nursery', 'avazu']

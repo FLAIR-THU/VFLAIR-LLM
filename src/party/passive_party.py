@@ -762,14 +762,15 @@ class PassiveParty_LLM(Party_LLM):
         return intermediate
     
     def inferdpt_decode(self, original_prompt, pertrubed_answer):
-        decode_input = self.decode_template.format(prefix=original_prompt ,perturbed_answer=pertrubed_answer)
-        print('Extraction Input:')
-        print(decode_input)
+        decode_input = [self.decode_template.format(prefix=original_prompt[_i] ,perturbed_answer=pertrubed_answer[_i])\
+            for _i in range(len(original_prompt))]
+        # print('Extraction Input:')
+        # print(decode_input)
         
-        decode_input_ids = self.args.tokenizer.tokenize(decode_input,return_tensors='pt')
-        print('decode_input_ids:',len(decode_input_ids))
-        extracted_answer = self.decode_model.generate(decode_input, **self.args.decode_generation_kwargs)
-        print('extracted_answer:',type(extracted_answer),len(extracted_answer))
+        decode_input = self.args.tokenizer(decode_input,return_tensors='pt')
+        self._tensor_to_device(decode_input, self.decode_model.device)
+        extracted_answer = self.decode_model.generate(**decode_input, **self.args.decode_generation_kwargs)
+        extracted_answer = extracted_answer[:,decode_input['input_ids'].shape[1]:]
         return extracted_answer
     
     def give_final_pred(self, resp):
