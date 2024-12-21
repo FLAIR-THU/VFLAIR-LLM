@@ -56,16 +56,14 @@ class GMS8KEval:
                 return None
         
         def wash(token_id_list, washed_ids):
-            if token_id_list == []:
-                return []
             washed_token_id_list = []
-            print(token_id_list)
             for token_ids in token_id_list:
-                token_ids = list(token_ids)
-                for washed_id in washed_ids:
-                    while washed_id in token_ids:
-                        token_ids.remove(washed_id)
-                
+                token_ids = token_ids.tolist()
+                if not isinstance(token_ids, list):
+                    token_ids = [token_ids]
+                for _id in washed_ids:
+                    while _id in token_ids:
+                        token_ids.remove(_id)
                 washed_token_id_list.append(torch.tensor(token_ids) )
             return washed_token_id_list
 
@@ -85,10 +83,10 @@ class GMS8KEval:
                 return ss1 == ss2
             except Exception:
                 return str1 == str2
-        
+       
         washed_ids = [self.args.tokenizer.pad_token_id, self.args.tokenizer.eos_token_id, self.args.tokenizer.bos_token_id]
         predict_word_list = wash(predict_word_list,washed_ids )
-        target_word_list = wash(target_word_list,washed_ids )
+        # target_word_list = wash(target_word_list,washed_ids )
 
         predict_word_list = [
             self.args.tokenizer.decode(_ids)
@@ -102,12 +100,14 @@ class GMS8KEval:
         for i in range(len(target_word_list)):
             pred_ans = str(extract_answer_number(predict_word_list[i]))
             
+            
+            res = is_equiv(pred_ans,target_word_list[i])
             # print('-'*100)
             # print('PRED:',predict_word_list[i])
             # print('Extract PRED:',type(pred_ans), pred_ans)
             # print('GOLD:',type(target_word_list[i]),target_word_list[i])
             # print('SCORE:',res)
-            res = is_equiv(pred_ans,target_word_list[i])
+            
             results.append(res)
         acc = sum(results) / len(results)
         return acc

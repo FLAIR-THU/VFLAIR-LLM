@@ -595,16 +595,14 @@ def create_main_task(global_model_type: GenerationMixin):
                 if self.args.task_type == "CausalLM":
                     predict_word_list = predict_list # bs, seq_len, vocab_size
                     target_word_list = label_list # bs, seq_len
-                    print('target_word_list:',target_word_list[0].shape)
-                    print('predict_word_list:',predict_word_list[0].shape)
+                    # print('target_word_list:',len(target_word_list),target_word_list[0])
+                    # print('predict_word_list:',len(predict_word_list),predict_word_list[0])
                     
                     if self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
                         self.evaluator = GMS8KEval(self.args)
                         acc = self.evaluator.evaluate(predict_word_list,target_word_list )
                     
                     elif self.args.dataset=='MATH':
-                        # print('predict_word_list:',type(predict_word_list),len(predict_word_list),predict_word_list[0].shape)
-                        
                         def wash(token_id_list, washed_ids):
                             washed_token_id_list = []
                             for token_ids in token_id_list:
@@ -618,7 +616,7 @@ def create_main_task(global_model_type: GenerationMixin):
 
                         washed_ids = [self.args.tokenizer.pad_token_id, self.args.tokenizer.eos_token_id, self.args.tokenizer.bos_token_id]
                         predict_word_list = wash(predict_word_list,washed_ids )
-                        target_word_list = wash(target_word_list,washed_ids )
+                        # target_word_list = wash(target_word_list,washed_ids )
 
                         predict_word_list = [
                             self.args.tokenizer.decode(_ids)

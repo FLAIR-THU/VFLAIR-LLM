@@ -2413,7 +2413,7 @@ def load_dataset_per_party_llm(args, index):
         y_train = np.array([ _ex['answer'] for _ex in train_examples])
 
         ##### Test #####
-        test_examples = get_examples(test_set_file)[:6] # list of [  {'quesion':... , 'answer':...} ...]
+        test_examples = get_examples(test_set_file)[:20] # list of [  {'quesion':... , 'answer':...} ...]
         X_test = np.array([ problem_prompt.format(instruction=_ex['question']) for _ex in test_examples])
         y_test = np.array([ get_final_ans(_ex['answer']) for _ex in test_examples])
 
