@@ -909,9 +909,7 @@ class GSMDataset_LLM(Dataset):
                 for i in range(len(self.ans))
             ]
             self.labels = [ _input['input_ids'] for _input in self.input_dicts ]
-            # print('--- train ---')
-            # print(self.input_dicts[0])
-            # print(self.labels[0])
+
         else:
             self.input_dicts = [ self.args.tokenizer(
                                     self.qns[i],return_tensors="pt",
@@ -923,12 +921,13 @@ class GSMDataset_LLM(Dataset):
             ]
             self.labels = [ self.args.tokenizer(
                                     self.ans[i],return_tensors="pt",
-                                    padding=args.padding,#"longest",
-                                    max_length=args.max_length, #tokenizer.model_max_length,
-                                    truncation=args.truncation, #True,
+                                    # padding=args.padding,#"longest",
+                                    # max_length=args.max_length, #tokenizer.model_max_length,
+                                    # truncation=args.truncation, #True,
                                 )['input_ids']
                 for i in range(len(self.ans))
             ]
+            
 
     def __len__(self):
         return len(self.ans)

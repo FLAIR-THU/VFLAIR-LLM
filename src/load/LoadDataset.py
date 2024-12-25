@@ -1509,11 +1509,11 @@ def load_dataset_per_party_llm(args, index):
     elif args.dataset == 'yelp-polarity':
         train_set_file, test_set_file = get_dataset_path(args.model_list[str(index)])
         if train_set_file is None or test_set_file is None:
-            # train_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/train.csv'
-            # test_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/test.csv'
+            train_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/train.csv'
+            test_set_file = DATA_PATH + 'Yelp/yelp_review_full_csv/test.csv'
 
-            train_set_file = DATA_PATH + '/yelp_review_full_csv/train.csv'
-            test_set_file = DATA_PATH + '/yelp_review_full_csv/test.csv'
+            # train_set_file = DATA_PATH + '/yelp_review_full_csv/train.csv'
+            # test_set_file = DATA_PATH + '/yelp_review_full_csv/test.csv'
 
         df = pd.read_csv(train_set_file, delimiter=',', header=None,
                          names=['label', 'sentence'])#[:200]
@@ -2172,11 +2172,11 @@ def load_dataset_per_party_llm(args, index):
         train_set_file, test_set_file = get_dataset_path(args.model_list[str(index)])
 
         if train_set_file is None or test_set_file is None:
-            # train_set_file = DATA_PATH + '/SQuAD/data/train-v1.1.json'
-            # test_set_file = DATA_PATH + '/SQuAD/data/dev-v1.1.json'
+            train_set_file = DATA_PATH + '/SQuAD/data/train-v1.1.json'
+            test_set_file = DATA_PATH + '/SQuAD/data/dev-v1.1.json'
 
-            train_set_file = DATA_PATH + '/SQuAD/train-v1.1.json'
-            test_set_file = DATA_PATH + '/SQuAD/dev-v1.1.json'
+            # train_set_file = DATA_PATH + '/SQuAD/train-v1.1.json'
+            # test_set_file = DATA_PATH + '/SQuAD/dev-v1.1.json'
 
         max_seq_length = args.max_seq_length
         doc_stride = args.doc_stride
@@ -2363,12 +2363,12 @@ def load_dataset_per_party_llm(args, index):
             return examples
 
         ##### Train #####
-        train_examples = get_examples(train_set_file) # list of [  {'quesion':... , 'answer':...} ...]
+        train_examples = get_examples(train_set_file)[:] # list of [  {'quesion':... , 'answer':...} ...]
         X_train = np.array([ problem_prompt.format(instruction=_ex['question']+ "<|endoftext|>") for _ex in train_examples])
         y_train = np.array([ _ex['answer'] for _ex in train_examples])
 
         ##### Test #####
-        test_examples = get_examples(test_set_file) # list of [  {'quesion':... , 'answer':...} ...]
+        test_examples = get_examples(test_set_file)[:] # list of [  {'quesion':... , 'answer':...} ...]
         X_test = np.array([ problem_prompt.format(instruction=_ex['question']) for _ex in test_examples])
         y_test = np.array([ get_final_ans(_ex['answer']) for _ex in test_examples])
 

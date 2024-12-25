@@ -1,6 +1,6 @@
 {
     "epochs": 50,
-    "lr": 0.001,
+    "lr": 0.00001,
     "k": 2,
     "batch_size": 16,
     "test_batch_size": 1,
@@ -45,7 +45,7 @@
         "0": {
             "path": "/home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B",
                 "head":{
-                    "trainable": 0,
+                    "trainable": 1,
                     "embedding_trainable": 0,
                     "encoder_trainable": 0,
                     "encoder_trainable_ids":[]

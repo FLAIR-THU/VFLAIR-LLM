@@ -35,7 +35,7 @@
         "kwargs_model_loading":{
         },
         "0": {
-          "path": "/shared/model/bert-base-uncased-SST-2",
+          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
 
             "head":{
                 "trainable": 0,
@@ -46,7 +46,7 @@
             
         },
         "1": {
-          "path": "/shared/model/bert-base-uncased-SST-2",
+          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
             "tail":{
                 "trainable": 0,
                 "head_layer_trainable": 0,

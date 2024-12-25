@@ -86,27 +86,24 @@ class GMS8KEval:
        
         washed_ids = [self.args.tokenizer.pad_token_id, self.args.tokenizer.eos_token_id, self.args.tokenizer.bos_token_id]
         predict_word_list = wash(predict_word_list,washed_ids )
-        # target_word_list = wash(target_word_list,washed_ids )
+        if len(target_word_list[0]) > 1:
+            target_word_list = wash(target_word_list,washed_ids )
 
         predict_word_list = [
-            self.args.tokenizer.decode(_ids)
-            for _ids in list(predict_word_list)]
-
+            self.args.tokenizer.decode(_ids,skip_special_tokens=True) for _ids in list(predict_word_list)]
         target_word_list = [
-            self.args.tokenizer.decode(_ids)
-            for _ids in list(target_word_list)]
+            self.args.tokenizer.decode(_ids,skip_special_tokens=True) for _ids in list(target_word_list)]
         
         results = []
         for i in range(len(target_word_list)):
             pred_ans = str(extract_answer_number(predict_word_list[i]))
-            
-            
             res = is_equiv(pred_ans,target_word_list[i])
-            # print('-'*100)
-            # print('PRED:',predict_word_list[i])
-            # print('Extract PRED:',type(pred_ans), pred_ans)
-            # print('GOLD:',type(target_word_list[i]),target_word_list[i])
-            # print('SCORE:',res)
+            if i <= 10:
+                print('-'*100)
+                print('PRED:',predict_word_list[i])
+                print('pred_ans:',type(pred_ans), pred_ans)
+                print('GOLD:',target_word_list[i])
+                print('SCORE:',res)
             
             results.append(res)
         acc = sum(results) / len(results)

@@ -4,7 +4,25 @@
 #SBATCH --time 1-1:00:00                    # 子任务 1 天 1 小时就能跑完
 #SBATCH --output exp_result/yelp_mia_mid_4.out
 
-for seed in {60,61,62,63,64,65}
+
+# 0.01
+python main_pipeline_llm_MIA.py --seed 60 --configs 2-slice/yelp_mia_mid_4
+
+# 0.001
+sed -i 's/"lambda": 0.01/"lambda": 0.001/g' ./configs/2-slice/yelp_mia_mid_4.json
+python main_pipeline_llm_MIA.py --seed 60 --configs 2-slice/yelp_mia_mid_4
+
+# 0.0001
+sed -i 's/"lambda": 0.001/"lambda": 0.0001/g' ./configs/2-slice/yelp_mia_mid_4.json
+python main_pipeline_llm_MIA.py --seed 60 --configs 2-slice/yelp_mia_mid_4
+
+# 0.00001
+sed -i 's/"lambda": 0.0001/"lambda": 0.00001/g' ./configs/2-slice/yelp_mia_mid_4.json
+python main_pipeline_llm_MIA.py --seed 60 --configs 2-slice/yelp_mia_mid_4
+
+sed -i 's/"lambda": 0.00001/"lambda": 0.5/g' ./configs/2-slice/yelp_mia_mid_4.json
+
+for seed in {61,62}
     do
     # 0.5
     python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/yelp_mia_mid_4

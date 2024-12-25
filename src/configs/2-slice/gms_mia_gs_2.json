@@ -78,7 +78,7 @@
         "parameters": {
           "party": [0],
           "position": ["pred"],
-          "gradient_sparse_rate": 99
+          "gradient_sparse_rate": 96
         }
     },
     "attack_list": {

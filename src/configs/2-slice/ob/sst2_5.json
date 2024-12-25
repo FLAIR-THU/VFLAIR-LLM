@@ -38,7 +38,7 @@
           "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
 
             "head":{
-                "trainable": 0,
+                "trainable": 1,
                 "embedding_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]

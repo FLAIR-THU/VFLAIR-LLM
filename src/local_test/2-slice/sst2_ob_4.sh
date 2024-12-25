@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name sst2_ob_4           # 任务名叫 example
+#SBATCH --job-name sst2_ob_4_5           # 任务名叫 example
 #SBATCH --gres gpu:a100:1                # 每个子任务都用一张 A100 GPU
-#SBATCH --time 2-1:00:00                    # 子任务 1 天 1 小时就能跑完
-#SBATCH --output exp_result/sst2_ob_4.out
+#SBATCH --time 3-1:00:00                    # 子任务 1 天 1 小时就能跑完
+#SBATCH --output exp_result/sst2_ob_4_5.out
 
 for seed in 60 61 62 63 64 65
     do
@@ -27,5 +27,27 @@ for seed in 60 61 62 63 64 65
     python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/sst2_4
 
     sed -i 's/"cluster_num": 250/"cluster_num": 50/g' ./configs/2-slice/ob/sst2_4.json
+
+    # 50
+    python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/sst2_5
+
+    # 100
+    sed -i 's/"cluster_num": 50/"cluster_num": 100/g' ./configs/2-slice/ob/sst2_5.json
+    python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/sst2_5
+
+    # 150
+    sed -i 's/"cluster_num": 100/"cluster_num": 150/g' ./configs/2-slice/ob/sst2_5.json
+    python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/sst2_5
+
+    # 200
+    sed -i 's/"cluster_num": 150/"cluster_num": 200/g' ./configs/2-slice/ob/sst2_5.json
+    python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/sst2_5
+
+    # 250
+    sed -i 's/"cluster_num": 200/"cluster_num": 250/g' ./configs/2-slice/ob/sst2_5.json
+    python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/sst2_5
+
+    sed -i 's/"cluster_num": 250/"cluster_num": 50/g' ./configs/2-slice/ob/sst2_5.json
+
 
 done

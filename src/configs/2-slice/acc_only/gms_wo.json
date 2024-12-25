@@ -13,12 +13,7 @@
     },
     "finetune_configs":{
         "name":"Vanilla",
-        "configs":{
-            "inference_mode":false,  
-          "r":4,  
-          "lora_alpha":32, 
-          "lora_dropout":0.1
-        }
+        "configs":{}
     },
     "dataset":{
         "dataset_name": "GMS8K",
@@ -66,7 +61,8 @@
                 "temperature":1.0,
                 "top_k": -1,
                 "top_p": 1.0,
-                "max_new_tokens": 256
+                "max_new_tokens": 256,
+                "stop_strings": ["<stop token>","<s>"]
             },
             "max_new_tokens": 256
         },

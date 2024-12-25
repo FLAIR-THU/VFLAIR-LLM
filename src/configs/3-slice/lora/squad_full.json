@@ -1,8 +1,8 @@
 {
-  "epochs": 1,
+  "epochs": 40,
   "lr": 0.0001,
   "k": 2,
-  "batch_size": 2,
+  "batch_size": 32,
   "test_batch_size": 1,
   "early_stop_threshold": 1,
   "pipeline": "finetune",
@@ -39,7 +39,7 @@
       "kwargs_model_loading":{
       },
       "0": {
-            "path": "/shared/model//google-bertbert-large-uncased-whole-word-masking-finetuned-squad",
+            "path": "/home/DAIR/guzx/Git_FedProject/Models//google-bertbert-large-uncased-whole-word-masking-finetuned-squad",
           "head":{
             "trainable": 1
           },
@@ -48,7 +48,7 @@
           }
       },
       "1": {
-        "path": "/shared/model/google-bertbert-large-uncased-whole-word-masking-finetuned-squad",
+        "path": "/home/DAIR/guzx/Git_FedProject/Models/google-bertbert-large-uncased-whole-word-masking-finetuned-squad",
           "body":{
               "trainable": 1
           }

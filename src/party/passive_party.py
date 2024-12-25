@@ -264,6 +264,13 @@ class PassiveParty_LLM(Party_LLM):
                 self.obfuscator = Laplace(loc=torch.tensor(0, device=self.local_model.device, dtype=float), \
                     scale=torch.tensor(1/self.args.epsilon, device=self.local_model.device, dtype=float))
                 
+                # if self.local_model_optimizer == None:
+                #     self.local_model_optimizer = torch.optim.Adam(self.obfuscator_privacy_loss_func.parameters(),
+                #                                                 lr=self.lr)
+                # else:
+                #     self.local_model_optimizer.add_param_group(
+                #         {'params': self.obfuscator_privacy_loss_func.parameters(), 'lr': self.lr})
+
             elif self.args.apply_inferdpt and (self.index in defense_configs["party"]):
                 print(f'Passive Party {self.index}: init InferDPT Defense')
                 infer_dpt_kit_dir = f'./models/model_parameters/inferdpt_kit/{self.args.dataset}/'
@@ -326,7 +333,7 @@ class PassiveParty_LLM(Party_LLM):
         elif args.dataset == 'MMLU':
             self.train_dst = MMLUDataset_LLM(args, self.train_data, self.train_label, 'train')
             self.test_dst = MMLUDataset_LLM(args, self.test_data, self.test_label, 'test')
-        elif args.dataset == 'GMS8K':
+        elif args.dataset == 'GMS8K' or args.dataset == 'GMS8K-test':
             self.train_dst = GSMDataset_LLM(args, self.train_data, self.train_label, 'train')
             self.test_dst = GSMDataset_LLM(args, self.test_data, self.test_label, 'test')
         elif args.dataset == 'MATH':
@@ -352,12 +359,10 @@ class PassiveParty_LLM(Party_LLM):
         '''
         self.global_gradient = \partial global_loss / \partial global_pred
         '''
-
-        if (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])
-              and (self.index < self.args.k - 1) and "tail" in self.mid_position):
-            global_loss = global_loss + self.tail_mid_loss.to(global_loss.device)
-        
-
+        # if (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])
+        #       and (self.index < self.args.k - 1) and "tail" in self.mid_position):
+        #     global_loss = global_loss + self.tail_mid_loss.to(global_loss.device)
+       
         if self.args.task_type == 'QuestionAnswering':
             _gradients_start = torch.autograd.grad(global_loss, global_pred.start_logits, retain_graph=True)
             _gradients_end = torch.autograd.grad(global_loss, global_pred.end_logits, retain_graph=True)
@@ -376,7 +381,7 @@ class PassiveParty_LLM(Party_LLM):
                 else:
                     global_gradient_clone=torch.autograd.grad(self.output_tensors[2],self.input_tensors[2],grad_outputs=logits_gradients,retain_graph=True)[0]
             self.global_gradient = global_gradient_clone
-        
+
         self.global_gradient = self.apply_defense_on_global_gradient(self.global_gradient)
 
         return self.global_gradient
@@ -386,9 +391,9 @@ class PassiveParty_LLM(Party_LLM):
         self.global_gradient = \partial global_loss / \partial global_intermediate
         self.input_tensors[2] = global_intermediate model body output/model tail input
         '''
-        if (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])
-              and (self.index < self.args.k - 1) and "tail" in self.mid_position):
-            global_loss = global_loss + self.tail_mid_loss.to(self.global_loss.device)
+        # if (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])
+        #       and (self.index < self.args.k - 1) and "tail" in self.mid_position):
+        #     global_loss = global_loss + self.tail_mid_loss.to(self.global_loss.device)
         
         global_gradient_clone=torch.autograd.grad(global_loss,global_intermediate,retain_graph=True)[0]
         self.global_gradient = global_gradient_clone
@@ -467,16 +472,6 @@ class PassiveParty_LLM(Party_LLM):
                 loss_fct = CrossEntropyLoss()
                 loss = loss_fct(shift_logits, shift_labels)
 
-                # # Shift so that tokens < n predict n
-                # shift_logits = lm_logits[..., :-1, :].contiguous()
-                # shift_labels = labels[..., 1:].contiguous()
-                # # Flatten the tokens
-                # loss_fct = CrossEntropyLoss()
-                # # print('shift_logits:',shift_logits.shape)
-                # # print(shift_logits.view(-1, shift_logits.size(-1)).shape)
-                # # print('shift_labels:',shift_labels.shape)
-                # # print(shift_labels.view(-1).shape)
-                # loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
             else:
                 next_token_logits = lm_logits[:, -1, :]
                 # print('next_token_logits:',next_token_logits.shape)
@@ -493,7 +488,6 @@ class PassiveParty_LLM(Party_LLM):
                 gt_one_hot_label = self.processed_labels
             except:
                 pass
-            # print('train_batch cal_loss gt_one_hot_label:',gt_one_hot_label)
             
             logits = pred.logits  # [bs, seq_len, vocab_size]
             labels = torch.tensor(gt_one_hot_label).to(logits.device) # [bs, seq_len]
@@ -595,17 +589,17 @@ class PassiveParty_LLM(Party_LLM):
         
         elif self.args.apply_textobfuscator == True and (self.index in self.args.defense_configs['party']):
             valid_ids = (self.local_data_input['attention_mask']==1) & (self.local_data_input['input_ids']!=2) & (self.local_data_input['input_ids']!=0) # [bs, seq_len]
-            client_hidden_states = self.origin_pred[valid_ids] # valid model head output [id_num, embed_dim]
+            client_hidden_states = self.output_tensors[0][valid_ids]
+            # self.origin_pred[valid_ids] # valid model head output [id_num, embed_dim]
             cluster_ids = torch.tensor([ [  self.token2cluster[ids.item()] if (ids.item() in self.token2cluster.keys()) else 0  for ids in batch_ids] for batch_ids in self.local_data_input['input_ids']], device=self.local_data_input['input_ids'].device)
             cluster_ids = cluster_ids[valid_ids] # [id_num]
             privacy_loss_dict = self.obfuscator_privacy_loss_func(client_hidden_states, cluster_ids)
-            
             self.obfuscator_privacy_loss = 0
             if privacy_loss_dict != None:
                 for loss_item in privacy_loss_dict.values():
                     self.obfuscator_privacy_loss += loss_item
             # print('self.obfuscator_privacy_loss:',self.obfuscator_privacy_loss)
-            self.global_loss = self.global_loss + self.obfuscator_privacy_loss.to(self.global_loss.device)
+            # self.global_loss = self.global_loss + self.obfuscator_privacy_loss.to(self.global_loss.device)
         # ########### Defense on Loss ###############
 
         return self.global_loss
@@ -706,29 +700,18 @@ class PassiveParty_LLM(Party_LLM):
             new_input_ids = torch.stack(new_input_ids) # [bs, seq_len]
             
             self.local_data_input['input_ids'] = new_input_ids.to(input_device)
-        
-        
         ######### Defense Applied on Text Input ###########
         
         # collect processed labels (only in some cases)
         # model 0 head  / model 1 body(active) / model 2 tail
         intermediate = self.forward(model_index=0, **self.local_data_input)
         
-        # if not isinstance(intermediate, VFLModelIntermediate):
-        #     _input = self.local_data_input
-        #     intermediate = VFLModelIntermediate(**intermediate).prepare_for_forward(
-        #         attention_mask=_input.get('attention_mask'),
-        #         position_ids=_input.get('position_ids'),
-        #         cache_position=_input.get('cache_position'),
-        #         use_cache=_input.get('use_cache'),
-        #     )
 
         if 'processed_labels' in intermediate.keys():
             self.processed_labels = intermediate['processed_labels']
             del(intermediate['processed_labels'])
 
         self.local_attention_mask = intermediate['attention_mask'] if ('attention_mask' in intermediate) else None
-
         self.local_pred_clone = self.output_tensors[0].detach().clone()
         if self.local_attention_mask != None:
             self.local_attention_mask = self.local_attention_mask.detach().clone()
@@ -842,9 +825,9 @@ class PassiveParty_LLM(Party_LLM):
 
             # update mid_model+local_model with mid_loss
             self.head_mid_loss.backward(retain_graph=True)
-
-            self.local_gradient = self.local_gradient.to(self.output_tensors[0].device)
+            
             # update mid_model and local model with global_loss
+            self.local_gradient = self.local_gradient.to(self.output_tensors[0].device)
             weights_grad_a = torch.autograd.grad(
                 self.output_tensors[0],
                 self.head_mid_model.parameters(),
@@ -879,7 +862,40 @@ class PassiveParty_LLM(Party_LLM):
                             w.grad = g.detach()
             
             self.local_model_optimizer.step()
+            
+        elif (self.args.apply_textobfuscator == True and (self.index in self.args.defense_configs["party"])
+              and (self.index < self.args.k - 1)):
+            
+            self.local_model_optimizer.zero_grad()  # self.mid_model_optimizer.zero_grad()
 
+            local_model_params = []
+            for param in self.local_model.parameters():
+                if param.requires_grad:
+                    local_model_params.append(param)
+            
+            if len(local_model_params) > 0:
+                # update local model with obfuscator_privacy_loss
+                self.obfuscator_privacy_loss.backward(retain_graph=True)
+                
+                # update local model with global loss
+                self.local_gradient = self.local_gradient.to(self.output_tensors[0].device)
+                self.weights_grad_a = torch.autograd.grad(
+                    self.output_tensors[0],
+                    local_model_params,  # self.local_model.parameters()
+                    grad_outputs=self.local_gradient,
+                    retain_graph=True,
+                    allow_unused=True,
+                )
+                for w, g in zip(local_model_params, self.weights_grad_a):
+                    if w.requires_grad and g != None:
+                        if w.grad != None:
+                            w.grad += g.detach()
+                        else:
+                            w.grad = g.detach()
+
+            self.local_model_optimizer.step()
+
+            # update 
         else:  # W/O Defense
             if self.local_model_optimizer != None:
                 self.local_model_optimizer.zero_grad()

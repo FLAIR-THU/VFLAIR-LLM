@@ -70,7 +70,7 @@
           "parameters": {
           "party": [0],
           "position": ["grad","pred"],
-          "epsilon": 50
+          "epsilon": 500
           }
     },
     "attack_list": {

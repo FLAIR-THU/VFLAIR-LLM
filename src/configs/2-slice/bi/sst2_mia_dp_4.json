@@ -2,7 +2,7 @@
   "epochs": 40,
   "lr": 0.0001,
   "k": 2,
-  "batch_size": 16,
+  "batch_size": 3,
   "early_stop_threshold": 2,
   "pipeline": "pretrained",
   "model_architect":"CLS",
@@ -11,7 +11,7 @@
       "iteration_per_aggregation": 1
   },
   "dataset": {
-    "dataset_name": "SST-2",
+    "dataset_name": "SST-2-test",
     "num_classes": 2
   },
   "tokenizer": {

@@ -445,11 +445,15 @@ def create_main_task(global_model_type: GenerationMixin):
                             party_global_output = self.forward(**data_input_list[party_id])
                             batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(party_global_output,
                                                                                             self.gt_one_hot_label[party_id])
-                            predict_label_list.extend(batch_predict_label)
-                            actual_label_list.extend(batch_actual_label)
+                            print('batch_predict_label:',batch_predict_label,batch_predict_label[0].device)
+                            print('batch_actual_label:',batch_actual_label,batch_actual_label[0].device)
+                            
+                            predict_label_list.extend(batch_predict_label) # [torch.tensor(class), ...]
+                            actual_label_list.extend(batch_actual_label) # [torch.tensor(class), ...]
                             if sample_cnt is not None:
                                 total_sample_cnt += sample_cnt
-                    
+                            torch.cuda.empty_cache()
+
                     elif self.args.model_architect == 'TQA':  # task_type == "QuestionAnswering":
                         for party_id in range(self.args.k-1):
                             self.current_client_id = party_id
@@ -469,12 +473,13 @@ def create_main_task(global_model_type: GenerationMixin):
                                 self.set_is_first_forward_epoch(1)
                                 party_generation_output = self.generate(**data_input_list[party_id], \
                                         generation_config = self.generation_config)
+                                party_generation_output = party_generation_output[:,self.seq_length:]
+                                
                                 if self.args.apply_inferdpt and (party_id in self.args.defense_configs['party']):
                                     origin_device = party_generation_output.device
                                     original_prompt_ids = data_input_list[party_id]['input_ids']
                                     original_prompt = self.args.tokenizer.batch_decode(original_prompt_ids,skip_special_tokens=True)
                                     
-                                    party_generation_output = party_generation_output[:,self.seq_length:]
                                     perturbed_answer = self.args.tokenizer.batch_decode(party_generation_output)
                                     # print('perturbed_answer:',type(perturbed_answer),len(perturbed_answer))
                                     # print(perturbed_answer)
@@ -485,17 +490,18 @@ def create_main_task(global_model_type: GenerationMixin):
                                     # extracted_answer = self.args.tokenizer.batch_decode(party_generation_output)
                                     # print('extracted_answer:',type(extracted_answer),len(extracted_answer))
                                     # print(extracted_answer)
-
                             else:  # next token prediction
                                 party_generation_output = self.forward(**data_input_list[party_id])
                             
+                            
                             self._clear_past_key_values()
 
-                            batch_target_word, batch_predict_word, sample_cnt = self.generate_result(party_generation_output, self.gt_one_hot_label[party_id])
+                            batch_target_word, batch_predict_word, sample_cnt = self.generate_result(party_generation_output.cpu(), self.gt_one_hot_label[party_id])
                             target_word_list.extend(batch_target_word)
                             predict_word_list.extend(batch_predict_word)
                             if sample_cnt is not None:
                                 total_sample_cnt += sample_cnt
+                            torch.cuda.empty_cache()
                        
                     elif self.args.model_architect=='MM':
                         for party_id in range(self.args.k-1):
@@ -532,6 +538,7 @@ def create_main_task(global_model_type: GenerationMixin):
                         self.sample_state = {}
 
                     del parties_data
+                    torch.cuda.empty_cache()
             
             if self._loss:
                 self._loss = self._loss / _batch_cnt
@@ -595,8 +602,6 @@ def create_main_task(global_model_type: GenerationMixin):
                 if self.args.task_type == "CausalLM":
                     predict_word_list = predict_list # bs, seq_len, vocab_size
                     target_word_list = label_list # bs, seq_len
-                    # print('target_word_list:',len(target_word_list),target_word_list[0])
-                    # print('predict_word_list:',len(predict_word_list),predict_word_list[0])
                     
                     if self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
                         self.evaluator = GMS8KEval(self.args)
@@ -675,7 +680,7 @@ def create_main_task(global_model_type: GenerationMixin):
                         acc = sum(results) / len(results)
                     
                     else: # normal generation tasks
-                        if len(target_word_list[0].shape)>0: # long text generation, not next token prediction   
+                        if self.args.max_new_tokens>1: # long text generation, not next token prediction   
                             def calculate_token_precision_recall(reference_ids, candidate_ids):
                                 reference_ids = reference_ids.tolist()
                                 candidate_ids = candidate_ids.tolist()
@@ -699,7 +704,6 @@ def create_main_task(global_model_type: GenerationMixin):
                                 print('Candidate_tokens',candidate_tokens)
                                 print('Score:',score)
                                 print('='*50)
-                                assert 1>2
                                 return score
                             
 
@@ -770,6 +774,9 @@ def create_main_task(global_model_type: GenerationMixin):
             elif self.args.model_architect == 'CLS':
                 predict_labels = predict_list
                 actual_labels = label_list
+                # print('cls predict_list:',predict_list)
+                # print('cls label_list:',label_list)
+                
                 if self.num_classes == 1:
                     mse = torch.mean(
                         (torch.tensor(predict_labels) - torch.tensor(actual_labels)) ** 2).item()
@@ -836,7 +843,7 @@ def create_main_task(global_model_type: GenerationMixin):
             elif self.args.model_architect == 'CLM':  # .task_type == "CausalLM":
                 if self.args.task_type == "CausalLM":  # dataset == "Lambada":
                     if isinstance(model_output, torch.Tensor):  # generation -- generated token ids
-                        predict_label_list = model_output[:,self.seq_length:] # [bs, max_new_tokens]
+                        predict_label_list = model_output # [bs, max_new_tokens]
                         target_label_list = list(gt_one_hot_label)
 
                     else:  # forward -- raw model output next token logits

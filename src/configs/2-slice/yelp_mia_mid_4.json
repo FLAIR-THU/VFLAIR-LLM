@@ -31,7 +31,7 @@
       "kwargs_model_loading":{
       },
       "0": {
-        "path": "/shared/model/Shunianyelp_review_classification",
+        "path": "/home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification",
 
           "head":{
               "trainable": 0,
@@ -42,7 +42,7 @@
           
       },
       "1": {
-        "path": "/shared/model/Shunianyelp_review_classification",
+        "path": "/home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification",
           "tail":{
               "head_layer_trainable": 1,
               "encoder_trainable": 0,
