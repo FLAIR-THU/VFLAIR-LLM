@@ -475,7 +475,7 @@ def create_main_task(global_model_type: GenerationMixin):
                                         generation_config = self.generation_config)
                                 party_generation_output = party_generation_output[:,self.seq_length:]
                                 
-                                if self.args.apply_inferdpt and (party_id in self.args.defense_configs['party']):
+                                if self.args.apply_inferdpt and (party_id in self.args.defense_configs['party']) and (self.args.decode_model_path != ""):
                                     origin_device = party_generation_output.device
                                     original_prompt_ids = data_input_list[party_id]['input_ids']
                                     original_prompt = self.args.tokenizer.batch_decode(original_prompt_ids,skip_special_tokens=True)
@@ -1339,13 +1339,15 @@ def create_main_task(global_model_type: GenerationMixin):
             if self.args.model_architect == 'TQA':  # self.args.task_type == 'QuestionAnswering':
                 pred = final_pred  # QuestionAnsweringModelOutput
                 loss = self.parties[0].global_loss
-                feature_list = data_inputs['feature']
-                batch_nbest, batch_gold_ans, sample_cnt = self.generate_result(pred, gt_one_hot_label, feature_list)
-
-                result_dict = self.generate_assessment(batch_nbest, batch_gold_ans)
-
-                exact_score = result_dict['exact_score']
-                return loss.item(), exact_score
+                
+                # feature_list = data_inputs['feature']
+                # batch_nbest, batch_gold_ans, sample_cnt = self.generate_result(pred, gt_one_hot_label, feature_list)
+                # result_dict = self.generate_assessment(batch_nbest, batch_gold_ans)
+                # exact_score = result_dict['exact_score']
+                # return loss.item(), exact_score
+            
+                return loss.item(), 0
+            
 
             elif self.args.model_architect == 'CLS':  # self.args.task_type == 'SequenceClassification':
 

@@ -39,13 +39,13 @@
       "kwargs_model_loading":{
       },
       "0": {
-            "path": "/shared/model//google-bertbert-large-uncased-whole-word-masking-finetuned-squad",
+            "path": "/home/DAIR/guzx/Git_FedProject/Models//google-bertbert-large-uncased-whole-word-masking-finetuned-squad",
           "head":{
             "trainable": 1
           }
       },
       "1": {
-        "path": "/shared/model/google-bertbert-large-uncased-whole-word-masking-finetuned-squad",
+        "path": "/home/DAIR/guzx/Git_FedProject/Models//google-bertbert-large-uncased-whole-word-masking-finetuned-squad",
           "tail":{
               "trainable": 1
           }

@@ -33,11 +33,13 @@ from models.mid_model_rapper import *
 from models.llm_models.base import VFLModelIntermediate
 from config import vfl_basic_config
 
+import re
 import time
 import numpy as np
 import pickle
 from torch.distributions.laplace import Laplace
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import StoppingCriteriaList,StoppingCriteria
 
 class PassiveParty(Party):
     def __init__(self, args, index):
@@ -316,9 +318,13 @@ class PassiveParty_LLM(Party_LLM):
                         self.delta_f = np.array(json.load(f))
                        
                 if self.args.decode_model_path != "":
+                    
                     self.decode_model = AutoModelForCausalLM.from_pretrained(self.args.decode_model_path,**self.args.decode_model_load_kwargs)
+                    self.decode_model_tokenizer = AutoTokenizer.from_pretrained(self.args.decode_model_path)
+                    # if self.args.dataset in ['GMS8K-test']:
+                    #     self.decode_template = """The "Perturbed Answer" is answer to the "Original Math Problrm". Your task is to extract coherent and consistent answer from the "Perturbed Answer" to make it seamlessly align with the context established by the "Original Math Problem". Provide only your "Extracted Answer"\n\n——"Original Math Problem":{prefix}\n\n——"Perturbed Answer":{perturbed_answer}\n\n——"Extracted Answer":"""
+                    # else:
                     self.decode_template = """Your task is to extend the "Prefix Text". Use the "Perturbed Generation" as your primary writing material for your extension. Extract coherent and consistent text from the "Perturbed Generation" and integrate them into your continuation. Ensure a seamless alignment with the context established by the "Prefix Text". Provide only your "Extended Text"\n——"Prefix Text":{prefix}\n——"Perturbed Generation":{perturbed_answer}\n——"Extended Text":"""
-                
     def prepare_data(self, args, index):
         if not args.dataset:
             return None
@@ -745,15 +751,37 @@ class PassiveParty_LLM(Party_LLM):
         return intermediate
     
     def inferdpt_decode(self, original_prompt, pertrubed_answer):
+        if self.args.dataset in ['GMS8K','GMS8K-test' ]:
+            for _i in range(len(original_prompt)):
+                instruction_match = re.search(r'### Instruction:(.*?)### Response:', original_prompt[_i], re.DOTALL)
+                original_prompt[_i] = instruction_match.group(1).strip()
         decode_input = [self.decode_template.format(prefix=original_prompt[_i] ,perturbed_answer=pertrubed_answer[_i])\
             for _i in range(len(original_prompt))]
+        
+        # print('===============')
         # print('Extraction Input:')
         # print(decode_input)
         
-        decode_input = self.args.tokenizer(decode_input,return_tensors='pt')
+        
+        decode_input = self.decode_model_tokenizer(decode_input,return_tensors='pt')
         self._tensor_to_device(decode_input, self.decode_model.device)
-        extracted_answer = self.decode_model.generate(**decode_input, **self.args.decode_generation_kwargs)
+        extracted_answer = self.decode_model.generate(**decode_input,**self.args.decode_generation_kwargs)
         extracted_answer = extracted_answer[:,decode_input['input_ids'].shape[1]:]
+        extracted_answer_txt = self.decode_model_tokenizer.decode(extracted_answer.squeeze().tolist())
+        
+        # convert to token ids correspond to self.args.tokenizer
+        extracted_answer = self.args.tokenizer(extracted_answer_txt)['input_ids']
+        # extracted_answer_txt = self.args.tokenizer.decode(extracted_answer)
+        # print('----------------')
+        # print('Extraction Output:')
+        # print(extracted_answer_txt)
+        
+        extracted_answer = torch.tensor(extracted_answer).unsqueeze(0)
+        
+        # print(type(extracted_answer),extracted_answer.shape)
+        # print(extracted_answer_txt)
+        # assert 1>2
+        
         return extracted_answer
     
     def give_final_pred(self, resp):

@@ -4,7 +4,7 @@
 #SBATCH --time 4-1:00:00                    # 子任务 1 天 1 小时就能跑完
 #SBATCH --output exp_result/gms_dpt.out
 
-
+# no decode
 for seed in {60,61,62}
     do
 

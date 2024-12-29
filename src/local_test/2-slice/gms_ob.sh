@@ -9,25 +9,25 @@
 for seed in 60 61 62 
     do 
 
-    # 50
-    python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/gms_2
-
-    # 100
-    sed -i 's/"cluster_num": 50/"cluster_num": 100/g' ./configs/2-slice/ob/gms_2.json
-    python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/gms_2
-
-    # 150
-    sed -i 's/"cluster_num": 100/"cluster_num": 150/g' ./configs/2-slice/ob/gms_2.json
+    # 250
+    sed -i 's/"cluster_num": 50/"cluster_num": 250/g' ./configs/2-slice/ob/gms_2.json
     python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/gms_2
 
     # 200
-    sed -i 's/"cluster_num": 150/"cluster_num": 200/g' ./configs/2-slice/ob/gms_2.json
+    sed -i 's/"cluster_num": 250/"cluster_num": 200/g' ./configs/2-slice/ob/gms_2.json
     python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/gms_2
 
-    # 250
-    sed -i 's/"cluster_num": 200/"cluster_num": 250/g' ./configs/2-slice/ob/gms_2.json
+    # 150
+    sed -i 's/"cluster_num": 200/"cluster_num": 150/g' ./configs/2-slice/ob/gms_2.json
     python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/gms_2
 
-    sed -i 's/"cluster_num": 250/"cluster_num": 50/g' ./configs/2-slice/ob/gms_2.json
+    # 100
+    sed -i 's/"cluster_num": 150/"cluster_num": 100/g' ./configs/2-slice/ob/gms_2.json
+    python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/gms_2
+
+    # 50
+    sed -i 's/"cluster_num": 100/"cluster_num": 50/g' ./configs/2-slice/ob/gms_2.json
+    python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/gms_2
+
 
 done

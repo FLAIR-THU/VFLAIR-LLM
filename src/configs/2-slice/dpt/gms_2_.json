@@ -74,15 +74,13 @@
         "parameters": {
             "party": [0],
             "epsilon": 0.00001,
-            "decode_model_path": "/home/DAIR/guzx/Git_FedProject/Models/gpt2",
+            "decode_model_path": "/home/DAIR/guzx/Git_FedProject/Models/QwenQwen1.5-0.5B",
             "decode_model_load_kwargs":{
                 "device_map": "auto"
             },
             "decode_generation_kwargs":{
-                "temperature":1.0,
-                "top_k": -1,
-                "top_p": 1.0,
-                "max_new_tokens": 256
+                "temperature": 0.01,
+                "max_new_tokens": 256 
             }
         }
     

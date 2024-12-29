@@ -79,7 +79,7 @@
             "party": [0],
             "mid_model_name":"MIDModel_Linear",
             "lr": 0.001,
-            "lambda": 0.5,
+            "lambda": 0.0001,
             "mid_position": ["head"],
             "current_bottleneck_scale": 1,
             "seq_length": 512,
@@ -88,6 +88,29 @@
     },
     "attack_list": {
         "0":{
+            "name": "VanillaModelInversion_WhiteBox",
+            "parameters": {
+                "party": [1],
+                "loss_type":"cross_entropy",
+                "lr": 0.01,
+                "epochs": 100,
+                "batch_size": 1,
+                "attack_sample_num": 100
+            }
+        },
+        "1":{
+            "name": "WhiteBoxInversion",
+            "parameters": {
+                "party": [1],
+                "loss_type":"cross_entropy",
+                "T": 0.05,
+                "lr": 0.005,
+                "epochs": 500,
+                "batch_size": 1,
+                "attack_sample_num":100
+            }
+        },
+        "2":{
             "name": "BiSR",
           "parameters": {
               "party": [1],
@@ -103,27 +126,6 @@
               "auxiliary_data_num": 100,
               "attack_sample_num": 100
           }
-        },
-        "1":{
-            "name": "VanillaModelInversion_WhiteBox",
-            "parameters": {
-                "party": [1],
-                "lr": 0.01,
-                "epochs": 100,
-                "batch_size": 32,
-                "attack_sample_num": 100
-            }
-        },
-        "2":{
-            "name": "WhiteBoxInversion",
-            "parameters": {
-                "party": [1],
-                "T": 0.05,
-                "lr": 0.005,
-                "epochs": 500,
-                "batch_size": 32,
-                "attack_sample_num":100
-            }
         }
     }
     

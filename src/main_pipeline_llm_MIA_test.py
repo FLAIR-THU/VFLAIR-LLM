@@ -142,6 +142,7 @@ def evaluate_label_inference_attack(args):
         train_party_time = vfl.train_party_time
         inference_party_time = vfl.inference_party_time
 
+
         rec_rate , attack_total_time= vfl.evaluate_attack()
         if isinstance(rec_rate, dict):
             gen_score = rec_rate['gen_score']
@@ -204,7 +205,7 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
 
 
 def create_exp_dir_and_file(dataset, vfl_model_slice_num, split_info, model_name, pipeline, defense_name='', defense_param=''):
-    exp_res_dir = f'exp_result/MIA_new/{dataset}/{str(vfl_model_slice_num)}-slice/{split_info}/'
+    exp_res_dir = f'exp_result/MIA_test/{dataset}/{str(vfl_model_slice_num)}-slice/{split_info}/'
     if not os.path.exists(exp_res_dir):
         os.makedirs(exp_res_dir)
     if pipeline == 'pretrained':
@@ -361,4 +362,4 @@ if __name__ == '__main__':
 
         append_exp_res(args.exp_res_path, f'\n')
         
-        # logger.info(recorder)
+        logger.info(recorder)

@@ -78,8 +78,8 @@
         "parameters": {
             "party": [0],
             "cluster_method": "kmeans",
-            "cluster_num": 50,
-            "epsilon": 1,
+            "cluster_num": 150,
+            "epsilon": 1e3,
             "w_cluster_away": 0.5,
             "w_cluster_close": 0.1
         }

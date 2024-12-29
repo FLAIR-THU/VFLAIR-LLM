@@ -2261,8 +2261,8 @@ def load_dataset_per_party_llm(args, index):
         # targets = [f"{example['output']}{args.tokenizer.eos_token}" for example in list_data_dict] # local
         targets = [f"{example['output']}" for example in list_data_dict]  # local
 
-        X_data = sources[:100] # list of instruction text
-        y_data = targets[:100] # list of answer text
+        X_data = sources[:50] # list of instruction text
+        y_data = targets[:50] # list of answer text
 
         X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.1,
                                                             random_state=args.current_seed)
@@ -2408,12 +2408,12 @@ def load_dataset_per_party_llm(args, index):
             return examples
 
         ##### Train #####
-        train_examples = get_examples(train_set_file)[:10] # list of [  {'quesion':... , 'answer':...} ...]
+        train_examples = get_examples(train_set_file)[:20] # list of [  {'quesion':... , 'answer':...} ...]
         X_train = np.array([ problem_prompt.format(instruction=_ex['question']+ "<|endoftext|>") for _ex in train_examples])
         y_train = np.array([ _ex['answer'] for _ex in train_examples])
 
         ##### Test #####
-        test_examples = get_examples(test_set_file)[:20] # list of [  {'quesion':... , 'answer':...} ...]
+        test_examples = get_examples(test_set_file)[:10] # list of [  {'quesion':... , 'answer':...} ...]
         X_test = np.array([ problem_prompt.format(instruction=_ex['question']) for _ex in test_examples])
         y_test = np.array([ get_final_ans(_ex['answer']) for _ex in test_examples])
 

@@ -6,6 +6,8 @@
 #SBATCH --mem 160000MB
 #SBATCH --qos high
 
+
+
 for seed in 60 61 62 63 64 65
 do
     

@@ -14,14 +14,10 @@
     "finetune_configs":{
         "name":"Vanilla",
         "configs":{
-            "inference_mode":false,  
-          "r":4,  
-          "lora_alpha":32, 
-          "lora_dropout":0.1
         }
     },
     "dataset":{
-        "dataset_name": "GMS8K",
+        "dataset_name": "GMS8K-test",
         "num_classes": 1,
         "use_prompt": 1
     },
@@ -40,12 +36,12 @@
         "model_type": "Mistral",
         "max_sequence": 512,
         "kwargs_model_loading":{
-            "device_map": "auto"
+            "device_map": "balanced_low_0"
         },
         "0": {
             "path": "/home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B",
                 "head":{
-                    "trainable": 0,
+                    "trainable": 1,
                     "embedding_trainable": 0,
                     "encoder_trainable": 0,
                     "encoder_trainable_ids":[]
@@ -64,7 +60,8 @@
             "task_type": "CausalLM",
             "generation_config_dict":{
                 "temperature":1.0,
-                "do_sample": true,
+                "top_k": -1,
+                "top_p": 1.0,
                 "max_new_tokens": 256
             },
             "max_new_tokens": 256
@@ -73,38 +70,23 @@
         "local_encoders_num": 2
     },
     "defense": {
-        "name": "GradientSparsification",
+        "name": "InferDPT",
         "parameters": {
-          "party": [0],
-          "position": ["pred"],
-          "gradient_sparse_rate": 97
+            "party": [0],
+            "epsilon": 0.00001,
+            "decode_model_path": "/home/DAIR/guzx/Git_FedProject/Models/QwenQwen1.5-0.5B",
+            "decode_model_load_kwargs":{
+                "device_map": "auto"
+            },
+            "decode_generation_kwargs":{
+                "temperature": 0.01,
+                "max_new_tokens": 256 
+            }
         }
+    
     },
     "attack_list": {
         "0":{
-            "name": "VanillaModelInversion_WhiteBox",
-            "parameters": {
-                "party": [1],
-                "loss_type":"cross_entropy",
-                "lr": 0.01,
-                "epochs": 100,
-                "batch_size": 1,
-                "attack_sample_num": 100
-            }
-        },
-        "1":{
-            "name": "WhiteBoxInversion",
-            "parameters": {
-                "party": [1],
-                "loss_type":"cross_entropy",
-                "T": 0.05,
-                "lr": 0.005,
-                "epochs": 500,
-                "batch_size": 1,
-                "attack_sample_num":100
-            }
-        },
-        "2":{
             "name": "BiSR",
           "parameters": {
               "party": [1],
@@ -120,6 +102,29 @@
               "auxiliary_data_num": 100,
               "attack_sample_num": 100
           }
+        },
+        "1":{
+            "name": "VanillaModelInversion_WhiteBox",
+            "parameters": {
+                "party": [1],
+                "loss_type":"cross_entropy",
+                "lr": 0.01,
+                "epochs": 100,
+                "batch_size": 1,
+                "attack_sample_num": 100
+            }
+        },
+        "2":{
+            "name": "WhiteBoxInversion",
+            "parameters": {
+                "party": [1],
+                "loss_type":"cross_entropy",
+                "T": 0.05,
+                "lr": 0.005,
+                "epochs": 500,
+                "batch_size": 1,
+                "attack_sample_num":100
+            }
         }
     }
     
