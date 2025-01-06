@@ -64,6 +64,7 @@ from utils.noisy_label_functions import add_noise
 from utils.noisy_sample_functions import noisy_sample
 from utils.communication_protocol_funcs import compress_pred, Cache, ins_weight
 from utils.squad_utils import normalize_answer, _get_best_indexes, get_tokens, compute_exact, compute_f1
+from utils.snd_utils import *
 
 from loguru import logger
 from evaluates.defenses.defense_api import apply_defense
@@ -144,6 +145,7 @@ def create_main_task(global_model_type: GenerationMixin):
             ###### init Parties ######
             self.parties = args.parties
             self.current_client_id = 0
+            self.prepare_defense()
 
 
             ### Results 
@@ -193,7 +195,135 @@ def create_main_task(global_model_type: GenerationMixin):
             
             # self.e2e_model = None  # type:E2EModel
             # self._init_e2e_model()
+        
+        def prepare_defense(self):
+            '''
+            Some defense models need to be initialized after party initialization
+            '''
+            if self.args.apply_snd:
+                for defense_party_id in self.args.defense_configs["party"]:
+                    
+                    if not os.path.exists(self.parties[defense_party_id].denoise_model_path):
+                        print(f'# Party {defense_party_id} preparing Denoise Model')
+                        defense_party = self.parties[defense_party_id]
+                        emb_norm_dict = {
+                            "gpt2": 4,
+                            "gpt2-large": 2.2,
+                            "gpt2-medium": 4,
+                            "gpt2-xl": 2,
+                            "bert-base-uncased": 2.5,
+                            "bert-large-uncased": 2.5,
+                            "textattackbert-base-uncased-SST-2": 2.5,
+                            
+                            "meta-mathMetaMath-Mistral-7B": 4
+                        }
+                        def get_embeddings(input_ids, attention_mask, args, decoder_start_token=None, mode="train"):
+                            '''
+                            server compute the embeddings given to the client
+                            '''
+                            #  Local Model Forward: get initial embeddings(inermediate representation)
+                            origin_device = input_ids.device
+                            local_model_result = self.parties[defense_party_id].local_model(input_ids=input_ids.to(self.parties[defense_party_id].local_model.device))
+                            init_emb = local_model_result['inputs_embeds'].to(origin_device)
+                            attention_mask = local_model_result['attention_mask']
+                            if attention_mask != None:
+                                attention_mask.to(origin_device)
+                            
+                            # sample noise
+                            eta = self.args.train_eta #if mode == "train" else args.test_eta
+                            noises = sample_noise_Chi(init_emb.shape, eta).to(init_emb.device)
+                            noise_init_emb = init_emb + noises
+                            
+                            # args.clip == "norm":
+                            max_norm = emb_norm_dict[self.args.model_name]
+                            all_norms = torch.norm(noise_init_emb, p=2, dim=-1)
+                            noise_init_emb = noise_init_emb * torch.clamp(max_norm / all_norms, max=1).unsqueeze(-1)
+                            noises = noise_init_emb - init_emb
+                            
+                            def get_cls_embedding(outputs,attention_mask,args):
+                                
+                                if args.vfl_model_slice_num == 2:
+                                    # if args.model_type =="Bert":
+                                    #     cls_embs = outputs.logits
+                                    #     # self.parties[-1].global_model.bert.pooled_output
+                                    # else:
+                                    cls_embs = outputs.logits
+                                    print('get cls_embs logits:',cls_embs.shape)
+                                    return cls_embs
+                                else:
+                                    cls_embs = outputs['inputs_embeds']
+                                    # if args.model_type =="Bert":
+                                    #     cls_embs = outputs['inputs_embeds']
+                                    #     # cls_embs = self.parties[0].local_model_tail.bert.base_model_tail_output
+                                    # elif args.model_type in ["GPT2","Mistral"]:
+                                    #     cls_embs = self.parties[0].local_model_tail.model.base_model_tail_output
+                                    # else:
+                                    #     assert 1>2, f"{args.model_type} not supported"
+                                    # print('get cls_embs:',cls_embs.shape)
+                                    return cls_embs
+                            
+                            if args.vfl_model_slice_num == 2:
+                                with torch.no_grad():
+                                    clean_input_dict = {'inputs_embeds':init_emb, 'attention_mask':attention_mask}
+                                    outputs = self.parties[-1].forward(1, defense_party_id, **clean_input_dict)
+                                    clean_cls_embs = get_cls_embedding(outputs, attention_mask, args)
+                                with torch.no_grad():
+                                    noise_input_dict = {'inputs_embeds':noise_init_emb, 'attention_mask':attention_mask}
+                                    noise_outputs = self.parties[-1].forward(1, defense_party_id, **noise_input_dict)
+                                    noise_cls_embs = get_cls_embedding(noise_outputs, attention_mask, args)
+                            else:
+                                with torch.no_grad():
+                                    clean_input_dict = {'inputs_embeds':init_emb, 'attention_mask':attention_mask}
+                                    outputs = self.parties[-1].forward(1, defense_party_id, **clean_input_dict)
+                                    # outputs = self.parties[-1].output_tensors[1] #self.parties[0].forward(2, **resp)
+                                    clean_cls_embs = get_cls_embedding(outputs, attention_mask, args)
+                                with torch.no_grad():
+                                    noise_input_dict = {'inputs_embeds':noise_init_emb, 'attention_mask':attention_mask}
+                                    noise_outputs = self.parties[-1].forward(1, defense_party_id, **noise_input_dict)
+                                    # noise_outputs = self.parties[-1].output_tensors[1] #self.parties[0].forward(2, **resp)
+                                    noise_cls_embs = get_cls_embedding(noise_outputs, attention_mask, args)
+                            return noises, clean_cls_embs, noise_cls_embs, init_emb
 
+                        #### train denoise model
+                        print('Train Denoise Model Into: ',self.parties[defense_party_id].denoise_model_path)
+                        denoise_optimizer = torch.optim.Adam(self.parties[defense_party_id].denoise_mod.parameters(), lr=0.0001)
+                        denoise_dataloader = DataLoader(self.parties[defense_party_id].train_dst, batch_size=self.args.batch_size, shuffle=False, num_workers=0, drop_last=True)
+                        epoch_pbar = tqdm(range(self.args.denoise_epoch), desc="Epochs")
+                        decoder_start_token = None
+                        total_t = 0
+                        t1 = time.time()
+                        for epoch in epoch_pbar:
+                            for i, batch in enumerate(denoise_dataloader, start=1):
+                                input_ids = batch[0]['input_ids'] # bs, seq_len
+                                attention_masks = batch[0]['attention_mask']
+
+                                for j in range(self.args.noise_per_sample):
+                                    noises, clean_cls_emb, noise_cls_emb, init_emb = get_embeddings(input_ids, attention_masks, self.args, decoder_start_token, "train")
+                                    # init_emb : [bs, embed_dim]
+                                    # noises : [bs, embed_dim]
+                                    # clean_cls_emb : [bs, num_class]
+                                    # noise_cls_emb : [bs, num_class]
+                                    
+                                    # if args.mask_init:
+                                    mask = attention_masks.unsqueeze(-1).expand_as(noises)
+                                    noises = noises.masked_fill(mask == 0, 0)
+                                    init_emb = init_emb.masked_fill(mask == 0, 0)
+                                    
+                                    denoise_optimizer.zero_grad()
+                                    y_pred = self.parties[defense_party_id].denoise_mod(init_emb, noises, noise_cls_emb, attention_masks)
+                                    
+                                    loss_fn = nn.MSELoss()
+                                    loss = loss_fn(y_pred, clean_cls_emb)
+                                    
+                                    loss.backward() 
+                                    denoise_optimizer.step()
+
+                                    if i % 50 == 0:
+                                        print(f'-- epoch {epoch} batch {i}, latest loss {loss.item()}')
+                        epoch_pbar.set_description(f"Denoise Model Training Completed Epoch {epoch+1}")             
+                        print(f'Finished epoch {epoch}, latest loss {loss.item()}')
+                        torch.save(self.parties[defense_party_id].denoise_mod.state_dict(), self.parties[defense_party_id].denoise_model_path)
+                        
         @property
         def device(self):
             return self._device
@@ -445,8 +575,8 @@ def create_main_task(global_model_type: GenerationMixin):
                             party_global_output = self.forward(**data_input_list[party_id])
                             batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(party_global_output,
                                                                                             self.gt_one_hot_label[party_id])
-                            print('batch_predict_label:',batch_predict_label,batch_predict_label[0].device)
-                            print('batch_actual_label:',batch_actual_label,batch_actual_label[0].device)
+                            # print('batch_predict_label:',batch_predict_label,batch_predict_label[0].device)
+                            # print('batch_actual_label:',batch_actual_label,batch_actual_label[0].device)
                             
                             predict_label_list.extend(batch_predict_label) # [torch.tensor(class), ...]
                             actual_label_list.extend(batch_actual_label) # [torch.tensor(class), ...]
@@ -473,7 +603,7 @@ def create_main_task(global_model_type: GenerationMixin):
                                 self.set_is_first_forward_epoch(1)
                                 party_generation_output = self.generate(**data_input_list[party_id], \
                                         generation_config = self.generation_config)
-                                party_generation_output = party_generation_output[:,self.seq_length:]
+                                party_generation_output = party_generation_output[:,self.seq_length:].detach()
                                 
                                 if self.args.apply_inferdpt and (party_id in self.args.defense_configs['party']) and (self.args.decode_model_path != ""):
                                     origin_device = party_generation_output.device
@@ -493,10 +623,8 @@ def create_main_task(global_model_type: GenerationMixin):
                             else:  # next token prediction
                                 party_generation_output = self.forward(**data_input_list[party_id])
                             
-                            
                             self._clear_past_key_values()
-
-                            batch_target_word, batch_predict_word, sample_cnt = self.generate_result(party_generation_output.cpu(), self.gt_one_hot_label[party_id])
+                            batch_target_word, batch_predict_word, sample_cnt = self.generate_result(party_generation_output, self.gt_one_hot_label[party_id])
                             target_word_list.extend(batch_target_word)
                             predict_word_list.extend(batch_predict_word)
                             if sample_cnt is not None:
@@ -1153,6 +1281,8 @@ def create_main_task(global_model_type: GenerationMixin):
                 final_output = p.give_final_pred(resp) 
             else:
                 final_output = resp
+            
+            final_output = self.parties[self.current_client_id].process_received_result(final_output)
             self.parties[self.current_client_id]._tensor_to_device(final_output,self.device)
 
             if (self.current_client_id == 0) and self.args.max_new_tokens > 1 and (self.args.need_final_epoch_state or self.args.need_test_sample_states):
@@ -1227,9 +1357,10 @@ def create_main_task(global_model_type: GenerationMixin):
 
         @timer()
         def inference(self, **kwargs):
-            # if self.args.attack_only:
-            #     self.final_state=self.save_party_data()
-            #     return "|attack_only|", -1
+            if kwargs.get("attack_only",0):
+                self.final_state=self.save_party_data()
+                print("attack_only----------")
+                return "|attack_only|", -1
 
             need_save_state = kwargs.get('need_save_state')
             # print('inference need_save_state:',need_save_state)
@@ -1446,17 +1577,10 @@ def create_main_task(global_model_type: GenerationMixin):
             optimize_step = 0
 
             data_record = pd.DataFrame(columns=['Epoch', 'train_loss', 'train_acc', 'test_acc'])
-            # if (not is_test) and (self.args.model_type.lower() == 'qwen2'):
-            #     self.eval()
-            #     with torch.no_grad():
-            #         _exp_result, test_acc = self.inference()
-            #     tensorboard_writer.add_scalar('train/eval_loss', self._loss, 0)
-            
+          
             for i_epoch in range(self.epochs):
                 self.train()
                 self.current_epoch = i_epoch
-                # if self.args.model_type.lower() == 'qwen2':
-                #     tensorboard_writer.add_scalar('train/epoch', i_epoch, optimize_step)
 
                 postfix = {'train_loss': 0.0, 'train_acc': 0.0, 'test_acc': 0.0}
                 i = -1
@@ -1516,8 +1640,8 @@ def create_main_task(global_model_type: GenerationMixin):
 
                     del (parties_data)
 
-                    if self.epochs == 1 :
-                        break
+                    # if self.epochs == 1 :
+                    #     break
 
                 # LR decay
                 self.LR_Decay(i_epoch)

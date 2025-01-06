@@ -537,9 +537,9 @@ class GLMBlock(torch.nn.Module):
             self, hidden_states, attention_mask, rotary_pos_emb, kv_cache=None, use_cache=True,
     ):
         # hidden_states: [s, b, h]
-
         # Layer norm at the beginning of the transformer layer.
         layernorm_output = self.input_layernorm(hidden_states)
+        
         # Self attention.
         attention_output, kv_cache = self.self_attention(
             layernorm_output,
@@ -610,7 +610,8 @@ class GLMTransformer(torch.nn.Module):
             use_cache: Optional[bool] = True,
             output_hidden_states: Optional[bool] = False,
     ):
-        print('GLMTransformer forward self.num_layers=',self.num_layers,' self.post_layer_norm:',self.post_layer_norm)
+        # print('GLMTransformer forward self.num_layers=',self.num_layers,' self.post_layer_norm:',self.post_layer_norm)
+        # print('hidden_states:',hidden_states.device)
         if not kv_caches:
             kv_caches = [None for _ in range(self.num_layers)]
         presents = () if use_cache else None
@@ -629,6 +630,7 @@ class GLMTransformer(torch.nn.Module):
 
             layer = self._get_layer(index)
             if self.gradient_checkpointing and self.training:
+                print(self.gradient_checkpointing,self.training)
                 layer_ret = torch.utils.checkpoint.checkpoint(
                     layer,
                     hidden_states,

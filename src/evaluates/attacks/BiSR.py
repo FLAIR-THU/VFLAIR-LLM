@@ -13,6 +13,7 @@ import pickle
 import matplotlib.pyplot as plt
 import itertools 
 from scipy import optimize
+import random
 
 from evaluates.attacks.attacker import Attacker
 from models.global_models import *
@@ -79,7 +80,7 @@ class BiSR(Attacker):
             self.criterion = nn.MSELoss()
     
     def set_seed(self,seed=0):
-        # random.seed(seed)
+        random.seed(seed)
         os.environ['PYTHONHASHSEED'] = str(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
@@ -100,7 +101,9 @@ class BiSR(Attacker):
                 dict_like[k] = v.to(device)
                    
     def attack(self):
-        self.set_seed(123)
+        # self.set_seed(123)
+        self.set_seed(self.args.current_seed)
+        
         print_every = 1
 
         for attacker_ik in self.party: # attacker party #attacker_ik
@@ -375,8 +378,13 @@ class BiSR(Attacker):
             torch.cuda.empty_cache()
             
             if len(test_data) > self.attack_sample_num:
-                test_data = test_data[:self.attack_sample_num]
-                test_label = test_label[:self.attack_sample_num]
+                sample_list = [i for i in range(len(test_data))]
+                sample_list = random.sample(sample_list, self.attack_sample_num) 
+                test_data = [test_data[i] for i in sample_list] 
+                test_label = [test_label[i] for i in sample_list] 
+                
+                # test_data = test_data[:self.attack_sample_num]
+                # test_label = test_label[:self.attack_sample_num]
             
             if self.args.dataset == 'Lambada' or self.args.dataset == 'Lambada_test':
                 attack_test_dataset = LambadaDataset_LLM(self.args, test_data, test_label, 'test')

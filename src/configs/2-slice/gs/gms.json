@@ -41,7 +41,7 @@
         "0": {
             "path": "/home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B",
                 "head":{
-                    "trainable": 1,
+                    "trainable": 0,
                     "embedding_trainable": 0,
                     "encoder_trainable": 0,
                     "encoder_trainable_ids":[]
@@ -70,18 +70,11 @@
         "local_encoders_num": 2
     },
     "defense": {
-        "name": "InferDPT",
+        "name": "GradientSparsification",
         "parameters": {
-            "party": [0],
-            "epsilon": 0.00001,
-            "decode_model_path": "/home/DAIR/guzx/Git_FedProject/Models/QwenQwen1.5-0.5B",
-            "decode_model_load_kwargs":{
-                "device_map": "auto"
-            },
-            "decode_generation_kwargs":{
-                "temperature": 0.01,
-                "max_new_tokens": 256 
-            }
+          "party": [0],
+          "position": ["pred"],
+          "gradient_sparse_rate": 95
         }
     
     },

@@ -6,7 +6,8 @@
 #SBATCH --mem 160000MB
 #SBATCH --qos high
 
-for seed in 60 61 62 
+
+for seed in 1 2 3 
     do 
 
     # 250
@@ -20,14 +21,16 @@ for seed in 60 61 62
     # 150
     sed -i 's/"cluster_num": 200/"cluster_num": 150/g' ./configs/2-slice/ob/gms_2.json
     python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/gms_2
+    
+    sed -i 's/"cluster_num": 150/"cluster_num": 50/g' ./configs/2-slice/ob/gms_2.json
 
-    # 100
-    sed -i 's/"cluster_num": 150/"cluster_num": 100/g' ./configs/2-slice/ob/gms_2.json
-    python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/gms_2
+    # # 100
+    # sed -i 's/"cluster_num": 150/"cluster_num": 100/g' ./configs/2-slice/ob/gms_2.json
+    # python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/gms_2
 
-    # 50
-    sed -i 's/"cluster_num": 100/"cluster_num": 50/g' ./configs/2-slice/ob/gms_2.json
-    python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/gms_2
+    # # 50
+    # sed -i 's/"cluster_num": 100/"cluster_num": 50/g' ./configs/2-slice/ob/gms_2.json
+    # python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/ob/gms_2
 
 
 done

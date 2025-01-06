@@ -308,6 +308,7 @@ class BertModelBody(BertModelSplitter):
             return_dict=return_dict,
         )
 
+        
         return {'inputs_embeds': encoder_intermediate.last_hidden_state,
                 'attention_mask': attention_mask}
 
@@ -411,12 +412,6 @@ class BertModelTail(BertModelSplitter):
         # and head_mask is converted to shape [num_hidden_layers x batch x num_heads x seq_length x seq_length]
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
 
-        # print(f'Tail inputs_embeds:{inputs_embeds[0,0,:5]}')
-        # print(f'Tail extended_attention_mask:{extended_attention_mask}')
-        # print(f'Tail head_mask:{head_mask}')
-        # print(f'Tail encoder_hidden_states:{encoder_hidden_states}')
-        # if past_key_values!= None:
-        #     print(f'Tail past_key_values:{len(past_key_values)} {past_key_values[0]}')
         encoder_outputs = self.encoder(
             hidden_states=inputs_embeds,  # intermediate,
             attention_mask=extended_attention_mask,
@@ -429,14 +424,33 @@ class BertModelTail(BertModelSplitter):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        sequence_output = encoder_outputs[0]
-
+        # encoder_outputs: BaseModelOutputWithPastAndCrossAttentions(
+        #     last_hidden_state=hidden_states,
+        #     past_key_values=next_decoder_cache,
+        #     hidden_states=all_hidden_states,
+        #     attentions=all_self_attentions,
+        #     cross_attentions=all_cross_attentions,
+        # )
+        
+        sequence_output = encoder_outputs[0] # last_hidden_state: bs, seq_len, hidden_dim
+        
         pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
-
+        #[bs, hidden_dim]
+        
+        self.base_model_tail_output = pooled_output # store pooled output for snd defense
+        if kwargs.get('denoise_mod'):
+            denoise_mod = kwargs['denoise_mod']
+            original_embedding = kwargs['original_embedding']
+            snd_noise = kwargs['snd_noise']
+            # print('denoise_mod:',type(denoise_mod))
+            # print('original_embedding:',original_embedding.shape,'  snd_noise:',snd_noise.shape)
+            pooled_output = denoise_mod(\
+                original_embedding, snd_noise, pooled_output, attention_mask)
+            # print('after pooled_output:',pooled_output.shape)
+        
         if not return_dict:
             return (sequence_output, pooled_output) + encoder_outputs[1:]
 
-        # print('Tail sequence_output:',sequence_output[0,:5],' pooled_output:',pooled_output[0,:5])
         return BaseModelOutputWithPoolingAndCrossAttentions(
             last_hidden_state=sequence_output,
             pooler_output=pooled_output,
@@ -509,6 +523,75 @@ class BertTailForSequenceClassification(BertForSequenceClassification, VFLModel)
     @head_layer.setter
     def head_layer(self, classifier):
         self.classifier = classifier
+    
+    def forward(
+        self,
+        input_ids: Optional[torch.Tensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        token_type_ids: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.Tensor] = None,
+        head_mask: Optional[torch.Tensor] = None,
+        inputs_embeds: Optional[torch.Tensor] = None,
+        labels: Optional[torch.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+        **kwargs
+    ) -> Union[Tuple[torch.Tensor], SequenceClassifierOutput]:
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.bert(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+            **kwargs
+        )
+
+        pooled_output = outputs[1]
+
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+
+        loss = None
+        if labels is not None:
+            if self.config.problem_type is None:
+                if self.num_labels == 1:
+                    self.config.problem_type = "regression"
+                elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                    self.config.problem_type = "single_label_classification"
+                else:
+                    self.config.problem_type = "multi_label_classification"
+
+            if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
+                if self.num_labels == 1:
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
+                else:
+                    loss = loss_fct(logits, labels)
+            elif self.config.problem_type == "single_label_classification":
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            elif self.config.problem_type == "multi_label_classification":
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
+        if not return_dict:
+            output = (logits,) + outputs[2:]
+            return ((loss,) + output) if loss is not None else output
+
+        return SequenceClassifierOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
+
+    
 
 class ModelPartitionPipelineBert(ModelPartitionPipeline):
 

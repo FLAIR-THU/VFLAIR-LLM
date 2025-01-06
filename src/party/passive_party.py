@@ -1,21 +1,30 @@
 import sys, os
-
 sys.path.append(os.pardir)
+
 import torch
-import json
-import collections
-from torch.utils.data import DataLoader
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 import torch.nn as nn
+from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
+
+import re
+import time
+import numpy as np
+import pickle
+import json
+import collections
 from loguru import logger
+from torch.distributions.laplace import Laplace
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import StoppingCriteriaList,StoppingCriteria
+
 
 from party.party import Party
 from party.llm_party import Party as Party_LLM
 
 from dataset.party_dataset import *
-from evaluates.defenses.defense_api import apply_defense
 from dataset.party_dataset import ActiveDataset
+from evaluates.defenses.defense_api import apply_defense
 
 from load.LoadModels import load_models_per_party, QuestionAnsweringModelOutput
 from utils import timer
@@ -25,22 +34,23 @@ from utils.communication_protocol_funcs import compress_pred
 from utils.basic_functions import cross_entropy_for_onehot, tf_distance_cov_cor
 from utils.cluster_utils import run_cluster, redivide_cluster, CenterLoss, load_cluster_results, save_cluster_results
 from utils.inferdpt_utils import *
+from utils.custext_utils import *
+from utils.snd_utils import *
 
+from models.denoise_model import *
 from models.imagined_adversary_models import *
 from models.adversarial_model import *
-
 from models.mid_model_rapper import *
 from models.llm_models.base import VFLModelIntermediate
+
 from config import vfl_basic_config
 
-import re
-import time
-import numpy as np
-import pickle
-from torch.distributions.laplace import Laplace
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from transformers import StoppingCriteriaList,StoppingCriteria
+from tqdm import tqdm
 
+
+DATASET_TYPE_DICT = {
+    'GMS8K': GSMDataset_LLM
+}
 class PassiveParty(Party):
     def __init__(self, args, index):
         super().__init__(args, index)
@@ -266,13 +276,6 @@ class PassiveParty_LLM(Party_LLM):
                 self.obfuscator = Laplace(loc=torch.tensor(0, device=self.local_model.device, dtype=float), \
                     scale=torch.tensor(1/self.args.epsilon, device=self.local_model.device, dtype=float))
                 
-                # if self.local_model_optimizer == None:
-                #     self.local_model_optimizer = torch.optim.Adam(self.obfuscator_privacy_loss_func.parameters(),
-                #                                                 lr=self.lr)
-                # else:
-                #     self.local_model_optimizer.add_param_group(
-                #         {'params': self.obfuscator_privacy_loss_func.parameters(), 'lr': self.lr})
-
             elif self.args.apply_inferdpt and (self.index in defense_configs["party"]):
                 print(f'Passive Party {self.index}: init InferDPT Defense')
                 infer_dpt_kit_dir = f'./models/model_parameters/inferdpt_kit/{self.args.dataset}/'
@@ -325,6 +328,60 @@ class PassiveParty_LLM(Party_LLM):
                     #     self.decode_template = """The "Perturbed Answer" is answer to the "Original Math Problrm". Your task is to extract coherent and consistent answer from the "Perturbed Answer" to make it seamlessly align with the context established by the "Original Math Problem". Provide only your "Extracted Answer"\n\n——"Original Math Problem":{prefix}\n\n——"Perturbed Answer":{perturbed_answer}\n\n——"Extracted Answer":"""
                     # else:
                     self.decode_template = """Your task is to extend the "Prefix Text". Use the "Perturbed Generation" as your primary writing material for your extension. Extract coherent and consistent text from the "Perturbed Generation" and integrate them into your continuation. Ensure a seamless alignment with the context established by the "Prefix Text". Provide only your "Extended Text"\n——"Prefix Text":{prefix}\n——"Perturbed Generation":{perturbed_answer}\n——"Extended Text":"""
+
+            elif self.args.apply_snd and (self.index in defense_configs["party"]):
+                print(f'Passive Party {self.index}: init Split and Denoise Defense')
+                #### Initialize denoise model
+                embed_dim = self.args.model_embedded_dim
+                denoise_model_type_dict = {
+                    'denoiseModelv3': denoiseModelv3,
+                    'denoiseModelv3_2slice': denoiseModelv3_2slice,
+                    'denoiseModelv3_3slice': denoiseModelv3_3slice
+                }
+                assert self.args.denoise_model in denoise_model_type_dict.keys(), f"{denoise_model_type_dict} not supported"
+                if self.args.vfl_model_slice_num == 3:
+                    d_out = embed_dim
+                else:
+                    if self.args.model_architect == 'CLS':
+                        d_out = self.args.num_classes
+                    elif self.args.model_architect == 'CLM':
+                        d_out = self.args.config.vocab_size
+                    else:
+                        assert 1>2, f"{self.args.model_architect} not supported for SnD defense"
+                self.denoise_mod = denoise_model_type_dict[self.args.denoise_model]\
+                    (d_model=embed_dim, d_out=d_out, args=self.args).to(self.args.device)
+                
+                denoise_model_dir = f"./models/model_parameters/denoise_model/{self.args.vfl_model_slice_num}-slice/{self.args.dataset}/"
+                if not os.path.exists(denoise_model_dir):
+                    os.makedirs(denoise_model_dir)
+                self.denoise_model_path = denoise_model_dir + f"/{self.args.denoise_model}_eta{str(self.args.train_eta)}"
+                
+                if os.path.exists(self.denoise_model_path):
+                    print('Load Denoise Model From: ',self.denoise_model_path)
+                    self.denoise_mod.load_state_dict(torch.load(self.denoise_model_path, map_location=self.args.device))
+                else:
+                    print('Denosie Model Unprepared, will be trained later afetr party initialization')
+                    
+            elif self.args.apply_custext and (self.index in defense_configs["party"]):
+                print(f'Passive Party {self.index}: init CUSTEXT Defense')
+                custext_dict_path = f"./models/model_parameters/custext_kit/{self.args.dataset}/eps_{self.args.epsilon}_top_{self.args.topk}/"
+                if not os.path.exists(custext_dict_path):
+                    os.makedirs(custext_dict_path)
+                
+                if os.path.exists(custext_dict_path+'/p_dict.txt') and os.path.exists(custext_dict_path+'/sim_word_dict.txt'):
+                    print(f'load custext p_dict/sim_word_dict from {custext_dict_path}')
+                    with open(custext_dict_path+f"/p_dict.txt", 'r') as dic:
+                        self.p_dict = json.load(dic)
+                    with open(custext_dict_path+f"/sim_word_dict.txt", 'r') as dic:
+                        self.sim_word_dict = json.load(dic)
+                else:
+                    self.p_dict, self.sim_word_dict = get_customized_mapping(self.train_data, defense_configs['epsilon'],defense_configs['topk'])
+                    with open(custext_dict_path+f"/p_dict.txt", 'w') as json_file:
+                        json_file.write(json.dumps(self.p_dict, ensure_ascii=False, indent=4))
+                    with open(custext_dict_path+f"/sim_word_dict.txt", 'w') as json_file:
+                        json_file.write(json.dumps(self.sim_word_dict, ensure_ascii=False, indent=4))
+                
+                
     def prepare_data(self, args, index):
         if not args.dataset:
             return None
@@ -418,7 +475,25 @@ class PassiveParty_LLM(Party_LLM):
         else:
             return origin_global_gradient
 
+    def process_received_result(self,final_output):
+        '''
+        apply possible defenses on the final_output
+        '''
+        ##### Defense on received pred #### relevant decode/denoise method
+        if self.args.apply_snd and self.args.vfl_model_slice_num == 2 and self.index in self.args.defense_configs["party"]:
+            if self.args.model_architect == 'TQA':
+                print('Warining: SnD currently do not supported for TQA')
+            else:
+                # print('2-slice Passive Party Denoise:',type(final_output),final_output.logits.shape)
+                origin_device = final_output.logits.device
+                final_output.logits = self.denoise_mod(self.output_tensors[0], self.snd_noise, final_output.logits, self.local_data_input['attention_mask']).to(origin_device)
+        ##### Defense on received pred #### relevant decode/denoise method
+        return final_output
+    
+    
     def cal_loss(self, pred, test=False):
+        
+        
         gt_one_hot_label = self.gt_one_hot_label  # label
         # ########### Normal Loss ###############
         if self.args.model_architect == 'CLS':  # self.args.task_type == 'SequenceClassification':
@@ -602,10 +677,12 @@ class PassiveParty_LLM(Party_LLM):
             privacy_loss_dict = self.obfuscator_privacy_loss_func(client_hidden_states, cluster_ids)
             self.obfuscator_privacy_loss = 0
             if privacy_loss_dict != None:
+                item_num = 0
                 for loss_item in privacy_loss_dict.values():
+                    item_num = item_num + 1
                     self.obfuscator_privacy_loss += loss_item
-            # print('self.obfuscator_privacy_loss:',self.obfuscator_privacy_loss)
-            # self.global_loss = self.global_loss + self.obfuscator_privacy_loss.to(self.global_loss.device)
+            self.obfuscator_privacy_loss = self.args.loss_lambda * self.obfuscator_privacy_loss
+            self.global_loss = self.global_loss + self.obfuscator_privacy_loss.to(self.global_loss.device)
         # ########### Defense on Loss ###############
 
         return self.global_loss
@@ -662,50 +739,74 @@ class PassiveParty_LLM(Party_LLM):
             self.local_data_input['past_key_values'] = self.past_key_values.get(0)
 
         ######### Defense Applied on Text Input ###########
-        if self.args.apply_inferdpt and (self.index in self.args.defense_configs["party"]):
-            input_device = self.local_data_input['input_ids'].device
-            new_input_ids = []
-            for original_input_ids in self.local_data_input['input_ids']: #[bs, seq_len]
-                assert self.args.epsilon > 0, "epsilon should be greater than 0"
-                tokens = self.args.tokenizer.convert_ids_to_tokens(original_input_ids)
-                # print('before tokens:',len(tokens))
-                # print(tokens)
-                new_tokens = []
-                Delta_u = 1.0  
-                exp_factor = self.args.epsilon / (2 * Delta_u)
-                for origin_token in tokens:
-                    if origin_token[0] == ' ':
-                        origin_token = origin_token[1:]
-                    origin_embed = self.token_to_vector_dict.get(origin_token, None)
-                    if origin_embed is None:
-                        new_tokens.append(origin_token)
-                        continue
-                    noise_embed = add_laplace_noise_to_vector(origin_embed, self.args.epsilon, self.delta_f)
-                    similarity = cosine_similarity_vectors(origin_embed, noise_embed)
-                    sorted_distances_for_token = self.sorted_similarities.get(origin_token, None)
-                    if sorted_distances_for_token is None:
-                        continue
-                    token_only = sorted_distances_for_token[0]
-                    similarity_only = sorted_distances_for_token[1]
-                    arr = np.flip(similarity_only)
-                    index = np.searchsorted(arr, similarity)
-                    index = len(arr) - index
-                    close_tokens = token_only[:index]
-                    close_similarities = similarity_only[:index]
-                    if len(close_tokens) == 0:
-                        continue
-                    unnormalized_probabilities = np.exp(exp_factor * np.array(close_similarities))
-                    total_unnormalized_prob = np.sum(unnormalized_probabilities)
-                    probabilities = unnormalized_probabilities / total_unnormalized_prob
-                    selected_token = np.random.choice(close_tokens, p=probabilities)
-                    new_tokens.append(selected_token)
-                new_token_ids = self.args.tokenizer.convert_tokens_to_ids(new_tokens)
-                # sentence = self.args.tokenizer.decode(new_token_ids)
-                # print('after:',sentence)
-                new_input_ids.append(torch.tensor(new_token_ids))
-            new_input_ids = torch.stack(new_input_ids) # [bs, seq_len]
-            
-            self.local_data_input['input_ids'] = new_input_ids.to(input_device)
+        if self.is_first_forward_iter:
+            if self.args.apply_custext and (self.index in self.args.defense_configs["party"]):
+                input_device = self.local_data_input['input_ids'].device
+                origin_len = self.local_data_input['input_ids'].shape[-1]
+                # print("origin_input_ids:", self.local_data_input['input_ids'].shape)
+                
+                origin_input_sentence = []
+                for row in self.local_data_input['input_ids']:
+                    sentence = self.args.tokenizer.decode(row, skip_special_tokens=True)
+                    origin_input_sentence.append(sentence)
+                print("origin_input_sentence:", origin_input_sentence)
+                
+                sanitized_sentence = generate_new_sents_s1(origin_input_sentence,self.sim_word_dict,self.p_dict,save_stop_words=False, args = self.args)
+                print("sanitized_sentence:", sanitized_sentence)
+                
+                # Convert sentence back to tensor
+                tokenized_sanitized_sentence = self.args.tokenizer(list(sanitized_sentence), 
+                                                padding=self.args.padding, truncation=self.args.truncation, \
+                                                max_length=origin_len, return_tensors='pt',
+                                                add_special_tokens=self.args.add_special_tokens)
+                self.local_data_input['input_ids'] = tokenized_sanitized_sentence['input_ids']
+                self.local_data_input['attention_mask'] = tokenized_sanitized_sentence['attention_mask']
+                # print("sanitized_input_ids:", self.local_data_input['input_ids'].shape)
+                # assert 1>2
+
+            if self.args.apply_inferdpt and (self.index in self.args.defense_configs["party"]):
+                input_device = self.local_data_input['input_ids'].device
+                new_input_ids = []
+                for original_input_ids in self.local_data_input['input_ids']: #[bs, seq_len]
+                    assert self.args.epsilon > 0, "epsilon should be greater than 0"
+                    tokens = self.args.tokenizer.convert_ids_to_tokens(original_input_ids)
+                    # print('before tokens:',len(tokens))
+                    # print(tokens)
+                    new_tokens = []
+                    Delta_u = 1.0  
+                    exp_factor = self.args.epsilon / (2 * Delta_u)
+                    for origin_token in tokens:
+                        if origin_token[0] == ' ':
+                            origin_token = origin_token[1:]
+                        origin_embed = self.token_to_vector_dict.get(origin_token, None)
+                        if origin_embed is None:
+                            new_tokens.append(origin_token)
+                            continue
+                        noise_embed = add_laplace_noise_to_vector(origin_embed, self.args.epsilon, self.delta_f)
+                        similarity = cosine_similarity_vectors(origin_embed, noise_embed)
+                        sorted_distances_for_token = self.sorted_similarities.get(origin_token, None)
+                        if sorted_distances_for_token is None:
+                            continue
+                        token_only = sorted_distances_for_token[0]
+                        similarity_only = sorted_distances_for_token[1]
+                        arr = np.flip(similarity_only)
+                        index = np.searchsorted(arr, similarity)
+                        index = len(arr) - index
+                        close_tokens = token_only[:index]
+                        close_similarities = similarity_only[:index]
+                        if len(close_tokens) == 0:
+                            continue
+                        unnormalized_probabilities = np.exp(exp_factor * np.array(close_similarities))
+                        total_unnormalized_prob = np.sum(unnormalized_probabilities)
+                        probabilities = unnormalized_probabilities / total_unnormalized_prob
+                        selected_token = np.random.choice(close_tokens, p=probabilities)
+                        new_tokens.append(selected_token)
+                    new_token_ids = self.args.tokenizer.convert_tokens_to_ids(new_tokens)
+                    # sentence = self.args.tokenizer.decode(new_token_ids)
+                    # print('after:',sentence)
+                    new_input_ids.append(torch.tensor(new_token_ids))
+                new_input_ids = torch.stack(new_input_ids) # [bs, seq_len]
+                self.local_data_input['input_ids'] = new_input_ids.to(input_device)
         ######### Defense Applied on Text Input ###########
         
         # collect processed labels (only in some cases)
@@ -738,8 +839,14 @@ class PassiveParty_LLM(Party_LLM):
             elif self.args.apply_textobfuscator == True and (self.index in self.args.defense_configs["party"]):
                 self.origin_pred = self.output_tensors[0].clone()
                 target_noise =  self.obfuscator.sample(self.output_tensors[0].shape).type_as(self.output_tensors[0])
-                self.output_tensors[0] =  self.output_tensors[0] + target_noise
-                self.local_pred_clone = self.output_tensors[0].detach().clone()
+                # self.output_tensors[0] =  self.output_tensors[0] + target_noise
+                self.local_pred_clone = self.output_tensors[0].detach().clone() + target_noise
+
+            elif self.args.apply_snd and (self.index in self.args.defense_configs["party"]):
+                # print('Passive Party Add noise')
+                self.snd_noise = sample_noise_Chi(self.output_tensors[0].shape, self.args.train_eta).to(self.output_tensors[0].device)
+                # print('noise:',self.snd_noise.shape,'  origin:',self.output_tensors[0].shape)
+                self.local_pred_clone = self.output_tensors[0].detach().clone() + self.snd_noise
         ######### Defense Applied on Local Model Prediction Process ###########
 
         self.output_attention_mask[0] = self.local_attention_mask
@@ -758,9 +865,9 @@ class PassiveParty_LLM(Party_LLM):
         decode_input = [self.decode_template.format(prefix=original_prompt[_i] ,perturbed_answer=pertrubed_answer[_i])\
             for _i in range(len(original_prompt))]
         
-        # print('===============')
-        # print('Extraction Input:')
-        # print(decode_input)
+        print('===============')
+        print('Extraction Input:')
+        print(decode_input)
         
         
         decode_input = self.decode_model_tokenizer(decode_input,return_tensors='pt')
@@ -771,30 +878,36 @@ class PassiveParty_LLM(Party_LLM):
         
         # convert to token ids correspond to self.args.tokenizer
         extracted_answer = self.args.tokenizer(extracted_answer_txt)['input_ids']
-        # extracted_answer_txt = self.args.tokenizer.decode(extracted_answer)
-        # print('----------------')
-        # print('Extraction Output:')
-        # print(extracted_answer_txt)
+        extracted_answer_txt = self.args.tokenizer.decode(extracted_answer)
+        print('----------------')
+        print('Extraction Output:')
+        print(extracted_answer_txt)
         
         extracted_answer = torch.tensor(extracted_answer).unsqueeze(0)
         
         # print(type(extracted_answer),extracted_answer.shape)
         # print(extracted_answer_txt)
-        # assert 1>2
         
         return extracted_answer
     
     def give_final_pred(self, resp):
-        received_pred = resp['inputs_embeds'] 
-
         ######### Defense Applied on Local Model Tail Prediction Process ###########
         if self.args.vfl_model_slice_num == 3 and self.args.apply_mid and \
             (self.index in self.args.defense_configs["party"]) and ("tail" in self.mid_position):
+            received_pred = resp['inputs_embeds'] 
             received_pred, self.tail_mid_loss = self.tail_mid_model(received_pred)  # , self.local_attention_mask
+            resp['inputs_embeds'] = received_pred
+            
+        if self.args.vfl_model_slice_num == 3 and self.args.apply_snd and self.index in self.args.defense_configs["party"]:
+            # print('3-slice Passive Party Denoise:')
+            # resp['denoise_mod'] = self.denoise_mod
+            # resp['snd_noise'] = self.snd_noise
+            # resp['original_embedding'] = self.output_tensors[0]
+            origin_device = resp['inputs_embeds'].device
+            received_pred = resp['inputs_embeds']
+            resp['inputs_embeds'] = self.denoise_mod(self.output_tensors[0], self.snd_noise, \
+                received_pred, self.local_data_input['attention_mask']).to(origin_device)
         ######### Defense Applied on Local Model Tail Prediction Process ###########
-        
-        resp['inputs_embeds'] = received_pred
-
         return self.forward(2, **resp)
 
     def local_backward(self):

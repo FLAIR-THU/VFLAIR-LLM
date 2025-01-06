@@ -10,6 +10,8 @@ __pycache__/
 src/models/model_parameters/pretrained_attacker_models
 src/models/model_parameters/clustering_models
 src/models/model_parameters/inferdpt_kit
+src/models/model_parameters/denoise_model
+src/models/model_parameters/custext_kit
 
 # dataset files
 # dataset/

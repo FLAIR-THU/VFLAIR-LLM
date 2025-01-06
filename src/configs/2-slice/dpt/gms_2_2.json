@@ -41,7 +41,7 @@
         "0": {
             "path": "/home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B",
                 "head":{
-                    "trainable": 1,
+                    "trainable": 0,
                     "embedding_trainable": 0,
                     "encoder_trainable": 0,
                     "encoder_trainable_ids":[]
@@ -73,13 +73,13 @@
         "name": "InferDPT",
         "parameters": {
             "party": [0],
-            "epsilon": 1,
+            "epsilon": 0.001,
             "decode_model_path": "/home/DAIR/guzx/Git_FedProject/Models/QwenQwen1.5-0.5B",
             "decode_model_load_kwargs":{
                 "device_map": "auto"
             },
             "decode_generation_kwargs":{
-                "temperature": 0.01,
+                "temperature": 1,
                 "max_new_tokens": 256 
             }
         }

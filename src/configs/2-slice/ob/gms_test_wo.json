@@ -2,17 +2,17 @@
     "epochs": 50,
     "lr": 0.00001,
     "k": 2,
-    "batch_size": 16,
+    "batch_size": 8,
     "test_batch_size": 1,
     "early_stop_threshold": 1,
-    "pipeline": "finetune",
+    "pipeline": "pretrained",
     "model_architect":"CLM",
     "communication":{
         "communication_protocol": "FedSGD",
         "iteration_per_aggregation": 1
     },
     "finetune_configs":{
-        "name":"Vanilla",
+        "name":"LoRA",
         "configs":{
             "inference_mode":false,  
           "r":4,  
@@ -55,7 +55,7 @@
                 "path": "/home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B",
                 "tail":{
                     "trainable": 0,
-                    "head_layer_trainable": 0,
+                    "head_layer_trainable": 1,
                     "encoder_trainable": 0,
                     "encoder_trainable_ids":[]
             }
@@ -73,47 +73,8 @@
         "vfl_model_slice_num": 2,
         "local_encoders_num": 2
     },
-    "defense": {
-        "name": "TextObfuscator",
-        "parameters": {
-            "party": [0],
-            "cluster_method": "kmeans",
-            "cluster_num": 150,
-            "epsilon": 1e3,
-            "w_cluster_away": 0.5,
-            "w_cluster_close": 0.1
-        }
-    },
     "attack_list": {
         "0":{
-            "name": "BiSR",
-          "parameters": {
-              "party": [1],
-              "attacker_model_name": "NaMoE",
-              "expert_scales": [0, 10.0, 7.5, 5.0],
-              "expert_epoch": 20,
-              "gate_epoch": 15,
-              "full_epoch": 4,
-              "phase1_lr":0.001,
-              "lr": 0.01,
-              "batch_size": 6,
-              "epochs": 100,
-              "auxiliary_data_num": 100,
-              "attack_sample_num": 100
-          }
-        },
-        "1":{
-            "name": "VanillaModelInversion_WhiteBox",
-            "parameters": {
-                "party": [1],
-                "loss_type":"cross_entropy",
-                "lr": 0.01,
-                "epochs": 100,
-                "batch_size": 1,
-                "attack_sample_num": 100
-            }
-        },
-        "2":{
             "name": "WhiteBoxInversion",
             "parameters": {
                 "party": [1],

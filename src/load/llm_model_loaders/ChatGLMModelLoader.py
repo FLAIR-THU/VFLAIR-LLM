@@ -28,7 +28,7 @@ class ChatGLMModelLoader(LLMModelLoader):
         ####### Load Models #######
         p = ModelPartitionPipelineChatGLM(args=args, all_layer_num = all_encoders_num, 
                             split_index=split_index, is_server=is_active_party)
-        self._models=p.from_pretrained(model_path, trust_remote_code=True, torch_dtype=torch.float32)# **vfl_basic_config.kwargs_model_loading))
+        self._models=p.from_pretrained(model_path, trust_remote_code=True, torch_dtype=torch.float32, device_map="cuda")# **vfl_basic_config.kwargs_model_loading))
         print(f'===== is_active_party={is_active_party}---{self._models.keys()} ======')
 
         ######## Finetune Configs #########

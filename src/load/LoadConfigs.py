@@ -555,7 +555,7 @@ def do_load_basic_configs_llm(config_dict, args):
     # Model
     if 'model_list' in config_dict:
         config_model_dict = config_dict['model_list']
-
+        args.model_name = config_model_dict['name']
         args.vfl_model_slice_num = config_model_dict['vfl_model_slice_num'] if('vfl_model_slice_num' in config_model_dict) else 2
         args.local_encoders_num = config_model_dict['local_encoders_num'] if('local_encoders_num' in config_model_dict) else 1
         args.local_tail_encoders_num = config_model_dict['local_tail_encoders_num'] if('local_tail_encoders_num' in config_model_dict) else 0
@@ -702,6 +702,8 @@ def do_load_basic_configs_llm(config_dict, args):
     args.apply_gs = False
     args.apply_mid = False  # mid defense
     args.apply_textobfuscator = False
+    args.apply_custext = False
+    args.apply_snd = False
     args.apply_inferdpt = False
     args.apply_cae = False  # cae defense
     args.apply_dcae = False  # dcae defense
@@ -736,6 +738,10 @@ def do_load_basic_configs_llm(config_dict, args):
                 args.apply_gs = True
             elif ('textobfuscator' in args.defense_name.casefold()):
                 args.apply_textobfuscator = True
+            elif ('custext' in args.defense_name.casefold()):
+                args.apply_custext = True
+            elif ('snd' in args.defense_name.casefold()):
+                args.apply_snd = True
             elif ('inferdpt' in args.defense_name.casefold()):
                 args.apply_inferdpt = True
         else:
@@ -769,10 +775,6 @@ def do_load_basic_configs_llm(config_dict, args):
                 mid_position = str(args.defense_configs['mid_position']) if 'mid_position' in args.defense_configs else ['head']
             
             args.defense_param = mid_model_name + '_' + mid_position+ '_' + str(args.defense_configs['lambda'])
-            print('======')
-            print(args.defense_param)
-            print('======')
-
             args.defense_param_name = 'lambda'
         elif args.defense_name == "GaussianDP" or args.defense_name == "LaplaceDP":
             if 'dp_strength' in args.defense_configs:
@@ -799,7 +801,31 @@ def do_load_basic_configs_llm(config_dict, args):
             args.w_cluster_close = args.defense_configs['w_cluster_close']
             args.w_cluster_away = args.defense_configs['w_cluster_away']
             args.epsilon = args.defense_configs['epsilon']
+            args.loss_lambda = args.defense_configs['lambda'] if 'lamba' in args.defense_configs else 1
         
+        elif args.defense_name == "CusText":
+            args.defense_param = args.defense_configs['epsilon']
+            args.defense_param_name = 'epsilon'
+            args.epsilon = args.defense_configs['epsilon']
+            args.topk = args.defense_configs['topk']
+        
+        elif args.defense_name == "SnD":
+            args.defense_name = args.defense_name + '_'+args.defense_configs['denoise_model'] 
+            args.defense_param = args.defense_configs['train_eta']
+            args.defense_param_name = 'train_eta'
+            
+            args.denoise_model = args.defense_configs['denoise_model'] 
+            args.train_eta = args.defense_configs['train_eta'] 
+            args.noise_per_sample = args.defense_configs['noise_per_sample'] # number of noise matrices added to each samples
+            args.denoise_epoch = args.defense_configs['denoise_epoch']
+            
+            args.dim_head = args.defense_configs['dim_head'] # dimension of each head
+            args.dropout = args.defense_configs['dropout'] # dropout rate of the denoise model
+            args.num_heads = args.defense_configs['num_heads'] # number of heads in the transformer
+            args.num_layers = args.defense_configs['num_layers'] # number of layers in the transformer
+            args.d_ff = args.defense_configs['d_ff'] # hidden dimension for the positional feed forward network
+            args.att_pool = args.defense_configs['att_pool'] # use attention pooling to combine sequence in the transformer
+                    
         elif args.defense_name == "InferDPT":
             args.defense_param = args.defense_configs['epsilon']
             args.defense_param_name = 'epsilon'
@@ -909,6 +935,8 @@ def do_load_basic_configs_llm(config_dict, args):
         args.apply_dcae = False
         args.apply_dp = False
         args.apply_textobfuscator = False
+        args.apply_custext = False
+        args.apply_snd = False
         args.apply_inferdpt = False
         args.Q = 1
         # return args

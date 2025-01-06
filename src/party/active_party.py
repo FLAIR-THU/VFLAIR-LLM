@@ -110,7 +110,6 @@ class ActiveParty_LLM(Party_LLM):
         # print(f"model_{model_index} forward:{kwargs.keys()}")
         resp = self.models[model_index](**kwargs)
 
-
         if model_index == self.args.vfl_model_slice_num - 1:
             if not self.args.task_type == 'QuestionAnswering':
                 self.output_tensors[client_id][model_index] = resp.get('logits')

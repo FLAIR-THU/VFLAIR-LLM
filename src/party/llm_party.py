@@ -106,9 +106,6 @@ class Party(object):
         if need_model:
             self.prepare_model(args, index)
         
-        # attack and defense
-        # self.attacker = None
-        # self.defender = None
 
         # Data
         if need_data:
@@ -181,9 +178,7 @@ class Party(object):
 
         self.train_data, self.train_label = train_dst
         self.test_data, self.test_label = test_dst
-        # self.train_data, self.train_label = train_dst[0][:20],train_dst[1][:20]
-        # self.test_data, self.test_label = train_dst[0][:20],train_dst[1][:20]
-
+       
     def prepare_data_loader(self, need_auxiliary=0, **kwargs):
         # self.train_loader = DataLoader(self.train_dst, batch_size=batch_size) # , 
         # self.test_loader = DataLoader(self.test_dst, batch_size=batch_size) # , shuffle=True ,collate_fn=my_collate

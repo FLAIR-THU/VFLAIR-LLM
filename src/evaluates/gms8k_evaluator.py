@@ -29,7 +29,7 @@ class GMS8KEval:
 
         def extract_answer_number(completion):
             text = completion.split('The answer is: ')
-            text = completion.split('answer is: ')
+            # text = completion.split('answer is: ')
             
             if len(text) > 1:
                 extract_ans = text[-1].strip()

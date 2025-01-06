@@ -1654,18 +1654,14 @@ def load_dataset_per_party_llm(args, index):
             train_set_file = DATA_PATH + 'SST-2/train.tsv'
             test_set_file = DATA_PATH + 'SST-2/dev.tsv'
         df = pd.read_csv(train_set_file, delimiter='\t')  # names=[  'sentence','label'] , names=['label', 'sentence']
-        sentences = df.sentence.values[:100]
-        labels = df.label.values[:100]
-
-
+        sentences = df.sentence.values[:10]
+        labels = df.label.values[:10]
         X_train = np.array(sentences)
         y_train = np.array([int(_label) for _label in labels])
 
         df = pd.read_csv(test_set_file, delimiter='\t')  # names=[  'sentence','label']
         sentences = df.sentence.values[:10]
         labels = df.label.values[:10]
-
-
         X_test = np.array(sentences)
         y_test = np.array([int(_label) for _label in labels])
         # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=args.current_seed)
@@ -2105,7 +2101,7 @@ def load_dataset_per_party_llm(args, index):
         texts = []
         target_word = []
 
-        for _all_text in train_all_texts[:1]:
+        for _all_text in train_all_texts[:100]:
             all_doc_tokens = args.tokenizer.tokenize(_all_text)#.strip().split()
             # all_doc_tokens = [c for c in all_doc_tokens if c not in string.punctuation]
 
@@ -2144,7 +2140,7 @@ def load_dataset_per_party_llm(args, index):
         test_domain = dataset['test'][:]['domain']
         texts = []
         target_word = []
-        for _all_text in test_all_texts[:10]:
+        for _all_text in test_all_texts[:50]:
             all_doc_tokens = args.tokenizer.tokenize(_all_text)  # .strip().split()
 
             text_tokens = all_doc_tokens[:-1]
@@ -2408,12 +2404,12 @@ def load_dataset_per_party_llm(args, index):
             return examples
 
         ##### Train #####
-        train_examples = get_examples(train_set_file)[:20] # list of [  {'quesion':... , 'answer':...} ...]
+        train_examples = get_examples(train_set_file)[:] # list of [  {'quesion':... , 'answer':...} ...]
         X_train = np.array([ problem_prompt.format(instruction=_ex['question']+ "<|endoftext|>") for _ex in train_examples])
         y_train = np.array([ _ex['answer'] for _ex in train_examples])
 
         ##### Test #####
-        test_examples = get_examples(test_set_file)[:10] # list of [  {'quesion':... , 'answer':...} ...]
+        test_examples = get_examples(test_set_file)[:20] # list of [  {'quesion':... , 'answer':...} ...]
         X_test = np.array([ problem_prompt.format(instruction=_ex['question']) for _ex in test_examples])
         y_test = np.array([ get_final_ans(_ex['answer']) for _ex in test_examples])
 

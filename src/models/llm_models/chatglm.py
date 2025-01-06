@@ -65,8 +65,6 @@ class ChatGLMModelHead(ChatGLMModelSplitter):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-        print('---- ChatGLMModelHead -----')
-
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
@@ -134,7 +132,6 @@ class ChatGLMModelBody(ChatGLMModelSplitter):
             return_dict: Optional[bool] = None,
             **kwargs
     ):
-        print('---- ChatGLMModelBody -----')
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
@@ -214,8 +211,6 @@ class ChatGLMModelTail(ChatGLMModelSplitter):
             return_dict: Optional[bool] = None,
             **kwargs
     ):
-        print('---- ChatGLMModelTail -----')
-
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )

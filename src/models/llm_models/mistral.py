@@ -480,6 +480,17 @@ class MistralModelTail(MistralModelSplitter):
         if use_cache:
             next_cache = next_decoder_cache.to_legacy_cache() if use_legacy_cache else next_decoder_cache
 
+        self.base_model_tail_output = hidden_states[:,-1,:] # bs seq_len hidden_dim
+        if kwargs.get('denoise_mod'):
+            denoise_mod = kwargs['denoise_mod']
+            original_embedding = kwargs['original_embedding']
+            snd_noise = kwargs['snd_noise']
+            # print('denoise_mod:',type(denoise_mod))
+            # print('original_embedding:',original_embedding.shape,'  snd_noise:',snd_noise.shape)
+            hidden_states[:,-1,:] = denoise_mod(\
+                original_embedding, snd_noise, hidden_states[:,-1,:], attention_mask)
+            print('after denoise hidden_states:',hidden_states.shape)
+        
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
         return BaseModelOutputWithPast(
@@ -512,6 +523,70 @@ class MistralTailForCausalLM(MistralForCausalLM, VFLModel):
     @head_layer.setter
     def head_layer(self, lm_head):
         self.lm_head = lm_head
+    
+    def forward(
+        self,
+        input_ids: torch.LongTensor = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        past_key_values: Optional[List[torch.FloatTensor]] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        labels: Optional[torch.LongTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+        **kwargs
+    ) -> Union[Tuple, CausalLMOutputWithPast]:
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
+        outputs = self.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+            **kwargs
+        )
+
+        hidden_states = outputs[0] #[bs, seq_len, hidden_dim]
+        logits = self.lm_head(hidden_states) #[bs, seq_len, vocab_size]
+        
+        logits = logits.float()
+
+        loss = None
+        if labels is not None:
+            # Shift so that tokens < n predict n
+            shift_logits = logits[..., :-1, :].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
+            # Flatten the tokens
+            shift_logits = shift_logits.view(-1, self.config.vocab_size)
+            shift_labels = shift_labels.view(-1)
+            # Ensure tensors are on the same device
+            shift_labels = shift_labels.to(shift_logits.device)
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(shift_logits, shift_labels)
+
+        if not return_dict:
+            output = (logits,) + outputs[1:]
+            return (loss,) + output if loss is not None else output
+
+        return CausalLMOutputWithPast(
+            loss=loss,
+            logits=logits,
+            past_key_values=outputs.past_key_values,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
 
 class MistralTailForSequenceClassification(MistralForSequenceClassification, VFLModel):
     def __init__(self, config: MistralConfig, **kwargs):
