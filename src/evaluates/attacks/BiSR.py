@@ -68,6 +68,7 @@ class BiSR(Attacker):
         self.epochs = args.attack_configs['epochs']
         self.attack_batch_size = args.attack_configs['batch_size']
         self.attack_sample_num = args.attack_configs['attack_sample_num']
+        
 
         if 'loss_type' not in args.attack_configs.keys():
             self.loss_type = 'cross_entropy'
@@ -103,6 +104,10 @@ class BiSR(Attacker):
     def attack(self):
         # self.set_seed(123)
         self.set_seed(self.args.current_seed)
+        
+        if 'attack_seed' in self.args.attack_configs.keys():
+            attack_seed = self.args.attack_configs['attack_seed']
+            self.set_seed(attack_seed)
         
         print_every = 1
 
@@ -378,6 +383,7 @@ class BiSR(Attacker):
             torch.cuda.empty_cache()
             
             if len(test_data) > self.attack_sample_num:
+                print('len(test_data):',len(test_data),' self.attack_sample_num:',self.attack_sample_num)
                 sample_list = [i for i in range(len(test_data))]
                 sample_list = random.sample(sample_list, self.attack_sample_num) 
                 test_data = [test_data[i] for i in sample_list] 
@@ -392,6 +398,8 @@ class BiSR(Attacker):
                 attack_test_dataset = TextVQADataset_train(self.args, test_data, test_label, vis_processor,'train')
             elif self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
                 attack_test_dataset = GSMDataset_LLM(self.args, test_data, test_label, 'test')
+            elif self.args.dataset in ['Alpaca','Alpaca-test']:
+                attack_test_dataset = AlpacaDataset_LLM(self.args, test_data, test_label, 'test')
             else:
                 attack_test_dataset = PassiveDataset_LLM(self.args, test_data, test_label)
 

@@ -110,6 +110,10 @@ class VanillaModelInversion_WhiteBox(Attacker):
     def attack(self):
         # self.set_seed(123)
         self.set_seed(self.args.current_seed)
+        if 'attack_seed' in self.args.attack_configs.keys():
+            attack_seed = self.args.attack_configs['attack_seed']
+            self.set_seed(attack_seed)
+        
         
         print_every = 1
 
@@ -144,18 +148,17 @@ class VanillaModelInversion_WhiteBox(Attacker):
                 sample_list = random.sample(sample_list, self.attack_sample_num) 
                 test_data = [test_data[i] for i in sample_list] 
                 test_label = [test_label[i] for i in sample_list] 
-                
-                # test_data = test_data[:self.attack_sample_num]
-                # test_label = test_label[:self.attack_sample_num]
-            
+              
             if self.args.dataset == 'Lambada' or self.args.dataset == 'Lambada_test':
                 attack_test_dataset = LambadaDataset_LLM(self.args, test_data, test_label, 'test')
             elif self.args.dataset == 'TextVQA' or self.args.dataset == 'TextVQA-test':
                 attack_test_dataset = TextVQADataset_train(self.args, test_data, test_label, vis_processor,'train')
             elif self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
                 attack_test_dataset = GSMDataset_LLM(self.args, test_data, test_label, 'test')
+            elif self.args.dataset in ['Alpaca']:
+                attack_test_dataset = AlpacaDataset_LLM(self.args, test_data, test_label, 'test')
             else:
-                attack_test_dataset = PassiveDataset_LLM(self.args, test_data, test_label)
+                attack_test_dataset = PassiveDataset_LLM(self.args, test_data, test_label, 'test')
 
             attack_info = f'Attack Sample Num:{len(attack_test_dataset)}'
             print(attack_info)

@@ -534,8 +534,6 @@ def GradPerturb(args, original_object):
 
 ############ LLM defense ##############
 DELTAF = {'Bert': 81.82, 'Roberta': 4.15, 'GPT2': 110.2}  
-# todo need to change Llama's value
-
 
 def LaplaceDP_for_llm_pred(args, original_object):
     original_object = original_object[0]  # bs, 12, 768

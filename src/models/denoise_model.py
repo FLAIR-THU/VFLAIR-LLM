@@ -11,6 +11,130 @@ import math
 # from baseline.ks_dist import ddKS
 # from transformers import BartForConditionalGeneration, AutoTokenizer
 
+import torch
+import torch.nn as nn
+
+class MydenoiseModel_2slice(nn.Module):
+    def __init__(self, d_model, d_out, args):
+        super(MydenoiseModel_2slice, self).__init__()
+        self.d_model = d_model
+        self.d_out = d_out
+
+        # Transformer Encoder
+        self.encoder = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(
+                d_model=d_model,
+                nhead=args.num_heads,
+                dim_feedforward=args.d_ff,
+                dropout=args.dropout
+            ),
+            num_layers=args.num_layers
+        )
+
+        # Linear layer to map `output` into d_model dimensions
+        self.output_embedding = nn.Linear(d_out, d_model)
+
+        # Transformer Decoder
+        self.decoder = nn.TransformerDecoder(
+            nn.TransformerDecoderLayer(
+                d_model=d_model,
+                nhead=args.num_heads,
+                dim_feedforward=args.d_ff,
+                dropout=args.dropout
+            ),
+            num_layers=args.num_layers
+        )
+
+        # Output projection layer
+        self.final_layer = nn.Linear(d_model, d_out)
+
+    def forward(self, init_embedding, noise, output, attention_mask=None):
+        '''
+        init_embedding, noise: [batch_size, seq_len, d_model]
+        output: [batch_size, d_out] (e.g., num_classes or vocab_dim)
+        '''
+        # print('init_embedding:',init_embedding.shape,' noise:',noise.shape,'  output:',output.shape)
+        # print('d_model:',self.d_model,'  d_out:',self.d_out)
+      
+        # Combine init_embedding and noise for the encoder input
+        encoder_input = torch.cat([init_embedding, noise], dim=1)  # [batch_size, 2*seq_len, d_model]
+        encoder_input = encoder_input.permute(1, 0, 2)  # [seq_len, batch_size, d_model]
+
+        # Process through encoder
+        encoder_output = self.encoder(encoder_input)  # [2*seq_len, batch_size, d_model]
+        
+        # Map `output` to the same dimension as d_model and add sequence dimension
+        output_embedded = self.output_embedding(output).unsqueeze(1)  # [batch_size, 1, d_model]
+        output_embedded = output_embedded.permute(1, 0, 2)  # [1, batch_size, d_model]
+        
+        if attention_mask is not None:
+            # Expand attention mask for decoder
+            memory_mask = attention_mask.repeat(2, 1)  # Adjust mask for concatenated sequence
+        else:
+            memory_mask = None
+            
+        # Process through decoder
+        decoder_output = self.decoder(
+            tgt=output_embedded,  # [1, batch_size, d_model]
+            memory=encoder_output,  # [2*seq_len, batch_size, d_model]
+            # tgt_mask=None,
+            # memory_mask=attention_mask  # Optional mask
+        )  # [1, batch_size, d_model]
+
+        # Remove sequence dimension and project to final output
+        decoder_output = decoder_output.squeeze(0)  # [batch_size, d_model]
+        final_output = self.final_layer(decoder_output)  # [batch_size, d_out]
+        return final_output
+
+
+# class MydenoiseModel_2slice(nn.Module):
+#     def __init__(self, d_model, d_out, args,  dim_feedforward=2048):
+#         super(MydenoiseModel_2slice, self).__init__()
+#         self.d_model = d_model
+#         self.d_out = d_out
+        
+#         self.num_heads = args.num_heads
+#         self.num_layers = args.num_layers
+#         self.d_ff = args.d_ff
+#         self.dim_head = args.dim_head
+#         self.dropout = args.dropout
+        
+#         self.num_encoder_layers = args.defense_configs['num_layers']
+#         self.num_decoder_layers = args.defense_configs['num_layers']
+        
+        
+#         # Transformer encoder
+#         self.encoder_layer = nn.TransformerEncoderLayer(d_model, self.num_heads, self.dim_head)#dim_feedforward)
+#         self.encoder = nn.TransformerEncoder(self.encoder_layer, self.num_encoder_layers)
+        
+#         # Transformer decoder
+#         self.decoder_layer = nn.TransformerDecoderLayer(d_model, self.num_heads, self.dim_head)
+#         self.decoder = nn.TransformerDecoder(self.decoder_layer, self.num_decoder_layers)
+        
+#         # Linear mapping for d_out tensor
+#         self.class_embedding = nn.Linear(d_out, d_model)
+        
+#         # Final output projection
+#         self.output_layer = nn.Linear(d_model, d_out)
+    
+#     def forward(self, encoder_input, class_tensor):
+#         # Encoder: process [batch_size, seq_len, d_model]
+#         encoder_output = self.encoder(encoder_input)
+        
+#         # Map class_tensor [batch_size, d_out] to [batch_size, 1, d_model]
+#         class_embedding = self.class_embedding(class_tensor).unsqueeze(1)
+#         print('class_embedding:',class_embedding.shape)
+        
+#         # Decoder: process using encoder output and class embedding
+#         decoder_output = self.decoder(
+#             tgt=class_embedding.permute(1, 0, 2),  # [d_out, batch_size, d_model]
+#             memory=encoder_output.permute(1, 0, 2)  # [seq_len, batch_size, d_model]
+#         )
+        
+#         # Project to [batch_size, d_out]
+#         output = self.output_layer(decoder_output.permute(1, 0, 2).squeeze(1))
+#         return output
+
 
 class denoiseModelv3_2slice(nn.Module):
     def __init__(self, d_model, d_out, args, decoder=False): #change some attributes
@@ -28,7 +152,7 @@ class denoiseModelv3_2slice(nn.Module):
         
         if self.d_out != self.d_model:
             #[bs, dim, d_model] -- [bs, dim, d_out]
-            self.match_transformer_num_layers = 2
+            self.match_transformer_num_layers = self.num_layers #args.defense_configs['match_num_layers']
             self.match_transformer = TransformerNopool(d_model, d_out, \
                 self.num_heads, self.dim_head, self.match_transformer_num_layers, self.d_ff, self.dropout, decoder)
             # self.linear_match = nn.Linear(d_model, d_out)
@@ -40,15 +164,15 @@ class denoiseModelv3_2slice(nn.Module):
         init_embedding noise: [bs, seq_len, d_model]
         output : [bs, d_out]  num_classes or vocab_dim
         '''
-        print('init_embedding:',init_embedding.shape,' noise:',noise.shape,'  output:',output.shape)
+        # print('init_embedding:',init_embedding.shape,' noise:',noise.shape,'  output:',output.shape)
+        # print('d_model:',self.d_model,'  d_out:',self.d_out)
         noise_info = torch.cat([init_embedding, noise], dim = 1) # [bs, seq_len+seq_len, hidden_dim]
         if self.d_out != self.d_model:
             noise_info.to(self.match_transformer.fc.weight.device)
             noise_info = self.match_transformer(noise_info)
         noise_info = noise_info.to(output.device)
-        print('noise_info:',noise_info.shape)
-        print(output.unsqueeze(dim=1).shape)
-        output = torch.cat([output, noise_info], dim = 1) # bs, 2seq_len+1, d_out
+        # print('noise_info:',noise_info.shape,' output.unsqueeze:',output.unsqueeze(dim=1).shape)
+        output = torch.cat([output.unsqueeze(dim=1), noise_info], dim = 1) # bs, 2seq_len+1, d_out
         output.to(self.transformer.fc.weight.device)
         
         if attention_mask is not None:
@@ -122,8 +246,8 @@ class denoiseModelv3(nn.Module):
         self.transformer = Transformer(d_model, d_out, self.num_heads, self.dim_head, self.num_layers, self.d_ff, self.dropout, decoder)
 
     def forward(self, init_embedding, noise, output, attention_mask=None):
-        print('init_embedding:',init_embedding.shape,' noise:',noise.shape,'  output:',output.shape)
-        print('self.d_model:',self.d_model,' self.d_out:',self.d_out)
+        # print('init_embedding:',init_embedding.shape,' noise:',noise.shape,'  output:',output.shape)
+        # print('self.d_model:',self.d_model,' self.d_out:',self.d_out)
         output = torch.cat([output.unsqueeze(dim=1), init_embedding, noise], dim = 1)
         # output = torch.cat([output, init_embedding, noise], dim = 1)
         
@@ -394,7 +518,7 @@ class denoiseModelv3_clm_2slice(nn.Module):
         self.dropout = args.dropout
         
         if self.d_out != self.d_model:
-            self.match_transformer_num_layers = 1
+            self.match_transformer_num_layers = self.num_layers  #args.defense_configs['match_num_layers']
             self.match_transformer = TransformerNopool(d_model, d_out, \
                 self.num_heads, self.dim_head, self.match_transformer_num_layers, self.d_ff, self.dropout, decoder)
             

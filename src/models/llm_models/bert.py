@@ -446,7 +446,7 @@ class BertModelTail(BertModelSplitter):
             # print('original_embedding:',original_embedding.shape,'  snd_noise:',snd_noise.shape)
             pooled_output = denoise_mod(\
                 original_embedding, snd_noise, pooled_output, attention_mask)
-            # print('after pooled_output:',pooled_output.shape)
+            # print('denoised pooled_output:',pooled_output.shape)
         
         if not return_dict:
             return (sequence_output, pooled_output) + encoder_outputs[1:]

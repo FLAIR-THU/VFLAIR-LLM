@@ -5,19 +5,25 @@
 #SBATCH --output exp_result/gms_add_custext.out
 
 
-for seed in 60 61 62
+for seed in 60 61 62 63 64
     do
 
 
-    # 5
-    sed -i 's/"epsilon": 1/"epsilon": 5/g' ./configs/2-slice/custext/gms_add.json
+    # 0.5
+    sed -i 's/"epsilon": 1/"epsilon": 0.5/g' ./configs/2-slice/custext/gms_add.json
     python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/custext/gms_add
 
-    # 15
-    sed -i 's/"epsilon": 5/"epsilon": 15/g' ./configs/2-slice/custext/gms_add.json
+    # 0.1
+    sed -i 's/"epsilon": 0.5/"epsilon": 0.1/g' ./configs/2-slice/custext/gms_add.json
     python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/custext/gms_add
 
-    sed -i 's/"epsilon": 15/"epsilon": 1/g' ./configs/2-slice/custext/gms_add.json
+    # 2
+    sed -i 's/"epsilon": 0.1/"epsilon": 2/g' ./configs/2-slice/custext/gms_add.json
+    python main_pipeline_llm_MIA.py --seed $seed --configs 2-slice/custext/gms_add
+
+
+    sed -i 's/"epsilon": 2/"epsilon": 1/g' ./configs/2-slice/custext/gms_add.json
+
 
 
 done

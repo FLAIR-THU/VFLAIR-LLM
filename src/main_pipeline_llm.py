@@ -204,8 +204,8 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
     return target_cls
 
 
-def create_exp_dir_and_file(dataset, vfl_model_slice_num, split_info, model_name, pipeline, defense_name='', defense_param=''):
-    exp_res_dir = f'exp_result/test/{dataset}/{str(vfl_model_slice_num)}-slice/{split_info}/'
+def create_exp_dir_and_file(dataset, vfl_model_slice_num, split_info, model_name, pipeline, defense_name='', defense_param='',prefix = ''):
+    exp_res_dir = f'exp_result/{dataset}/{prefix}/{str(vfl_model_slice_num)}-slice/{split_info}/'
     if not os.path.exists(exp_res_dir):
         os.makedirs(exp_res_dir)
     if pipeline == 'pretrained':
@@ -220,6 +220,7 @@ if __name__ == '__main__':
     parser.add_argument('--device', type=str, default='cuda', help='use gpu or cpu')
     parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
     parser.add_argument('--seed', type=int, default=97, help='random seed')
+    parser.add_argument('--prefix', type=str, default="", help='result_file_prefix')
     parser.add_argument('--configs', type=str, default='basic_configs_news', help='configure json file path')
     parser.add_argument('--save_model', type=bool, default=False, help='whether to save the trained model')
     parser.add_argument('--attack_only', type=bool, default=False, help='attack_only')
@@ -261,7 +262,7 @@ if __name__ == '__main__':
         # Save record for different defense method
         model_name = args.model_list["name"]  
         split_info = f'{str(args.local_encoders_num)}_{str(args.local_tail_encoders_num)}'
-        exp_res_dir, exp_res_path = create_exp_dir_and_file(args.dataset, args.vfl_model_slice_num, split_info, model_name, args.pipeline, args.defense_name,args.defense_param)
+        exp_res_dir, exp_res_path = create_exp_dir_and_file(args.dataset, args.vfl_model_slice_num, split_info, model_name, args.pipeline, args.defense_name,args.defense_param, args.prefix)
         args.exp_res_dir = exp_res_dir
         args.exp_res_path = exp_res_path
         print(args.exp_res_path)

@@ -86,9 +86,13 @@ def generate_new_sents_s1(dataset,sim_word_dict,p_dict,save_stop_words,args):
     # print(dataset[:3])
     punct = list(string.punctuation)
 
-    # nltk.download('stopwords')
-    # nltk.download('punkt')
-    stop_words = set(stopwords.words('english'))
+    
+    try:
+        stop_words = set(stopwords.words('english'))
+    except:
+        nltk.download('stopwords')
+        nltk.download('punkt')
+        stop_words = set(stopwords.words('english'))
     
     cnt = 0 
     raw_cnt = 0 

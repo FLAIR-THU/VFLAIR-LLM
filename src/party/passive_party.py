@@ -6,7 +6,7 @@ from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
-
+from collections import Counter
 import re
 import time
 import numpy as np
@@ -36,6 +36,7 @@ from utils.cluster_utils import run_cluster, redivide_cluster, CenterLoss, load_
 from utils.inferdpt_utils import *
 from utils.custext_utils import *
 from utils.snd_utils import *
+from utils.santext_utils import *
 
 from models.denoise_model import *
 from models.imagined_adversary_models import *
@@ -278,48 +279,63 @@ class PassiveParty_LLM(Party_LLM):
                 
             elif self.args.apply_inferdpt and (self.index in defense_configs["party"]):
                 print(f'Passive Party {self.index}: init InferDPT Defense')
-                infer_dpt_kit_dir = f'./models/model_parameters/inferdpt_kit/{self.args.dataset}/'
-                if not os.path.exists(infer_dpt_kit_dir):
-                    os.makedirs(infer_dpt_kit_dir)
-                
-                # Init InferDPT Kit: token_to_vector_dict / sorted_similarities / delta_f
-                if not os.path.exists(infer_dpt_kit_dir + '/token_2_vector.json'):
-                    #### Generate InferDPT
-                    embeddings = self.args.tokenizer.get_vocab()
-                    print('embeddings:',type(embeddings),len(embeddings))
-                    dtype = np.float32
-                    embedding_weights = self.local_model.get_input_embeddings().weight
-                    embedding_weights_np = embedding_weights.detach().cpu().numpy().astype(dtype)
-                    filtered_index2token = filter_tokens(embeddings)
-                    used_num_tokens = len(filtered_index2token)
-                    print('used_num_tokens:',used_num_tokens)
-                    
-                    token_2_embedding = {}
-                    for idx, token in filtered_index2token.items():
-                        token_2_embedding[token] = embedding_weights_np[idx].tolist()
-                    token_list = list(token_2_embedding.keys())
-                    embedding_matrix = np.array(list(token_2_embedding.values()), dtype=dtype)
-                    print('token_list:',len(token_list))
-                    print('embedding_matrix:',embedding_matrix.shape)
-                    self.token_to_vector_dict, self.sorted_similarities, self.delta_f = generate_inferdpt_kit(embedding_matrix,token_list)
-
-                    # Save InferDPT kit
-                    with open(infer_dpt_kit_dir+'/token_2_vector.json', 'w', encoding='utf8') as f:
-                        json.dump(self.token_to_vector_dict, f, ensure_ascii=False, cls=NumpyEncoder)
-                    with open(infer_dpt_kit_dir+'/sorted_similarities.json', 'w') as f:
-                        json.dump(self.sorted_similarities, f, cls=NumpyEncoder)
-                    with open(infer_dpt_kit_dir+'/delta_f.json', 'w') as f:
-                        json.dump(self.delta_f, f, cls=NumpyEncoder)
-                    print(f'Save InferDPTkit into:',infer_dpt_kit_dir)
-                else:
-                    print(f'Load InferDPTkit from:',infer_dpt_kit_dir)
-                    with open(infer_dpt_kit_dir+'/token_2_vector.json', 'r', encoding='utf8') as f:
-                        self.token_to_vector_dict = json.load(f)
-                    with open(infer_dpt_kit_dir+'/sorted_similarities.json', 'r') as f:
-                        self.sorted_similarities = json.load(f)
-                    with open(infer_dpt_kit_dir+'/delta_f.json', 'r') as f:
+                if "inferdpt_kit_path" in defense_configs.keys():
+                    infer_dpt_kit_dir = defense_configs["inferdpt_kit_path"]
+                    #token_to_vector_dict,sorted_cl100_emb/sorted_similarities,sen_emb/delta_f
+                    with open(infer_dpt_kit_dir+"/cl100_embeddings.json", 'r') as f:
+                        cl100_emb=json.load(f)
+                        vector_data_json = {k: cl100_emb[k] for k in list(cl100_emb.keys())[:11000]}
+                        cl100_emb=None
+                        self.token_to_vector_dict = {token: np.array(vector) for token, vector in vector_data_json.items()}
+                    with open(infer_dpt_kit_dir+'/sorted_cl100_embeddings.json', 'r') as f1:
+                        self.sorted_similarities = json.load(f1)
+                        # sorted_cl100_emb = json.load(f1)
+                    with open(infer_dpt_kit_dir+'/sensitivity_of_embeddings.json', 'r') as f:
                         self.delta_f = np.array(json.load(f))
-                       
+                        # sen_emb = np.array(json.load(f))
+                else:
+                    infer_dpt_kit_dir = f'./models/model_parameters/inferdpt_kit/{self.args.dataset}/'
+                    if not os.path.exists(infer_dpt_kit_dir):
+                        os.makedirs(infer_dpt_kit_dir)
+                
+                    # Init InferDPT Kit: token_to_vector_dict / sorted_similarities / delta_f
+                    if not os.path.exists(infer_dpt_kit_dir + '/token_2_vector.json'):
+                        #### Generate InferDPT
+                        embeddings = self.args.tokenizer.get_vocab()
+                        print('embeddings:',type(embeddings),len(embeddings))
+                        dtype = np.float32
+                        embedding_weights = self.local_model.get_input_embeddings().weight
+                        embedding_weights_np = embedding_weights.detach().cpu().numpy().astype(dtype)
+                        filtered_index2token = filter_tokens(embeddings)
+                        used_num_tokens = len(filtered_index2token)
+                        print('used_num_tokens:',used_num_tokens)
+                        
+                        token_2_embedding = {}
+                        for idx, token in filtered_index2token.items():
+                            token_2_embedding[token] = embedding_weights_np[idx].tolist()
+                        token_list = list(token_2_embedding.keys())
+                        embedding_matrix = np.array(list(token_2_embedding.values()), dtype=dtype)
+                        print('token_list:',len(token_list))
+                        print('embedding_matrix:',embedding_matrix.shape)
+                        self.token_to_vector_dict, self.sorted_similarities, self.delta_f = generate_inferdpt_kit(embedding_matrix,token_list)
+
+                        # Save InferDPT kit
+                        with open(infer_dpt_kit_dir+'/token_2_vector.json', 'w', encoding='utf8') as f:
+                            json.dump(self.token_to_vector_dict, f, ensure_ascii=False, cls=NumpyEncoder)
+                        with open(infer_dpt_kit_dir+'/sorted_similarities.json', 'w') as f:
+                            json.dump(self.sorted_similarities, f, cls=NumpyEncoder)
+                        with open(infer_dpt_kit_dir+'/delta_f.json', 'w') as f:
+                            json.dump(self.delta_f, f, cls=NumpyEncoder)
+                        print(f'Save InferDPTkit into:',infer_dpt_kit_dir)
+                    else:
+                        print(f'Load InferDPTkit from:',infer_dpt_kit_dir)
+                        with open(infer_dpt_kit_dir+'/token_2_vector.json', 'r', encoding='utf8') as f:
+                            self.token_to_vector_dict = json.load(f)
+                        with open(infer_dpt_kit_dir+'/sorted_similarities.json', 'r') as f:
+                            self.sorted_similarities = json.load(f)
+                        with open(infer_dpt_kit_dir+'/delta_f.json', 'r') as f:
+                            self.delta_f = np.array(json.load(f))
+                        
                 if self.args.decode_model_path != "":
                     
                     self.decode_model = AutoModelForCausalLM.from_pretrained(self.args.decode_model_path,**self.args.decode_model_load_kwargs)
@@ -334,6 +350,7 @@ class PassiveParty_LLM(Party_LLM):
                 #### Initialize denoise model
                 embed_dim = self.args.model_embedded_dim
                 denoise_model_type_dict = {
+                    'MydenoiseModel_2slice': MydenoiseModel_2slice,
                     'denoiseModelv3': denoiseModelv3,
                     'denoiseModelv3_2slice': denoiseModelv3_2slice,
                     'denoiseModelv3_3slice': denoiseModelv3_3slice
@@ -354,7 +371,7 @@ class PassiveParty_LLM(Party_LLM):
                 denoise_model_dir = f"./models/model_parameters/denoise_model/{self.args.vfl_model_slice_num}-slice/{self.args.dataset}/"
                 if not os.path.exists(denoise_model_dir):
                     os.makedirs(denoise_model_dir)
-                self.denoise_model_path = denoise_model_dir + f"/{self.args.denoise_model}_eta{str(self.args.train_eta)}"
+                self.denoise_model_path = denoise_model_dir + f"/{self.args.denoise_model}_eta{str(self.args.train_eta)}_numlayer{str(self.args.num_layers)}_epoch{str(self.args.denoise_epoch)}"
                 
                 if os.path.exists(self.denoise_model_path):
                     print('Load Denoise Model From: ',self.denoise_model_path)
@@ -381,15 +398,94 @@ class PassiveParty_LLM(Party_LLM):
                     with open(custext_dict_path+f"/sim_word_dict.txt", 'w') as json_file:
                         json_file.write(json.dumps(self.sim_word_dict, ensure_ascii=False, indent=4))
                 
+            elif self.args.apply_santext and (self.index in defense_configs["party"]):
+                print(f'Passive Party {self.index}: init SANTEXT Defense')
+                santext_dict_path = f"./models/model_parameters/santext_kit/{self.args.dataset}/eps_{self.args.epsilon}/"
+                if not os.path.exists(santext_dict_path):
+                    os.makedirs(santext_dict_path)
                 
+                ### vocab
+                if os.path.exists(santext_dict_path+'/vocab.pkl'):
+                    with open(santext_dict_path+'/vocab.pkl', 'rb') as f:
+                        self.santext_vocab = pickle.load(f)
+                else:
+                    self.santext_vocab = get_vocab(self.train_dst,self.args.tokenizer)
+                    with open(santext_dict_path+'/vocab.pkl', 'wb') as f:
+                        pickle.dump(self.santext_vocab, f)
+                
+                # word2id, sword2id, all_words, prob_matrix
+                if os.path.exists(santext_dict_path+'/word2id.pkl') \
+                    and os.path.exists(santext_dict_path+'/sword2id.pkl'):
+                    with open(santext_dict_path+'/word2id.pkl', 'rb') as f:
+                        self.word2id = pickle.load(f)
+                    with open(santext_dict_path+'/sword2id.pkl', 'rb') as f:
+                        self.sword2id = pickle.load(f)
+                    with open(santext_dict_path+'/all_words.pkl', 'rb') as f:
+                        self.all_words = pickle.load(f)
+                    self.prob_matrix = np.load(santext_dict_path+'/prob_matrix.npy')
+
+                else:
+                    sensitive_word_count = int(self.args.sensitive_word_percentage * len(self.santext_vocab))
+                    self.all_words = [key for key, _ in self.santext_vocab.most_common()]
+                    print('self.all_words:',type(self.all_words))
+                    sensitive_words = self.all_words[-sensitive_word_count - 1:]
+
+                    sensitive_words2id = {word: k for k, word in enumerate(sensitive_words)}
+                    print("#Total Words: %d, #Sensitive Words: %d" % (len(self.all_words),len(sensitive_words2id)))
+
+                    sensitive_word_embed = []
+                    all_word_embed=[]
+                    word2id = {}
+                    sword2id = {}
+                    sensitive_count = 0
+                    all_count = 0
+                    embedding_matrix = self.local_model.get_input_embeddings().weight.data.cpu().numpy()
+                    print('LLM embedding_matrix:',type(embedding_matrix),embedding_matrix.shape)
+                    for cur_word in self.args.tokenizer.vocab:
+                        if cur_word in self.args.tokenizer.vocab and cur_word not in word2id:
+                            word2id[cur_word] = all_count
+                            emb = embedding_matrix[self.args.tokenizer.convert_tokens_to_ids(cur_word)]
+                            all_word_embed.append(emb)
+                            all_count += 1
+
+                            if cur_word in sensitive_words2id:
+                                sword2id[cur_word] = sensitive_count
+                                sensitive_count += 1
+                                sensitive_word_embed.append(emb)
+                        assert len(word2id) == len(all_word_embed)
+                        assert len(sword2id) == len(sensitive_word_embed)
+                    self.word2id = word2id
+                    self.sword2id = sword2id
+                    print('self.word2id:',type(self.word2id))
+                    
+                    all_word_embed=np.array(all_word_embed, dtype='f')
+                    sensitive_word_embed = np.array(sensitive_word_embed, dtype='f')
+                    print("All Word Embedding Matrix: %s" % str(all_word_embed.shape))
+                    print("Sensitive Word Embedding Matrix: %s" % str(sensitive_word_embed.shape))
+                    print("Calculating Prob Matrix for Exponential Mechanism...")
+                    self.prob_matrix = cal_probability(all_word_embed,sensitive_word_embed, self.args.epsilon)
+                    print('self.prob_matrix:',type(self.prob_matrix))
+                    
+                    with open(santext_dict_path+'/word2id.pkl', 'wb') as f:
+                        pickle.dump(self.word2id, f)
+                    with open(santext_dict_path+'/sword2id.pkl', 'wb') as f:
+                        pickle.dump(self.sword2id, f)
+                    with open(santext_dict_path+'/all_words.pkl', 'wb') as f:
+                        pickle.dump(self.all_words, f)
+                    np.save(santext_dict_path+'/prob_matrix.npy', self.prob_matrix)
+                    
+                    
     def prepare_data(self, args, index):
         if not args.dataset:
             return None
         super().prepare_data(args, index)  # Party_llm's prepare_data
 
-        if args.dataset in ['Alpaca', 'CodeAlpaca']:
+        if args.dataset in ['Alpaca','CodeAlpaca','Alpaca-test']:
             self.train_dst = AlpacaDataset_LLM(args, self.train_data, self.train_label, 'train')
             self.test_dst = AlpacaDataset_LLM(args, self.test_data, self.test_label, 'test')
+        elif args.dataset in ['CNNDailyMail']:
+            self.train_dst = CNNDailyMailDataset(args, self.train_data, self.train_label, 'train')
+            self.test_dst = CNNDailyMailDataset(args, self.test_data, self.test_label, 'test')
         elif args.dataset == 'Lambada' or args.dataset == 'Lambada_test':
             self.train_dst = LambadaDataset_LLM(args, self.train_data, self.train_label, 'train')
             self.test_dst = LambadaDataset_LLM(args, self.test_data, self.test_label, 'test')
@@ -485,8 +581,9 @@ class PassiveParty_LLM(Party_LLM):
                 print('Warining: SnD currently do not supported for TQA')
             else:
                 # print('2-slice Passive Party Denoise:',type(final_output),final_output.logits.shape)
-                origin_device = final_output.logits.device
-                final_output.logits = self.denoise_mod(self.output_tensors[0], self.snd_noise, final_output.logits, self.local_data_input['attention_mask']).to(origin_device)
+                # origin_device = final_output.logits.device
+                # final_output.logits = self.denoise_mod(self.output_tensors[0], self.snd_noise, final_output.logits, self.local_data_input['attention_mask']).to(origin_device)
+                pass
         ##### Defense on received pred #### relevant decode/denoise method
         return final_output
     
@@ -749,10 +846,10 @@ class PassiveParty_LLM(Party_LLM):
                 for row in self.local_data_input['input_ids']:
                     sentence = self.args.tokenizer.decode(row, skip_special_tokens=True)
                     origin_input_sentence.append(sentence)
-                print("origin_input_sentence:", origin_input_sentence)
+                # print("origin_input_sentence:", origin_input_sentence)
                 
                 sanitized_sentence = generate_new_sents_s1(origin_input_sentence,self.sim_word_dict,self.p_dict,save_stop_words=False, args = self.args)
-                print("sanitized_sentence:", sanitized_sentence)
+                # print("sanitized_sentence:", sanitized_sentence)
                 
                 # Convert sentence back to tensor
                 tokenized_sanitized_sentence = self.args.tokenizer(list(sanitized_sentence), 
@@ -763,50 +860,134 @@ class PassiveParty_LLM(Party_LLM):
                 self.local_data_input['attention_mask'] = tokenized_sanitized_sentence['attention_mask']
                 # print("sanitized_input_ids:", self.local_data_input['input_ids'].shape)
                 # assert 1>2
+            
+            if self.args.apply_santext and (self.index in self.args.defense_configs["party"]):
+                input_device = self.local_data_input['input_ids'].device
+                origin_len = self.local_data_input['input_ids'].shape[-1]
+                # print("origin_input_ids:", self.local_data_input['input_ids'].shape)
+                
+                sanitized_sentence_list = []
+                for row in self.local_data_input['input_ids']:
+                    origin_sentence = self.args.tokenizer.decode(row, skip_special_tokens=True)
+                    origin_sentence = self.args.tokenizer.tokenize(origin_sentence)
+                    # print("origin_sentence:", origin_sentence)
+                    sanitized_sentence = SanText_plus(origin_sentence,\
+                        self.word2id, self.sword2id, self.all_words, self.prob_matrix, self.args.p)
+                    # print("sanitized_sentence:", sanitized_sentence)
+                    sanitized_sentence_list.append(sanitized_sentence)
+                
+                # Convert sentence back to tensor
+                tokenized_sanitized_sentence = self.args.tokenizer(sanitized_sentence_list, 
+                                                padding=self.args.padding, truncation=self.args.truncation, \
+                                                max_length=origin_len, return_tensors='pt',
+                                                add_special_tokens=self.args.add_special_tokens)
+                self.local_data_input['input_ids'] = tokenized_sanitized_sentence['input_ids']
+                self.local_data_input['attention_mask'] = tokenized_sanitized_sentence['attention_mask']
+                # print("sanitized_input_ids:", self.local_data_input['input_ids'].shape)
+                # assert 1>2
+
 
             if self.args.apply_inferdpt and (self.index in self.args.defense_configs["party"]):
+                #token_to_vector_dict,sorted_cl100_emb/sorted_similarities,sen_emb/delta_f
                 input_device = self.local_data_input['input_ids'].device
+                print(self.local_data_input['input_ids'].shape, self.local_data_input['attention_mask'].shape)
                 new_input_ids = []
                 for original_input_ids in self.local_data_input['input_ids']: #[bs, seq_len]
                     assert self.args.epsilon > 0, "epsilon should be greater than 0"
                     tokens = self.args.tokenizer.convert_ids_to_tokens(original_input_ids)
-                    # print('before tokens:',len(tokens))
-                    # print(tokens)
                     new_tokens = []
+                    
                     Delta_u = 1.0  
                     exp_factor = self.args.epsilon / (2 * Delta_u)
+                    
+                    # for origin_token in tokens:
+                    #     if origin_token[0] == ' ':
+                    #         origin_token = origin_token[1:]
+                    #     origin_embed = self.token_to_vector_dict.get(origin_token, None)
+                    #     if origin_embed is None:
+                    #         new_tokens.append(origin_token)
+                    #         continue
+                    #     noise_embed = add_laplace_noise_to_vector(origin_embed, self.args.epsilon, self.delta_f)
+                    #     similarity = cosine_similarity_vectors(origin_embed, noise_embed)
+                    #     sorted_distances_for_token = self.sorted_similarities.get(origin_token, None)
+                        
+                    #     if sorted_distances_for_token is None:
+                    #         continue
+                    #     if len(sorted_distances_for_token) != 2:
+                    #         token_only = [ sorted_distances_for_token[i][0] for i in range(len(sorted_distances_for_token))]
+                    #         similarity_only =  [ sorted_distances_for_token[i][1] for i in range(len(sorted_distances_for_token))]
+                    #     else:
+                    #         token_only = sorted_distances_for_token[0]
+                    #         similarity_only = sorted_distances_for_token[1]
+                            
+                    #     arr = np.flip(similarity_only)
+                    #     index = np.searchsorted(arr, similarity)
+                    #     index = len(arr) - index
+                    #     close_tokens = token_only[:index]
+                    #     close_similarities = similarity_only[:index]
+                    #     if len(close_tokens) == 0:
+                    #         continue
+                    #     unnormalized_probabilities = np.exp(exp_factor * np.array(close_similarities))
+                    #     total_unnormalized_prob = np.sum(unnormalized_probabilities)
+                    #     probabilities = unnormalized_probabilities / total_unnormalized_prob
+                    #     selected_token = np.random.choice(close_tokens, p=probabilities)
+                    #     new_tokens.append(selected_token)
+                    
+                    
                     for origin_token in tokens:
-                        if origin_token[0] == ' ':
-                            origin_token = origin_token[1:]
+                        if origin_token in [self.args.tokenizer.pad_token, self.args.tokenizer.eos_token]:
+                            new_tokens.append(origin_token)
+                            continue
+                        if(origin_token.isnumeric()):
+                            if self.args.dataset in ['MATH','GMS8K']:
+                                new_tokens.append(str(random.randint(1, 1000)))
+                            else:
+                                new_tokens.append(origin_token)
+                            continue
+                        if(origin_token[0]==' '):
+                            origin_token=origin_token[1:]
                         origin_embed = self.token_to_vector_dict.get(origin_token, None)
                         if origin_embed is None:
                             new_tokens.append(origin_token)
                             continue
                         noise_embed = add_laplace_noise_to_vector(origin_embed, self.args.epsilon, self.delta_f)
-                        similarity = cosine_similarity_vectors(origin_embed, noise_embed)
+                        distance = np.linalg.norm(origin_embed - noise_embed)
                         sorted_distances_for_token = self.sorted_similarities.get(origin_token, None)
                         if sorted_distances_for_token is None:
+                            new_tokens.append(origin_token)
                             continue
-                        token_only = sorted_distances_for_token[0]
-                        similarity_only = sorted_distances_for_token[1]
-                        arr = np.flip(similarity_only)
-                        index = np.searchsorted(arr, similarity)
-                        index = len(arr) - index
-                        close_tokens = token_only[:index]
-                        close_similarities = similarity_only[:index]
-                        if len(close_tokens) == 0:
+                        
+                        if len(sorted_distances_for_token) == 2:
+                            sorted_distances_for_token = [
+                                [sorted_distances_for_token[0][i],sorted_distances_for_token[1][i]] for i in range(len(sorted_distances_for_token[0]))
+                                ]
+                       
+                        distances_only = np.array([item[1] for item in sorted_distances_for_token])
+                        index = np.searchsorted(distances_only, distance)
+                        close_tokens = [item[0] for item in sorted_distances_for_token[:index] ]
+                        close_distances = np.array([item[1] for item in sorted_distances_for_token[:index]])
+                        if not close_tokens:
+                            new_tokens.append(origin_token)
                             continue
-                        unnormalized_probabilities = np.exp(exp_factor * np.array(close_similarities))
+                        unnormalized_probabilities = np.exp(exp_factor * ((distance-close_distances)/distance))
                         total_unnormalized_prob = np.sum(unnormalized_probabilities)
                         probabilities = unnormalized_probabilities / total_unnormalized_prob
                         selected_token = np.random.choice(close_tokens, p=probabilities)
-                        new_tokens.append(selected_token)
+                        new_tokens.append(selected_token)   
+                        # print(f"{origin_token} -- {selected_token}")
+                        
                     new_token_ids = self.args.tokenizer.convert_tokens_to_ids(new_tokens)
                     # sentence = self.args.tokenizer.decode(new_token_ids)
+                    # print('Origin:',self.args.tokenizer.decode(original_input_ids,skip_special_tokens=True))
+                    # print( len(original_input_ids) )
                     # print('after:',sentence)
+                    # print(len(new_token_ids))
+                    # assert 1>2
                     new_input_ids.append(torch.tensor(new_token_ids))
+                    
                 new_input_ids = torch.stack(new_input_ids) # [bs, seq_len]
                 self.local_data_input['input_ids'] = new_input_ids.to(input_device)
+                
         ######### Defense Applied on Text Input ###########
         
         # collect processed labels (only in some cases)
@@ -865,9 +1046,9 @@ class PassiveParty_LLM(Party_LLM):
         decode_input = [self.decode_template.format(prefix=original_prompt[_i] ,perturbed_answer=pertrubed_answer[_i])\
             for _i in range(len(original_prompt))]
         
-        print('===============')
-        print('Extraction Input:')
-        print(decode_input)
+        # print('===============')
+        # print('Extraction Input:')
+        # print(decode_input)
         
         
         decode_input = self.decode_model_tokenizer(decode_input,return_tensors='pt')
@@ -878,10 +1059,10 @@ class PassiveParty_LLM(Party_LLM):
         
         # convert to token ids correspond to self.args.tokenizer
         extracted_answer = self.args.tokenizer(extracted_answer_txt)['input_ids']
-        extracted_answer_txt = self.args.tokenizer.decode(extracted_answer)
-        print('----------------')
-        print('Extraction Output:')
-        print(extracted_answer_txt)
+        # extracted_answer_txt = self.args.tokenizer.decode(extracted_answer)
+        # print('----------------')
+        # print('Extraction Output:')
+        # print(extracted_answer_txt)
         
         extracted_answer = torch.tensor(extracted_answer).unsqueeze(0)
         
@@ -900,13 +1081,14 @@ class PassiveParty_LLM(Party_LLM):
             
         if self.args.vfl_model_slice_num == 3 and self.args.apply_snd and self.index in self.args.defense_configs["party"]:
             # print('3-slice Passive Party Denoise:')
-            # resp['denoise_mod'] = self.denoise_mod
-            # resp['snd_noise'] = self.snd_noise
-            # resp['original_embedding'] = self.output_tensors[0]
-            origin_device = resp['inputs_embeds'].device
-            received_pred = resp['inputs_embeds']
-            resp['inputs_embeds'] = self.denoise_mod(self.output_tensors[0], self.snd_noise, \
-                received_pred, self.local_data_input['attention_mask']).to(origin_device)
+            resp['denoise_mod'] = self.denoise_mod
+            resp['snd_noise'] = self.snd_noise
+            resp['original_embedding'] = self.output_tensors[0]
+            
+            # origin_device = resp['inputs_embeds'].device
+            # received_pred = resp['inputs_embeds']
+            # resp['inputs_embeds'] = self.denoise_mod(self.output_tensors[0], self.snd_noise, \
+            #     received_pred, self.local_data_input['attention_mask']).to(origin_device)
         ######### Defense Applied on Local Model Tail Prediction Process ###########
         return self.forward(2, **resp)
 

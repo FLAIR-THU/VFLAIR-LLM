@@ -39,7 +39,7 @@
             "device_map": "balanced_low_0"
         },
         "0": {
-            "path": "/home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B",
+            "path": "/data/guzx0/Models/meta-mathMetaMath-Mistral-7B",
                 "head":{
                     "trainable": 0,
                     "embedding_trainable": 0,
@@ -48,7 +48,7 @@
                 }
         },
         "1": {
-                "path": "/home/DAIR/guzx/Git_FedProject/Models/meta-mathMetaMath-Mistral-7B",
+                "path": "/data/guzx0/Models/meta-mathMetaMath-Mistral-7B",
                 "tail":{
                     "trainable": 0,
                     "head_layer_trainable": 0,
@@ -73,7 +73,7 @@
         "name": "CusText",
         "parameters": {
             "party": [0],
-            "epsilon": 1,
+            "epsilon": 0.1,
             "topk": 100
         }
     
@@ -116,6 +116,49 @@
                 "lr": 0.005,
                 "epochs": 500,
                 "batch_size": 1,
+                "attack_sample_num":100
+            }
+        },
+        "3":{
+            "name": "BiSR",
+          "parameters": {
+              "party": [1],
+              "attacker_model_name": "NaMoE",
+              "expert_scales": [0, 10.0, 7.5, 5.0],
+              "expert_epoch": 20,
+              "gate_epoch": 15,
+              "full_epoch": 4,
+              "phase1_lr":0.001,
+              "lr": 0.01,
+              "batch_size": 6,
+              "epochs": 100,
+              "auxiliary_data_num": 100,
+              "attack_seed": 1,
+              "attack_sample_num": 100
+          }
+        },
+        "4":{
+            "name": "VanillaModelInversion_WhiteBox",
+            "parameters": {
+                "party": [1],
+                "loss_type":"cross_entropy",
+                "lr": 0.01,
+                "epochs": 100,
+                "batch_size": 1,
+                "attack_seed": 1,
+                "attack_sample_num": 100
+            }
+        },
+        "5":{
+            "name": "WhiteBoxInversion",
+            "parameters": {
+                "party": [1],
+                "loss_type":"cross_entropy",
+                "T": 0.05,
+                "lr": 0.005,
+                "epochs": 500,
+                "batch_size": 1,
+                "attack_seed": 1,
                 "attack_sample_num":100
             }
         }

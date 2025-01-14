@@ -214,8 +214,7 @@ def create_main_task(global_model_type: GenerationMixin):
                             "bert-base-uncased": 2.5,
                             "bert-large-uncased": 2.5,
                             "textattackbert-base-uncased-SST-2": 2.5,
-                            
-                            "meta-mathMetaMath-Mistral-7B": 4
+                            "meta-mathMetaMath-Mistral-7B": 2
                         }
                         def get_embeddings(input_ids, attention_mask, args, decoder_start_token=None, mode="train"):
                             '''
@@ -243,23 +242,18 @@ def create_main_task(global_model_type: GenerationMixin):
                             def get_cls_embedding(outputs,attention_mask,args):
                                 
                                 if args.vfl_model_slice_num == 2:
-                                    # if args.model_type =="Bert":
-                                    #     cls_embs = outputs.logits
-                                    #     # self.parties[-1].global_model.bert.pooled_output
-                                    # else:
                                     cls_embs = outputs.logits
-                                    print('get cls_embs logits:',cls_embs.shape)
                                     return cls_embs
                                 else:
-                                    cls_embs = outputs['inputs_embeds']
-                                    # if args.model_type =="Bert":
-                                    #     cls_embs = outputs['inputs_embeds']
-                                    #     # cls_embs = self.parties[0].local_model_tail.bert.base_model_tail_output
+                                    if args.model_type =="Bert":
+                                        cls_embs = self.parties[0].local_model_tail.bert.base_model_tail_output
+                                    else:
+                                        cls_embs = outputs['inputs_embeds']
                                     # elif args.model_type in ["GPT2","Mistral"]:
                                     #     cls_embs = self.parties[0].local_model_tail.model.base_model_tail_output
                                     # else:
                                     #     assert 1>2, f"{args.model_type} not supported"
-                                    # print('get cls_embs:',cls_embs.shape)
+                                    # print('3slice get cls_embs:',cls_embs.shape)
                                     return cls_embs
                             
                             if args.vfl_model_slice_num == 2:
@@ -276,17 +270,19 @@ def create_main_task(global_model_type: GenerationMixin):
                                     clean_input_dict = {'inputs_embeds':init_emb, 'attention_mask':attention_mask}
                                     outputs = self.parties[-1].forward(1, defense_party_id, **clean_input_dict)
                                     # outputs = self.parties[-1].output_tensors[1] #self.parties[0].forward(2, **resp)
+                                    self.parties[0].forward(2, **outputs)
                                     clean_cls_embs = get_cls_embedding(outputs, attention_mask, args)
                                 with torch.no_grad():
                                     noise_input_dict = {'inputs_embeds':noise_init_emb, 'attention_mask':attention_mask}
                                     noise_outputs = self.parties[-1].forward(1, defense_party_id, **noise_input_dict)
                                     # noise_outputs = self.parties[-1].output_tensors[1] #self.parties[0].forward(2, **resp)
+                                    self.parties[0].forward(2, **noise_outputs)
                                     noise_cls_embs = get_cls_embedding(noise_outputs, attention_mask, args)
                             return noises, clean_cls_embs, noise_cls_embs, init_emb
 
                         #### train denoise model
                         print('Train Denoise Model Into: ',self.parties[defense_party_id].denoise_model_path)
-                        denoise_optimizer = torch.optim.Adam(self.parties[defense_party_id].denoise_mod.parameters(), lr=0.0001)
+                        denoise_optimizer = torch.optim.Adam(self.parties[defense_party_id].denoise_mod.parameters(), lr=self.args.defense_configs['denoise_lr'])
                         denoise_dataloader = DataLoader(self.parties[defense_party_id].train_dst, batch_size=self.args.batch_size, shuffle=False, num_workers=0, drop_last=True)
                         epoch_pbar = tqdm(range(self.args.denoise_epoch), desc="Epochs")
                         decoder_start_token = None
@@ -314,14 +310,14 @@ def create_main_task(global_model_type: GenerationMixin):
                                     
                                     loss_fn = nn.MSELoss()
                                     loss = loss_fn(y_pred, clean_cls_emb)
-                                    
                                     loss.backward() 
                                     denoise_optimizer.step()
 
-                                    if i % 50 == 0:
-                                        print(f'-- epoch {epoch} batch {i}, latest loss {loss.item()}')
+                                    # if i % 50 == 0:
+                                    #     print(f'-- epoch {epoch} batch {i}, latest loss {loss.item()}')
+                            print(f'Epoch {epoch}, latest loss {loss.item()}')
                         epoch_pbar.set_description(f"Denoise Model Training Completed Epoch {epoch+1}")             
-                        print(f'Finished epoch {epoch}, latest loss {loss.item()}')
+                        # print(f'Finished epoch {epoch}, latest loss {loss.item()}')
                         torch.save(self.parties[defense_party_id].denoise_mod.state_dict(), self.parties[defense_party_id].denoise_model_path)
                         
         @property
@@ -575,8 +571,6 @@ def create_main_task(global_model_type: GenerationMixin):
                             party_global_output = self.forward(**data_input_list[party_id])
                             batch_predict_label, batch_actual_label, sample_cnt = self.generate_result(party_global_output,
                                                                                             self.gt_one_hot_label[party_id])
-                            # print('batch_predict_label:',batch_predict_label,batch_predict_label[0].device)
-                            # print('batch_actual_label:',batch_actual_label,batch_actual_label[0].device)
                             
                             predict_label_list.extend(batch_predict_label) # [torch.tensor(class), ...]
                             actual_label_list.extend(batch_actual_label) # [torch.tensor(class), ...]
@@ -620,11 +614,13 @@ def create_main_task(global_model_type: GenerationMixin):
                                     # extracted_answer = self.args.tokenizer.batch_decode(party_generation_output)
                                     # print('extracted_answer:',type(extracted_answer),len(extracted_answer))
                                     # print(extracted_answer)
+                                
                             else:  # next token prediction
                                 party_generation_output = self.forward(**data_input_list[party_id])
                             
                             self._clear_past_key_values()
                             batch_target_word, batch_predict_word, sample_cnt = self.generate_result(party_generation_output, self.gt_one_hot_label[party_id])
+                            
                             target_word_list.extend(batch_target_word)
                             predict_word_list.extend(batch_predict_word)
                             if sample_cnt is not None:
@@ -809,32 +805,57 @@ def create_main_task(global_model_type: GenerationMixin):
                     
                     else: # normal generation tasks
                         if self.args.max_new_tokens>1: # long text generation, not next token prediction   
+                            print('predict_word_list:',len(predict_word_list),predict_word_list[0].shape,predict_word_list[1].shape)
+                            from rouge import Rouge 
+                            rouger = Rouge()
                             def calculate_token_precision_recall(reference_ids, candidate_ids):
-                                reference_ids = reference_ids.tolist()
-                                candidate_ids = candidate_ids.tolist()
+                                '''
+                                reference_ids: [answer_len]
+                                candidate_ids: [answer_len]
+                                '''
+                                reference_text = self.args.tokenizer.decode(reference_ids,skip_special_tokens=True)
+                                candidate_text = self.args.tokenizer.decode(candidate_ids,skip_special_tokens=True)
 
-                                def wash(ids, target_token_id):
-                                    while(target_token_id in ids):
-                                        ids.remove(target_token_id)
-                                    return ids
+                                # if len(candidate_ids) == 1:
+                                #     print(candidate_ids.shape)
+                                #     print(candidate_text)
+                                #     assert 1>2
+                                # Rouge-2 Recall: can be user-defined here
+                                try:
+                                    rouge_result = rouger.get_scores(candidate_text, reference_text)
+                                    score = rouge_result[0]['rouge-2']['r']
+                                except:
+                                    # print('reference_text:',reference_ids.shape,reference_text)
+                                    # print('candidate_text:',candidate_ids.shape,candidate_text)
+                                    score = 0
+                                # print('reference_text:',reference_ids.shape,reference_text)
+                                # print('candidate_text:',candidate_ids.shape,candidate_text)
+                                # print('score:',score)
                                 
-                                reference_ids = wash(reference_ids, self.args.tokenizer.pad_token_id)
-                                reference_ids = wash(reference_ids, self.args.tokenizer.eos_token_id)
+                                # reference_ids = reference_ids.tolist()
+                                # candidate_ids = candidate_ids.tolist()
 
-                                reference_tokens = [self.args.tokenizer.convert_ids_to_tokens(reference_ids)]
-                                candidate_tokens = self.args.tokenizer.convert_ids_to_tokens(candidate_ids)
+                                # def wash(ids, target_token_id):
+                                #     while(target_token_id in ids):
+                                #         ids.remove(target_token_id)
+                                #     return ids
+                                
+                                # reference_ids = wash(reference_ids, self.args.tokenizer.pad_token_id)
+                                # reference_ids = wash(reference_ids, self.args.tokenizer.eos_token_id)
+
+                                # reference_tokens = [self.args.tokenizer.convert_ids_to_tokens(reference_ids)]
+                                # candidate_tokens = self.args.tokenizer.convert_ids_to_tokens(candidate_ids)
                                 
 
-                                score = sentence_bleu(reference_tokens, candidate_tokens)
+                                # score = sentence_bleu(reference_tokens, candidate_tokens)
 
-                                print('Reference_tokens:',reference_tokens)
-                                print('-'*25)
-                                print('Candidate_tokens',candidate_tokens)
-                                print('Score:',score)
-                                print('='*50)
+                                # print('Reference_tokens:',reference_tokens)
+                                # print('-'*25)
+                                # print('Candidate_tokens',candidate_tokens)
+                                # print('Score:',score)
+                                # print('='*50)
                                 return score
                             
-
                             score = 0
                             for i in range(len(target_word_list)):
                                 _score = calculate_token_precision_recall(target_word_list[i], predict_word_list[i])
@@ -970,7 +991,7 @@ def create_main_task(global_model_type: GenerationMixin):
 
             elif self.args.model_architect == 'CLM':  # .task_type == "CausalLM":
                 if self.args.task_type == "CausalLM":  # dataset == "Lambada":
-                    if isinstance(model_output, torch.Tensor):  # generation -- generated token ids
+                    if isinstance(model_output, torch.Tensor): 
                         predict_label_list = model_output # [bs, max_new_tokens]
                         target_label_list = list(gt_one_hot_label)
 
@@ -1238,17 +1259,10 @@ def create_main_task(global_model_type: GenerationMixin):
             self.eval()
             predict_word_list, target_word_list, total_sample_cnt = self.predict()
 
-            # print('causal_lm_inference target_word_list:',target_word_list)
-            # print('causal_lm_inference predict_word_list:',predict_word_list)
-
-            # try:
             result_dict = self.generate_assessment(predict_word_list, target_word_list)
             self.test_acc = result_dict['acc']
             exp_result = f'|test_acc={self.test_acc}'
-            # print(exp_result)
             return exp_result, self.test_acc
-            # except:
-            #     return '',0
 
         def qa_inference(self):
             # generate all model prediction

@@ -49,7 +49,6 @@ from utils.basic_functions import get_class_i, get_labeled_data, fetch_data_and_
 from utils.cora_utils import *
 from utils.graph_functions import load_data1, split_graph
 
-
 DATA_PATH = '../../../share_dataset/'
 # DATA_PATH = '/shared/data/'
 
@@ -1654,14 +1653,14 @@ def load_dataset_per_party_llm(args, index):
             train_set_file = DATA_PATH + 'SST-2/train.tsv'
             test_set_file = DATA_PATH + 'SST-2/dev.tsv'
         df = pd.read_csv(train_set_file, delimiter='\t')  # names=[  'sentence','label'] , names=['label', 'sentence']
-        sentences = df.sentence.values[:10]
-        labels = df.label.values[:10]
+        sentences = df.sentence.values[:2000]
+        labels = df.label.values[:2000]
         X_train = np.array(sentences)
         y_train = np.array([int(_label) for _label in labels])
 
         df = pd.read_csv(test_set_file, delimiter='\t')  # names=[  'sentence','label']
-        sentences = df.sentence.values[:10]
-        labels = df.label.values[:10]
+        sentences = df.sentence.values[:100]
+        labels = df.label.values[:100]
         X_test = np.array(sentences)
         y_test = np.array([int(_label) for _label in labels])
         # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=args.current_seed)
@@ -2216,12 +2215,37 @@ def load_dataset_per_party_llm(args, index):
         print('y', type(y_train), len(y_train), len(y_test), y_train[0])  #
 
     elif args.dataset == 'Alpaca':
-        data_path = DATA_PATH + '/alpaca/alpaca_data.json'
+        data_path = DATA_PATH+"alpaca/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet"
+        list_data_dict = pd.read_parquet(data_path)
+        list_data_dict = [
+            {key: value for key, value in row.items() if pd.notna(value)} 
+            for row in list_data_dict.to_dict(orient="records")
+        ]
+        
+        # data_path = DATA_PATH + '/alpaca/alpaca_data.json'
+        # def _make_r_io_base(f, mode: str):
+        #     if not isinstance(f, io.IOBase):
+        #         f = open(f, mode=mode)
+        #     return f
+
+        # def jload(f, mode="r"):
+            # """Load a .json file into a dictionary."""
+            # f = _make_r_io_base(f, mode)
+            # jdict = json.load(f)
+            # f.close()
+            # return jdict
+
+        # list_data_dict = jload(data_path)
+     
         DEFAULT_PAD_TOKEN = "[PAD]"
         DEFAULT_EOS_TOKEN = "</s>"
         DEFAULT_BOS_TOKEN = "<s>"
         DEFAULT_UNK_TOKEN = "<unk>"
-        IGNORE_INDEX = args.tokenizer.pad_token_id  # -100
+        IGNORE_INDEX = -100
+        args.tokenizer.eos_token = DEFAULT_EOS_TOKEN
+        args.tokenizer.pad_token = DEFAULT_PAD_TOKEN
+        args.tokenizer.bos_token = DEFAULT_BOS_TOKEN
+
         PROMPT_DICT = {
             "prompt_input": (
                 "Below is an instruction that describes a task, paired with an input that provides further context. "
@@ -2234,33 +2258,24 @@ def load_dataset_per_party_llm(args, index):
                 "### Instruction:\n{instruction}\n\n### Response:"
             ),
         }
-
-        def _make_r_io_base(f, mode: str):
-            if not isinstance(f, io.IOBase):
-                f = open(f, mode=mode)
-            return f
-
-        def jload(f, mode="r"):
-            """Load a .json file into a dictionary."""
-            f = _make_r_io_base(f, mode)
-            jdict = json.load(f)
-            f.close()
-            return jdict
-
-        list_data_dict = jload(data_path)
-
         prompt_input, prompt_no_input = PROMPT_DICT["prompt_input"], PROMPT_DICT["prompt_no_input"]
+        
         sources = [
             prompt_input.format_map(example) if example.get("input", "") != "" else prompt_no_input.format_map(example)
             for example in list_data_dict
-        ]  # instructions
-        # targets = [f"{example['output']}{args.tokenizer.eos_token}" for example in list_data_dict] # local
-        targets = [f"{example['output']}" for example in list_data_dict]  # local
+        ]
+        targets = [f"{example['output']}{args.tokenizer.eos_token}" for example in list_data_dict]
 
-        X_data = sources[:50] # list of instruction text
-        y_data = targets[:50] # list of answer text
+        # sources = [
+        #     prompt_input.format_map(example) if example.get("input", "") != "" else prompt_no_input.format_map(example)
+        #     for example in list_data_dict
+        # ]  
+        # targets = [f"{example['output']}" for example in list_data_dict]  
 
-        X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.1,
+        X_data = sources[:] # list of instruction text
+        y_data = targets[:] # list of answer text
+
+        X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.05,
                                                             random_state=args.current_seed)
 
         print('train data:', len(X_train), len(y_train))
@@ -2268,13 +2283,80 @@ def load_dataset_per_party_llm(args, index):
 
         train_dst = (X_train, y_train)
         test_dst = (X_test, y_test)
+    
+    elif args.dataset == 'Alpaca-test':
+        data_path = DATA_PATH+"alpaca/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet"
+        list_data_dict = pd.read_parquet(data_path)
+        list_data_dict = [
+            {key: value for key, value in row.items() if pd.notna(value)} 
+            for row in list_data_dict.to_dict(orient="records")
+        ]
+        
+        # data_path = DATA_PATH + '/alpaca/alpaca_data.json'
+        # def _make_r_io_base(f, mode: str):
+        #     if not isinstance(f, io.IOBase):
+        #         f = open(f, mode=mode)
+        #     return f
 
-        # input_ids, labels = tuple([instance[key] for instance in instances] for key in ("input_ids", "labels"))
-        # input_ids = torch.nn.utils.rnn.pad_sequence(
-        #     input_ids, batch_first=True, padding_value=args.tokenizer.pad_token_id
-        # )
-        # labels = torch.nn.utils.rnn.pad_sequence(labels, batch_first=True, padding_value=IGNORE_INDEX)
+        # def jload(f, mode="r"):
+            # """Load a .json file into a dictionary."""
+            # f = _make_r_io_base(f, mode)
+            # jdict = json.load(f)
+            # f.close()
+            # return jdict
 
+        # list_data_dict = jload(data_path)
+     
+        DEFAULT_PAD_TOKEN = "[PAD]"
+        DEFAULT_EOS_TOKEN = "</s>"
+        DEFAULT_BOS_TOKEN = "<s>"
+        DEFAULT_UNK_TOKEN = "<unk>"
+        IGNORE_INDEX = -100
+        args.tokenizer.eos_token = DEFAULT_EOS_TOKEN
+        args.tokenizer.pad_token = DEFAULT_PAD_TOKEN
+        args.tokenizer.bos_token = DEFAULT_BOS_TOKEN
+
+        PROMPT_DICT = {
+            "prompt_input": (
+                "Below is an instruction that describes a task, paired with an input that provides further context. "
+                "Write a response that appropriately completes the request.\n\n"
+                "### Instruction:\n{instruction}\n\n### Input:\n{input}\n\n### Response:"
+            ),
+            "prompt_no_input": (
+                "Below is an instruction that describes a task. "
+                "Write a response that appropriately completes the request.\n\n"
+                "### Instruction:\n{instruction}\n\n### Response:"
+            ),
+        }
+        prompt_input, prompt_no_input = PROMPT_DICT["prompt_input"], PROMPT_DICT["prompt_no_input"]
+        
+        sources = [
+            prompt_input.format_map(example) if example.get("input", "") != "" else prompt_no_input.format_map(example)
+            for example in list_data_dict
+        ]
+        targets = [f"{example['output']}{args.tokenizer.eos_token}" for example in list_data_dict]
+
+        # sources = [
+        #     prompt_input.format_map(example) if example.get("input", "") != "" else prompt_no_input.format_map(example)
+        #     for example in list_data_dict
+        # ]  
+        # targets = [f"{example['output']}" for example in list_data_dict]  
+
+        X_data = sources[:2000] # list of instruction text
+        y_data = targets[:2000] # list of answer text
+
+        X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.05,
+                                                            random_state=args.current_seed)
+
+        test_num = 100
+        X_test = X_test[:test_num]
+        y_test = y_test[:test_num]
+        print('train data:', len(X_train), len(y_train))
+        print('test data:', len(X_test), len(y_test))
+
+        train_dst = (X_train, y_train)
+        test_dst = (X_test, y_test)
+      
     elif args.dataset == 'CodeAlpaca':
         data_path = DATA_PATH + '/CodeAlpaca-20k/code_alpaca_20k.json'
         DEFAULT_PAD_TOKEN = "[PAD]"
@@ -2317,8 +2399,8 @@ def load_dataset_per_party_llm(args, index):
         # targets = [f"{example['output']}{args.tokenizer.eos_token}" for example in list_data_dict] # local
         targets = [f"{example['output']}" for example in list_data_dict]  # local
 
-        X_data = sources # list of instruction text
-        y_data = targets # list of answer text
+        X_data = sources[:] # list of instruction text
+        y_data = targets[:] # list of answer text
 
         X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.1,
                                                             random_state=args.current_seed)
@@ -2329,6 +2411,65 @@ def load_dataset_per_party_llm(args, index):
         train_dst = (X_train, y_train)
         test_dst = (X_test, y_test)
 
+    elif args.dataset == 'CNNDailyMail':
+        data_path = DATA_PATH + '/cnn_dailymails/3.0.0/'
+        
+        train_df = pd.read_parquet(data_path+'test-00000-of-00001.parquet')
+        print('train_df:',len(train_df))
+        X_train = np.array(train_df['article'])[:10]
+        y_train = np.array(train_df['highlights'])[:10]
+        
+        test_df = pd.read_parquet(data_path+'test-00000-of-00001.parquet')
+        print('train_df:',len(train_df))
+        X_test = np.array(test_df['article'])[:10]
+        y_test = np.array(test_df['highlights'])[:10]
+        
+        print('train data:', len(X_train), len(y_train))
+        print('test data:', len(X_test), len(y_test))
+
+        train_dst = (X_train, y_train)
+        test_dst = (X_test, y_test)
+
+        
+    # elif args.dataset == 'HellaSwag':
+    #     from utils.hellaswag_utils import *
+    #     data_path = DATA_PATH + '/hellaswag/'
+    #     examples = {'train': [], 'test': []} # 'val': [], 
+        
+    #     train_examples = []
+    #     with open(data_path+f'/hellaswag_train.jsonl', 'r') as f:
+    #         for l in f:
+    #             item = json.loads(l)
+    #             for possible_ending in item['endings']:
+    #                 train_examples.append(
+    #                     dict(
+    #                         context = item['ctx']+' '+possible_ending,  
+    #                         label = item['label']  
+    #                     )
+    #             )
+        
+    #     test_examples = []
+    #     with open(data_path+f'/hellaswag_test.jsonl', 'r') as f:
+    #         for l in f:
+    #             item = json.loads(l)
+    #             for possible_ending in item['endings']:
+    #                 test_examples.append(
+    #                     dict(
+    #                         context = item['ctx'],  
+    #                         label = item['label']  
+    #                     )
+    #             )
+        
+    #     test_examples = examples['test'][:2]
+    #     context = item['ctx']  # Use 'ctx' field as context
+    #     endings = item['endings']  # Possible endings
+    #     correct_end = item['label']  # Correct answer index is in 'label' field
+
+    #     print('train_examples:',train_examples[0])
+    #     print('test_examples:',test_examples[0])
+    #     assert 1>2
+        
+       
     elif args.dataset == 'GMS8K':
         data_path = DATA_PATH + '/GMS8K/'
         train_set_file, test_set_file = get_dataset_path(args.model_list[str(index)])

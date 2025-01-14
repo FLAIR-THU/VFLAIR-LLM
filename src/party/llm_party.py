@@ -180,11 +180,6 @@ class Party(object):
         self.test_data, self.test_label = test_dst
        
     def prepare_data_loader(self, need_auxiliary=0, **kwargs):
-        # self.train_loader = DataLoader(self.train_dst, batch_size=batch_size) # , 
-        # self.test_loader = DataLoader(self.test_dst, batch_size=batch_size) # , shuffle=True ,collate_fn=my_collate
-        # if self.args.need_auxiliary == 1 and self.aux_dst != None:
-        #     self.aux_loader = DataLoader(self.aux_dst, batch_size=batch_size)
-
         batch_size = self.args.batch_size
         test_batch_size = self.args.test_batch_size
         self.train_loader = DataLoader(self.train_dst, batch_size=batch_size, collate_fn=lambda x: x)  # ,

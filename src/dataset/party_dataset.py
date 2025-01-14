@@ -43,6 +43,7 @@ class PassiveDataset_LLM(Dataset):
         self.input_dicts = []
 
         if args.task_type == 'SequenceClassification':
+            texts = np.array(texts)
             for _text in texts:
                 if len(texts.shape) == 1:  # input: single sentence
                     if args.padding != "do_not_pad" and args.padding_type == "inside":  # [PAD] between [CLS][SEP]
@@ -785,29 +786,14 @@ class AlpacaDataset_LLM(Dataset):
 
         def _tokenize_fn(strings: Sequence[str], tokenizer) -> Dict:
             """Tokenize a list of strings."""
-
+                
             if split_name == 'train':
                 tokenized_list = [
-                    tokenizer(
-                        text,
-                        return_tensors="pt",
-                        padding=args.padding,  # "longest",
-                        max_length=args.max_length,  # tokenizer.model_max_length,
-                        truncation=args.truncation,  # True,
-                    )
-                    for text in strings
-                ]
+                    tokenizer(text, return_tensors="pt",
+                        padding=args.padding, max_length=args.max_length,  truncation=args.truncation)
+                    for text in strings]
             else:
-                tokenized_list = [
-                    tokenizer(
-                        text,
-                        return_tensors="pt",
-                        # padding=args.padding,  # "longest",
-                        # max_length=args.max_length,  # tokenizer.model_max_length,
-                        # truncation=args.truncation,  # True,
-                    )
-                    for text in strings
-                ]
+                tokenized_list = [tokenizer(text,return_tensors="pt") for text in strings]
 
 
             input_ids = labels = [tokenized.input_ids[0] for tokenized in tokenized_list]
@@ -833,44 +819,47 @@ class AlpacaDataset_LLM(Dataset):
             """Preprocess the data by tokenizing."""
             if split_name == 'train':
                 examples = [s + t for s, t in zip(sources, targets)]
-                examples_tokenized, targets_tokenized = [_tokenize_fn(strings, tokenizer) for strings in
-                                                         (examples, targets)]
-
+                examples_tokenized = _tokenize_fn(examples, tokenizer) # prompt+ans
+                prompt_tokenized = _tokenize_fn(sources, tokenizer) # ans
+                sources_tokenized = _tokenize_fn(targets, tokenizer) # ans
+                
                 input_ids = examples_tokenized["input_ids"]
                 attention_mask = examples_tokenized["attention_mask"]
-
+                
                 labels = copy.deepcopy(input_ids)
-                for label, target_len in zip(labels, targets_tokenized["input_ids_lens"]):
-                    label[:-target_len] = IGNORE_INDEX
+                # for label, source_len in zip(labels, sources_tokenized["input_ids_lens"]): # source_len:label length
+                #     label[:source_len] = IGNORE_INDEX
+                for label, source_len in zip(labels, prompt_tokenized["input_ids_lens"]): # source_len:label length
+                    label[:source_len] = IGNORE_INDEX
+                
             else:
                 inputs_tokenized, targets_tokenized = [_tokenize_fn(strings, tokenizer) for strings in
                                                        (sources, targets)]
                 input_ids = inputs_tokenized["input_ids"]
                 attention_mask = inputs_tokenized["attention_mask"]
                 labels = targets_tokenized["input_ids"]
-            # input_ids: prompt +  target
-            # label: masked_prompt + target
             return dict(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
 
         data_dict = preprocess(sources, targets, args.tokenizer)
 
         self.input_dicts = [
             {'input_ids': data_dict['input_ids'][i], 'attention_mask': data_dict['attention_mask'][i]}
-            for i in range(len(data_dict['input_ids']))
-        ]  # list of input_dicts
-        self.labels = data_dict["labels"]  # list of tensor(labels)
+            for i in range(len(data_dict['input_ids'])) ] 
+        self.labels = data_dict["labels"]  
 
-        # print(f'=== Dataset Split = {split_name} ===')
-        # print('text:',self.input_dicts[0]['input_ids'].shape, self.args.tokenizer.decode(self.input_dicts[0]['input_ids']))
-        # print('-'*25)
-        # print('label:',self.labels[0].shape, self.args.tokenizer.decode(self.labels[0]))
-        # print('='*50)
+        # if split_name == 'train':
+        #     print(f'=== Dataset Split = {split_name} ===')
+        #     for i in [0]:
+        #         print('text:',self.input_dicts[i]['input_ids'].shape, self.args.tokenizer.decode(self.input_dicts[i]['input_ids'], skip_special_tokens=True))
+        #         print('-'*25)
+        #         print('label:',self.labels[i].shape, self.args.tokenizer.decode(self.labels[i],skip_special_tokens=True))
+        #         print('='*50)
+        #     assert 1>2
 
     def __len__(self):
         return len(self.labels)
 
     def __getitem__(self, item_idx):
-
         input_dict = self.input_dicts[item_idx]
 
         for key_name in input_dict.keys():
@@ -887,6 +876,77 @@ class AlpacaDataset_LLM(Dataset):
                 bos_tensor = torch.tensor( [self.args.tokenizer.bos_token_id] ).to(input_dict['input_ids'].device)
                 # input_dict['decoder_input_ids'] = torch.cat((bos_tensor, input_dict['input_ids'][1:]), dim=0)
                 input_dict['decoder_input_ids'] = bos_tensor
+        
+        label = torch.tensor(self.labels[item_idx]).squeeze().to(self.args.device)
+        
+        return input_dict, label
+
+
+class CNNDailyMailDataset(Dataset):
+    def __init__(self, args, articles, highlights, split_name='train'):
+        self.args = args
+        self.split_name = split_name
+        
+        prompt_template = """Generate a summarization of the provided ducument.\n## Document: {article}\n## Summarization: """
+        # prompt_template = """Generate a summarization of the provided ducument.\n## Document: {article}\n## Summarization: {highlight}"""
+        
+        if split_name == 'train':
+            self.input_dicts = []
+            self.labels = []
+            for a,h in zip(articles,highlights):
+                article_input_text = prompt_template.format(article=a)
+                article_input_ids = self.args.tokenizer(article_input_text, return_tensors="pt").input_ids
+                article_len = article_input_ids.shape[-1]
+                print('article_input_ids:',article_input_ids.shape)
+                
+                highlight_input_ids = self.args.tokenizer(h, return_tensors="pt").input_ids
+                print('highlight_input_ids:',highlight_input_ids.shape)
+                
+                combined_input_ids = torch.cat((article_input_ids, highlight_input_ids), dim=1)
+                print('combined_input_ids:',combined_input_ids.shape)
+                
+                pad_length = max(0,args.max_length - combined_input_ids.shape[-1])
+                combined_input_ids = torch.nn.functional.pad(combined_input_ids, (0, pad_length), value=self.args.tokenizer.pad_token_id)
+                # combined_input_ids = torch.nn.utils.rnn.pad_sequence(combined_input_ids, batch_first=True, padding_value=self.args.tokenizer.pad_token_id)
+                attention_mask=combined_input_ids.ne(self.args.tokenizer.pad_token_id)
+                self.input_dicts.append(
+                    dict(input_ids = combined_input_ids, attention_mask = attention_mask)
+                )
+                
+                label_ids = copy.deepcopy(combined_input_ids)
+                label_ids[0,:article_len]=self.args.tokenizer.pad_token_id
+                pad_length = max(0,args.max_length - label_ids.shape[-1])
+                label_ids = torch.nn.functional.pad(label_ids, (0, pad_length), value=self.args.tokenizer.pad_token_id)
+                # label_ids = torch.nn.utils.rnn.pad_sequence(label_ids, batch_first=True, padding_value=self.args.tokenizer.pad_token_id)
+                self.labels.append(label_ids)
+                
+        else:
+            self.input_dicts = []
+            self.labels = []
+            for a,h in zip(articles,highlights):
+                input_text = prompt_template.format(article=a)
+                self.input_dicts.append( self.args.tokenizer(input_text, return_tensors="pt") )
+                self.labels.append( self.args.tokenizer(h, return_tensors="pt").input_ids )
+        
+        print(f'=== Dataset Split = {split_name} ===')
+        print(len(self.input_dicts),len(self.labels))
+        for i in range(2):
+            print('text:',self.input_dicts[i]['input_ids'].shape)
+            print(self.args.tokenizer.batch_decode(self.input_dicts[i]['input_ids']))
+            print('-'*25)
+            print('label:',self.labels[i].shape)
+            print(self.args.tokenizer.batch_decode(self.labels[i]))
+            print('='*50)
+        assert 1>2
+                
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, item_idx):
+        input_dict = self.input_dicts[item_idx]
+        for key_name in input_dict.keys():
+            if not isinstance( input_dict[key_name] , dict):
+                input_dict[key_name] = torch.tensor(input_dict[key_name]).squeeze().to(self.args.device)
         
         label = torch.tensor(self.labels[item_idx]).squeeze().to(self.args.device)
         return input_dict, label

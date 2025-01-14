@@ -2,7 +2,7 @@
     "epochs": 2,
     "lr": 0.0001,
     "k": 2,
-    "batch_size": 2,
+    "batch_size": 128,
     "pipeline": "pretrained",
     "model_architect":"CLS",
     "early_stop_threshold": 1,
@@ -35,7 +35,7 @@
         "kwargs_model_loading":{
         },
         "0": {
-          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
+          "path": "/data/guzx0/Models/textattackbert-base-uncased-SST-2",
 
             "head":{
                 "trainable": 0,
@@ -46,7 +46,7 @@
             
         },
         "1": {
-          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
+          "path": "/data/guzx0/Models/textattackbert-base-uncased-SST-2",
             "tail":{
                 "trainable": 0,
                 "head_layer_trainable": 0,
@@ -65,15 +65,14 @@
         "name": "SnD",
         "parameters": {
             "party": [0],
-            "denoise_model": "denoiseModelv3_2slice",
-            "denoise_epoch": 2,
-            "train_eta": 50,
+            "denoise_model": "MydenoiseModel_2slice",
+            "denoise_epoch": 20,
+            "denoise_lr": 0.0001,
+            "num_layers": 4,
+            "train_eta": 5,
             "d_ff": 1280,
             "noise_per_sample": 2,
-            "n_emb_block": 1,
-            "n_noise_block": 1,
             "num_heads": 8,
-            "num_layers": 6,
             "dropout": 0.2,
             "dim_head": 256,
             "att_pool": true,
@@ -82,7 +81,7 @@
   },
   "attack_list": {
     
-      "0":{
+      "1":{
             "name": "BiSR",
             "parameters": {
                 "party": [1],
@@ -99,7 +98,7 @@
                 "attack_sample_num": 100
             }
         },
-      "1":{
+      "0":{
           "name": "VanillaModelInversion_WhiteBox",
           "parameters": {
               "party": [1],

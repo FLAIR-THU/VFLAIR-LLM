@@ -70,6 +70,10 @@ class WhiteBoxInversion(Attacker):
 
     def attack(self):
         self.set_seed(self.args.current_seed)
+        if 'attack_seed' in self.args.attack_configs.keys():
+            attack_seed = self.args.attack_configs['attack_seed']
+            self.set_seed(attack_seed)
+        
         print_every = 1
 
         for attacker_ik in self.party: # attacker party #attacker_ik
@@ -118,6 +122,8 @@ class WhiteBoxInversion(Attacker):
                 attack_test_dataset = LambadaDataset_LLM(self.args, test_data, test_label, 'test')
             elif self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
                 attack_test_dataset = GSMDataset_LLM(self.args, test_data, test_label, 'test')
+            elif self.args.dataset in ['Alpaca']:
+                attack_test_dataset = AlpacaDataset_LLM(self.args, test_data, test_label, 'test')
             elif self.args.dataset == 'TextVQA' or self.args.dataset == 'TextVQA-test':
                 attack_test_dataset = TextVQADataset_train(self.args, test_data, test_label, vis_processor,'train')
             else:
