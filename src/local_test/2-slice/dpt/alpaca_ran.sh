@@ -6,35 +6,21 @@
 #SBATCH --mem 160000MB
 
 
-for seed in 60 61 62 63 64
+for seed in 61 62 63 64
     do
 
-    # 0.01
-    sed -i 's/"epsilon": 1/"epsilon": 0.01/g' ./configs/2-slice/dpt/alpaca_ran.json
-    python main_pipeline_llm.py --prefix "rantext_new" --seed $seed --configs 2-slice/dpt/alpaca_ran
-
-
-    # 0.1
-    sed -i 's/"epsilon": 0.01/"epsilon": 0.1/g' ./configs/2-slice/dpt/alpaca_ran.json
-    python main_pipeline_llm.py --prefix "rantext_new" --seed $seed --configs 2-slice/dpt/alpaca_ran
-
-    # 1
-    sed -i 's/"epsilon": 0.1/"epsilon": 1/g' ./configs/2-slice/dpt/alpaca_ran.json
-    python main_pipeline_llm.py --prefix "rantext_new" --seed $seed --configs 2-slice/dpt/alpaca_ran
-
-    # 3
-    sed -i 's/"epsilon": 1/"epsilon": 3/g' ./configs/2-slice/dpt/alpaca_ran.json
-    # python main_pipeline_llm.py --prefix "rantext_new" --seed $seed --configs 2-slice/dpt/alpaca_ran
-
-    # 5
-    sed -i 's/"epsilon": 3/"epsilon": 5/g' ./configs/2-slice/dpt/alpaca_ran.json
-    # python main_pipeline_llm.py --prefix "rantext_new" --seed $seed --configs 2-slice/dpt/alpaca_ran
-
     # 10
-    sed -i 's/"epsilon": 5/"epsilon": 10/g' ./configs/2-slice/dpt/alpaca_ran.json
-    # python main_pipeline_llm.py --prefix "rantext_new" --seed $seed --configs 2-slice/dpt/alpaca_ran
+    sed -i 's/"epsilon": 1/"epsilon": 10/g' ./configs/2-slice/dpt/alpaca_ran.json
+    python main_pipeline_llm.py --prefix "rantext" --seed $seed --configs 2-slice/dpt/alpaca_ran
 
+    # 15
+    sed -i 's/"epsilon": 10/"epsilon": 15/g' ./configs/2-slice/dpt/alpaca_ran.json
+    python main_pipeline_llm.py --prefix "rantext" --seed $seed --configs 2-slice/dpt/alpaca_ran
 
-    sed -i 's/"epsilon": 10/"epsilon": 1/g' ./configs/2-slice/dpt/alpaca_ran.json
+    # 100
+    sed -i 's/"epsilon": 15/"epsilon": 100/g' ./configs/2-slice/dpt/alpaca_ran.json
+    python main_pipeline_llm.py --prefix "rantext" --seed $seed --configs 2-slice/dpt/alpaca_ran
+
+    sed -i 's/"epsilon": 100/"epsilon": 1/g' ./configs/2-slice/dpt/alpaca_ran.json
 
 done

@@ -17,7 +17,7 @@
         }
     },
     "dataset":{
-        "dataset_name": "Alpaca",
+        "dataset_name": "Alpaca-test",
         "num_classes": 1,
         "use_prompt": 1
     },
@@ -75,8 +75,9 @@
         "name": "InferDPT",
         "parameters": {
             "party": [0],
-            "epsilon": 0.001,
-            "decode_model_path": "/data/guzx0/Models/QwenQwen1.5-0.5B",
+            "epsilon": 20,
+            "decode_model_path": "",
+            "inferdpt_kit_path": "/data/guzx0/FedProjects/vflair_llm/src/models/model_parameters/inferdpt_kit/original",
             "decode_model_load_kwargs":{
                 "device_map": "auto"
             },

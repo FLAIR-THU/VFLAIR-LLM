@@ -17,7 +17,8 @@ from loguru import logger
 from torch.distributions.laplace import Laplace
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import StoppingCriteriaList,StoppingCriteria
-
+import tiktoken
+import string
 
 from party.party import Party
 from party.llm_party import Party as Party_LLM
@@ -301,18 +302,25 @@ class PassiveParty_LLM(Party_LLM):
                     # Init InferDPT Kit: token_to_vector_dict / sorted_similarities / delta_f
                     if not os.path.exists(infer_dpt_kit_dir + '/token_2_vector.json'):
                         #### Generate InferDPT
+                        # bert_tokenizer = AutoTokenizer.from_pretrained(model_path)
                         embeddings = self.args.tokenizer.get_vocab()
+                        
                         print('embeddings:',type(embeddings),len(embeddings))
                         dtype = np.float32
                         embedding_weights = self.local_model.get_input_embeddings().weight
                         embedding_weights_np = embedding_weights.detach().cpu().numpy().astype(dtype)
+                        
+                        filtered_index2token = embeddings
                         filtered_index2token = filter_tokens(embeddings)
                         used_num_tokens = len(filtered_index2token)
-                        print('used_num_tokens:',used_num_tokens)
+                        # print(filtered_index2token["Ġthe"])  # 打印 'Ġthe' 的 token_id
+                        # print(filtered_index2token["the"])
+                        # print('used_num_tokens:',used_num_tokens)
                         
                         token_2_embedding = {}
                         for idx, token in filtered_index2token.items():
                             token_2_embedding[token] = embedding_weights_np[idx].tolist()
+
                         token_list = list(token_2_embedding.keys())
                         embedding_matrix = np.array(list(token_2_embedding.values()), dtype=dtype)
                         print('token_list:',len(token_list))
@@ -859,7 +867,6 @@ class PassiveParty_LLM(Party_LLM):
                 self.local_data_input['input_ids'] = tokenized_sanitized_sentence['input_ids']
                 self.local_data_input['attention_mask'] = tokenized_sanitized_sentence['attention_mask']
                 # print("sanitized_input_ids:", self.local_data_input['input_ids'].shape)
-                # assert 1>2
             
             if self.args.apply_santext and (self.index in self.args.defense_configs["party"]):
                 input_device = self.local_data_input['input_ids'].device
@@ -884,17 +891,24 @@ class PassiveParty_LLM(Party_LLM):
                 self.local_data_input['input_ids'] = tokenized_sanitized_sentence['input_ids']
                 self.local_data_input['attention_mask'] = tokenized_sanitized_sentence['attention_mask']
                 # print("sanitized_input_ids:", self.local_data_input['input_ids'].shape)
-                # assert 1>2
 
 
             if self.args.apply_inferdpt and (self.index in self.args.defense_configs["party"]):
-                #token_to_vector_dict,sorted_cl100_emb/sorted_similarities,sen_emb/delta_f
                 input_device = self.local_data_input['input_ids'].device
-                print(self.local_data_input['input_ids'].shape, self.local_data_input['attention_mask'].shape)
-                new_input_ids = []
+                origin_len = self.local_data_input['input_ids'].shape[-1]
+                # print(self.local_data_input['input_ids'].shape, self.local_data_input['attention_mask'].shape)
+
+                new_sentence_list = []
                 for original_input_ids in self.local_data_input['input_ids']: #[bs, seq_len]
                     assert self.args.epsilon > 0, "epsilon should be greater than 0"
-                    tokens = self.args.tokenizer.convert_ids_to_tokens(original_input_ids)
+                    
+                    origin_sentence = self.args.tokenizer.decode(original_input_ids)
+                    # print('origin_sentence:',origin_sentence)
+                    
+                    tokens_with_identifiers = [self.args.tokenizer.convert_ids_to_tokens(int(token_id)) for token_id in original_input_ids.squeeze().tolist()]
+                    tokens = [token.replace("Ġ", "").replace("▁", "").replace("Ċ", "") for token in tokens_with_identifiers]
+                    # print('tokens:',tokens)
+
                     new_tokens = []
                     
                     Delta_u = 1.0  
@@ -932,10 +946,13 @@ class PassiveParty_LLM(Party_LLM):
                     #     probabilities = unnormalized_probabilities / total_unnormalized_prob
                     #     selected_token = np.random.choice(close_tokens, p=probabilities)
                     #     new_tokens.append(selected_token)
-                    
+                    #     print(f"{origin_token} -- {selected_token}")
                     
                     for origin_token in tokens:
                         if origin_token in [self.args.tokenizer.pad_token, self.args.tokenizer.eos_token]:
+                            new_tokens.append(origin_token)
+                            continue
+                        if origin_token in string.punctuation:
                             new_tokens.append(origin_token)
                             continue
                         if(origin_token.isnumeric()):
@@ -948,13 +965,11 @@ class PassiveParty_LLM(Party_LLM):
                             origin_token=origin_token[1:]
                         origin_embed = self.token_to_vector_dict.get(origin_token, None)
                         if origin_embed is None:
-                            new_tokens.append(origin_token)
                             continue
                         noise_embed = add_laplace_noise_to_vector(origin_embed, self.args.epsilon, self.delta_f)
                         distance = np.linalg.norm(origin_embed - noise_embed)
                         sorted_distances_for_token = self.sorted_similarities.get(origin_token, None)
                         if sorted_distances_for_token is None:
-                            new_tokens.append(origin_token)
                             continue
                         
                         if len(sorted_distances_for_token) == 2:
@@ -963,11 +978,14 @@ class PassiveParty_LLM(Party_LLM):
                                 ]
                        
                         distances_only = np.array([item[1] for item in sorted_distances_for_token])
+                        # print('distances_only:',distances_only[:5])
+                        # print('distance:',distance)
                         index = np.searchsorted(distances_only, distance)
                         close_tokens = [item[0] for item in sorted_distances_for_token[:index] ]
+                        
+                        # print('index:',index,' close_tokens:',len(close_tokens))
                         close_distances = np.array([item[1] for item in sorted_distances_for_token[:index]])
                         if not close_tokens:
-                            new_tokens.append(origin_token)
                             continue
                         unnormalized_probabilities = np.exp(exp_factor * ((distance-close_distances)/distance))
                         total_unnormalized_prob = np.sum(unnormalized_probabilities)
@@ -975,18 +993,24 @@ class PassiveParty_LLM(Party_LLM):
                         selected_token = np.random.choice(close_tokens, p=probabilities)
                         new_tokens.append(selected_token)   
                         # print(f"{origin_token} -- {selected_token}")
-                        
-                    new_token_ids = self.args.tokenizer.convert_tokens_to_ids(new_tokens)
-                    # sentence = self.args.tokenizer.decode(new_token_ids)
-                    # print('Origin:',self.args.tokenizer.decode(original_input_ids,skip_special_tokens=True))
-                    # print( len(original_input_ids) )
-                    # print('after:',sentence)
-                    # print(len(new_token_ids))
-                    # assert 1>2
-                    new_input_ids.append(torch.tensor(new_token_ids))
                     
-                new_input_ids = torch.stack(new_input_ids) # [bs, seq_len]
-                self.local_data_input['input_ids'] = new_input_ids.to(input_device)
+                    new_tokens = [token.replace("Ġ", "").replace("▁", "").replace("Ċ", "") for token in new_tokens]
+                    new_sentence = " ".join(new_tokens)
+                    new_sentence_list.append(new_sentence)
+                    
+                    # print('after:')
+                    # print(new_sentence)
+                    # print('----')
+                    # assert 1>2
+                
+                # Convert sentence back to tensor
+                tokenized_new_sentence = self.args.tokenizer(new_sentence_list, 
+                                                padding=self.args.padding, truncation=self.args.truncation, \
+                                                max_length=origin_len, return_tensors='pt',
+                                                add_special_tokens=self.args.add_special_tokens)
+                self.local_data_input['input_ids'] = tokenized_new_sentence['input_ids']
+                self.local_data_input['attention_mask'] = tokenized_new_sentence['attention_mask']
+                    
                 
         ######### Defense Applied on Text Input ###########
         

@@ -75,7 +75,7 @@
         "name": "CusText",
         "parameters": {
             "party": [0],
-            "epsilon": 0.01,
+            "epsilon": 1,
             "topk": 20
         }
     

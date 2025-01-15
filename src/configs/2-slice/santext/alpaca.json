@@ -75,7 +75,7 @@
         "name": "SanText",
         "parameters": {
             "party": [0],
-            "epsilon": 1,
+            "epsilon": 0.1,
             "sensitive_word_percentage": 0.5,
             "p": 0.2
         }

@@ -9,32 +9,29 @@
 for seed in 60 61 62 63 64
     do
 
-    # 0.01
-    sed -i 's/"epsilon": 1/"epsilon": 0.01/g' ./configs/2-slice/dpt/alpaca_ran_.json
-    # python main_pipeline_llm.py --prefix "rantext_new" --seed $seed --configs 2-slice/dpt/alpaca_ran_
-
-
-    # 0.1
-    sed -i 's/"epsilon": 0.01/"epsilon": 0.1/g' ./configs/2-slice/dpt/alpaca_ran_.json
-    # python main_pipeline_llm.py --prefix "rantext_new" --seed $seed --configs 2-slice/dpt/alpaca_ran_
-
     # 1
-    sed -i 's/"epsilon": 0.1/"epsilon": 1/g' ./configs/2-slice/dpt/alpaca_ran_.json
-    # python main_pipeline_llm.py --prefix "rantext_new" --seed $seed --configs 2-slice/dpt/alpaca_ran_
-
-    # 3
-    sed -i 's/"epsilon": 1/"epsilon": 3/g' ./configs/2-slice/dpt/alpaca_ran_.json
-    python main_pipeline_llm.py --prefix "rantext_new" --seed $seed --configs 2-slice/dpt/alpaca_ran_
-
-    # 5
-    sed -i 's/"epsilon": 3/"epsilon": 5/g' ./configs/2-slice/dpt/alpaca_ran_.json
-    python main_pipeline_llm.py --prefix "rantext_new" --seed $seed --configs 2-slice/dpt/alpaca_ran_
+    # python main_pipeline_llm.py --prefix "rantext" --seed $seed --configs 2-slice/dpt/alpaca_ran_
 
     # 10
-    sed -i 's/"epsilon": 5/"epsilon": 10/g' ./configs/2-slice/dpt/alpaca_ran_.json
-    python main_pipeline_llm.py --prefix "rantext_new" --seed $seed --configs 2-slice/dpt/alpaca_ran_
+    sed -i 's/"epsilon": 1/"epsilon": 10/g' ./configs/2-slice/dpt/alpaca_ran_.json
+    # python main_pipeline_llm.py --prefix "rantext" --seed $seed --configs 2-slice/dpt/alpaca_ran_
 
+    # 15
+    sed -i 's/"epsilon": 10/"epsilon": 15/g' ./configs/2-slice/dpt/alpaca_ran_.json
+    # python main_pipeline_llm.py --prefix "rantext" --seed $seed --configs 2-slice/dpt/alpaca_ran_
 
-    sed -i 's/"epsilon": 10/"epsilon": 1/g' ./configs/2-slice/dpt/alpaca_ran_.json
+    # 20
+    sed -i 's/"epsilon": 15/"epsilon": 20/g' ./configs/2-slice/dpt/alpaca_ran_.json
+    python main_pipeline_llm.py --prefix "rantext" --seed $seed --configs 2-slice/dpt/alpaca_ran_
+
+    # 25
+    sed -i 's/"epsilon": 20/"epsilon": 25/g' ./configs/2-slice/dpt/alpaca_ran_.json
+    python main_pipeline_llm.py --prefix "rantext" --seed $seed --configs 2-slice/dpt/alpaca_ran_
+
+    # 30
+    sed -i 's/"epsilon": 25/"epsilon": 30/g' ./configs/2-slice/dpt/alpaca_ran_.json
+    python main_pipeline_llm.py --prefix "rantext" --seed $seed --configs 2-slice/dpt/alpaca_ran_
+
+    sed -i 's/"epsilon": 30/"epsilon": 1/g' ./configs/2-slice/dpt/alpaca_ran_.json
 
 done

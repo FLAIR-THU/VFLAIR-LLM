@@ -77,7 +77,7 @@
             "party": [0],
             "cluster_method": "kmeans",
             "cluster_num": 100,
-            "epsilon": 2,
+            "epsilon": 5,
             "w_cluster_away": 0.5,
             "w_cluster_close": 0.1
         }

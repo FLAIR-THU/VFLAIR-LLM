@@ -72,20 +72,12 @@
         "local_encoders_num": 2
     },
     "defense": {
-        "name": "InferDPT",
+        "name": "SanText",
         "parameters": {
             "party": [0],
-            "epsilon": 25,
-            "decode_model_path": "",
-            "inferdpt_kit_path": "/data/guzx0/FedProjects/vflair_llm/src/models/model_parameters/inferdpt_kit/original",
-            "decode_model_load_kwargs":{
-                "device_map": "auto"
-            },
-            "decode_generation_kwargs":{
-                "temperature": 1,
-                "early_stopping": true,
-                "max_new_tokens": 160 
-            }
+            "epsilon": 1,
+            "sensitive_word_percentage": 0.5,
+            "p": 0.2
         }
     
     },
@@ -103,7 +95,7 @@
               "lr": 0.01,
               "batch_size": 6,
               "epochs": 100,
-              "auxiliary_data_num": 100,
+              "auxiliary_data_num": 300,
               "attack_sample_num": 100
           }
         },
@@ -144,7 +136,7 @@
               "batch_size": 6,
               "epochs": 100,
               "attack_seed": 1,
-              "auxiliary_data_num": 100,
+              "auxiliary_data_num": 300,
               "attack_sample_num": 100
           }
         },

@@ -1,11 +1,11 @@
 {
-    "epochs": 50,
-    "lr": 0.001,
+    "epochs": 40,
+    "lr": 0.0001,
     "k": 2,
     "batch_size": 16,
     "test_batch_size": 1,
     "early_stop_threshold": 1,
-    "pipeline": "pretrained",
+    "pipeline": "finetune",
     "model_architect":"CLM",
     "communication":{
         "communication_protocol": "FedSGD",
@@ -41,7 +41,7 @@
         "0": {
             "path": "/data/guzx0/Models/vicgallegpt2-alpaca",
                 "head":{
-                    "trainable": 0,
+                    "trainable": 1,
                     "embedding_trainable": 0,
                     "encoder_trainable": 0,
                     "encoder_trainable_ids":[]
@@ -50,7 +50,7 @@
         "1": {
                 "path": "/data/guzx0/Models/vicgallegpt2-alpaca",
                 "tail":{
-                    "trainable": 0,
+                    "trainable": 1,
                     "head_layer_trainable": 0,
                     "encoder_trainable": 0,
                     "encoder_trainable_ids":[]
@@ -72,22 +72,15 @@
         "local_encoders_num": 2
     },
     "defense": {
-        "name": "InferDPT",
+        "name": "TextObfuscator",
         "parameters": {
             "party": [0],
-            "epsilon": 25,
-            "decode_model_path": "",
-            "inferdpt_kit_path": "/data/guzx0/FedProjects/vflair_llm/src/models/model_parameters/inferdpt_kit/original",
-            "decode_model_load_kwargs":{
-                "device_map": "auto"
-            },
-            "decode_generation_kwargs":{
-                "temperature": 1,
-                "early_stopping": true,
-                "max_new_tokens": 160 
-            }
+            "cluster_method": "kmeans",
+            "cluster_num": 100,
+            "epsilon": 10,
+            "w_cluster_away": 0.5,
+            "w_cluster_close": 0.1
         }
-    
     },
     "attack_list": {
         "0":{
@@ -103,34 +96,11 @@
               "lr": 0.01,
               "batch_size": 6,
               "epochs": 100,
-              "auxiliary_data_num": 100,
+              "auxiliary_data_num": 300,
               "attack_sample_num": 100
           }
         },
         "1":{
-            "name": "VanillaModelInversion_WhiteBox",
-            "parameters": {
-                "party": [1],
-                "loss_type":"cross_entropy",
-                "lr": 0.01,
-                "epochs": 100,
-                "batch_size": 1,
-                "attack_sample_num": 100
-            }
-        },
-        "2":{
-            "name": "WhiteBoxInversion",
-            "parameters": {
-                "party": [1],
-                "loss_type":"cross_entropy",
-                "T": 0.05,
-                "lr": 0.005,
-                "epochs": 500,
-                "batch_size": 1,
-                "attack_sample_num":100
-            }
-        },
-        "3":{
             "name": "BiSR",
           "parameters": {
               "party": [1],
@@ -143,12 +113,24 @@
               "lr": 0.01,
               "batch_size": 6,
               "epochs": 100,
-              "attack_seed": 1,
-              "auxiliary_data_num": 100,
+              "auxiliary_data_num": 300,
+                "attack_seed": 1,
               "attack_sample_num": 100
           }
         },
-        "4":{
+
+        "2":{
+            "name": "VanillaModelInversion_WhiteBox",
+            "parameters": {
+                "party": [1],
+                "loss_type":"cross_entropy",
+                "lr": 0.01,
+                "epochs": 100,
+                "batch_size": 1,
+                "attack_sample_num": 100
+            }
+        },
+        "3":{
             "name": "VanillaModelInversion_WhiteBox",
             "parameters": {
                 "party": [1],
@@ -158,6 +140,18 @@
                 "batch_size": 1,
                 "attack_seed": 1,
                 "attack_sample_num": 100
+            }
+        },
+        "4":{
+            "name": "WhiteBoxInversion",
+            "parameters": {
+                "party": [1],
+                "loss_type":"cross_entropy",
+                "T": 0.05,
+                "lr": 0.005,
+                "epochs": 500,
+                "batch_size": 1,
+                "attack_sample_num":100
             }
         },
         "5":{

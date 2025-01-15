@@ -74,19 +74,20 @@ def contains_non_english_chars(string):
 def filter_tokens(token2index):
     filtered_index2token = {}
     for key, idx in tqdm.tqdm(token2index.items()):
-       
-        if key.startswith('<'):
-            continue
+        # if key.startswith('<'):
+        #     continue
         # if not key.startswith('▁'):
         #     continue
         val_ = key.replace("▁", "")
-        # if val_ == val_.upper():
-        #     continue
-        if contains_non_english_chars(val_):
+        if val_ == val_.upper():
             continue
-        if 3 < len(val_) < 16 and contains_english_chars(val_):
-            filtered_index2token[idx] = key
-
+        # if contains_non_english_chars(val_):
+        #     continue
+        
+        # if 3 < len(val_) < 16 and contains_english_chars(val_):
+        #     filtered_index2token[idx] = key
+        filtered_index2token[idx] = key
+        
     return filtered_index2token
 
 
