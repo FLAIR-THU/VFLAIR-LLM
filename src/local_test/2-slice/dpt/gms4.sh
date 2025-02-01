@@ -6,7 +6,7 @@
 #SBATCH --mem 160000MB
 
 
-for seed in 60 61 62 63 64
+for seed in 61 62 63 64
     do
 
     # 10
@@ -27,7 +27,7 @@ for seed in 60 61 62 63 64
 
     # 100
     sed -i 's/"epsilon": 30/"epsilon": 100/g' ./configs/2-slice/dpt/gms4.json
-    python main_pipeline_llm.py --prefix "rantext" --seed $seed --configs 2-slice/dpt/gms4
+    # python main_pipeline_llm.py --prefix "rantext" --seed $seed --configs 2-slice/dpt/gms4
 
     sed -i 's/"epsilon": 100/"epsilon": 1/g' ./configs/2-slice/dpt/gms4.json
 

@@ -1,0 +1,113 @@
+{
+    "epochs": 20,
+    "lr": 0.0001,
+    "k": 2,
+    "batch_size": 128,
+    "pipeline": "finetune",
+    "model_architect":"CLS",
+    "early_stop_threshold": 1,
+    "communication":{
+        "communication_protocol": "FedSGD",
+        "iteration_per_aggregation": 1
+    },
+    "dataset":{
+        "dataset_name": "SST-2",
+        "num_classes": 2
+    },
+    "tokenizer":{
+        "padding": "max_length",
+        "padding_type": "outside",
+        "pad_token": "[PAD]",
+        "truncation": "longest_first",
+        "max_length": 70,
+        "padding_side": "left",
+        "add_special_tokens": 1
+    },
+    "model_list":{
+        "name": "textattackbert-base-uncased-SST-2",
+        "pretrained": 1,
+        "model_type": "Bert",
+        "max_sequence": 512,
+        "kwargs_model_loading":{
+        },
+        "0": {
+            "path": "/data/guzx0/Models/textattackbert-base-uncased-SST-2",
+
+            "head":{
+                "trainable": 0,
+                "embedding_trainable": 0,
+                "encoder_trainable": 0,
+                "encoder_trainable_ids":[]
+            }
+        },
+        "1": {
+            "path": "/data/guzx0/Models/textattackbert-base-uncased-SST-2",
+            "tail":{
+                "trainable": 0,
+                "head_layer_trainable": 0,
+                "encoder_trainable": 0,
+                "encoder_trainable_ids":[]
+            }
+        },
+        "task":{
+            "task_type": "SequenceClassification"
+        },
+        "vfl_model_slice_num": 2,
+        "local_encoders_num": 4,
+        "local_tail_encoders_num": 0
+    },
+    "defense": {
+        "name": "AdversarialTraining",
+        "parameters": {
+            "party": [0],
+            "position":"head",
+            "adversarial_model": "Mapping_MLP3",
+            "adversarial_model_lr": 0.0001,
+            "imagined_adversary": "ImaginedAdversary_MLP3",
+            "imagined_adversary_lr": 0.0001,
+            "lambda": 0.001,
+            "seq_length": 70,
+            "embed_dim": 768
+        }
+    },
+    "attack_list": {
+        "0":{
+            "name": "BiSR",
+            "parameters": {
+                "party": [1],
+                "attacker_model_name": "NaMoE",
+                "expert_scales": [0, 10.0, 7.5, 5.0],
+                "expert_epoch": 20,
+                "gate_epoch": 15,
+                "full_epoch": 4,
+                "phase1_lr":0.001,
+                "lr": 0.01,
+                "batch_size": 6,
+                "epochs": 100,
+              "auxiliary_data_num": 100,
+                "attack_sample_num": 100
+            }
+        },
+        "1":{
+            "name": "VanillaModelInversion_WhiteBox",
+            "parameters": {
+                "party": [1],
+                "lr": 0.01,
+                "epochs": 100,
+                "batch_size": 32,
+                "attack_sample_num": 100
+            }
+        },
+        "2":{
+            "name": "WhiteBoxInversion",
+            "parameters": {
+                "party": [1],
+                "T": 0.05,
+                "lr": 0.005,
+                "epochs": 500,
+                "batch_size": 32,
+                "attack_sample_num": 100
+            }
+        }
+    }
+}

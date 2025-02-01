@@ -1515,7 +1515,7 @@ def load_dataset_per_party_llm(args, index):
             # test_set_file = DATA_PATH + '/yelp_review_full_csv/test.csv'
 
         df = pd.read_csv(train_set_file, delimiter=',', header=None,
-                         names=['label', 'sentence'])#[:200]
+                         names=['label', 'sentence'])
 
         scalar = np.array([-1])
         sentences = df.sentence.values
@@ -1653,8 +1653,8 @@ def load_dataset_per_party_llm(args, index):
             train_set_file = DATA_PATH + 'SST-2/train.tsv'
             test_set_file = DATA_PATH + 'SST-2/dev.tsv'
         df = pd.read_csv(train_set_file, delimiter='\t')  # names=[  'sentence','label'] , names=['label', 'sentence']
-        sentences = df.sentence.values[:2000]
-        labels = df.label.values[:2000]
+        sentences = df.sentence.values[:]
+        labels = df.label.values[:]
         X_train = np.array(sentences)
         y_train = np.array([int(_label) for _label in labels])
 
@@ -1990,11 +1990,10 @@ def load_dataset_per_party_llm(args, index):
         else:
             data_file = DATA_PATH + 'Lambada'
         print(data_file)
-
-        dataset = load_dataset(data_file)
+        # /data/guzx0/share_dataset/Lambada
+        dataset = load_dataset(data_file,trust_remote_code=True)
 
         doc_stride = args.doc_stride
-
         prompt_tokens = args.tokenizer.tokenize(prompt)  # .strip().split()
         max_seq_length = args.max_seq_length - len(prompt_tokens)
 
@@ -2550,7 +2549,7 @@ def load_dataset_per_party_llm(args, index):
         y_train = np.array([ _ex['answer'] for _ex in train_examples])
 
         ##### Test #####
-        test_examples = get_examples(test_set_file)[:20] # list of [  {'quesion':... , 'answer':...} ...]
+        test_examples = get_examples(test_set_file)[:100] # list of [  {'quesion':... , 'answer':...} ...]
         X_test = np.array([ problem_prompt.format(instruction=_ex['question']) for _ex in test_examples])
         y_test = np.array([ get_final_ans(_ex['answer']) for _ex in test_examples])
 

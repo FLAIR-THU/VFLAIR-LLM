@@ -207,6 +207,7 @@ def create_main_task(global_model_type: GenerationMixin):
                         print(f'# Party {defense_party_id} preparing Denoise Model')
                         defense_party = self.parties[defense_party_id]
                         emb_norm_dict = {
+                            "vicgallegpt2-alpaca": 4,
                             "gpt2": 4,
                             "gpt2-large": 2.2,
                             "gpt2-medium": 4,
@@ -240,39 +241,36 @@ def create_main_task(global_model_type: GenerationMixin):
                             noises = noise_init_emb - init_emb
                             
                             def get_cls_embedding(outputs,attention_mask,args):
-                                
                                 if args.vfl_model_slice_num == 2:
                                     cls_embs = outputs.logits
-                                    return cls_embs
                                 else:
-                                    if args.model_type =="Bert":
+                                    if args.model_type =="Bert": # bs, hidden_dim
                                         cls_embs = self.parties[0].local_model_tail.bert.base_model_tail_output
+                                    # elif args.model_type =="GPT2": # bs, hidden_dim
+                                    #     hid_states = self.parties[0].local_model_tail.transformer.base_model_tail_output
+                                    #     print('hid_states:',hid_states.shape)
+                                    #     cls_embs = hid_states[,:,]
                                     else:
                                         cls_embs = outputs['inputs_embeds']
-                                    # elif args.model_type in ["GPT2","Mistral"]:
-                                    #     cls_embs = self.parties[0].local_model_tail.model.base_model_tail_output
-                                    # else:
-                                    #     assert 1>2, f"{args.model_type} not supported"
-                                    # print('3slice get cls_embs:',cls_embs.shape)
-                                    return cls_embs
+                                # print('cls_embs:',cls_embs.shape)
+                                return cls_embs
                             
-                            if args.vfl_model_slice_num == 2:
-                                with torch.no_grad():
+                            with torch.no_grad():
+                                if args.vfl_model_slice_num == 2:
                                     clean_input_dict = {'inputs_embeds':init_emb, 'attention_mask':attention_mask}
                                     outputs = self.parties[-1].forward(1, defense_party_id, **clean_input_dict)
                                     clean_cls_embs = get_cls_embedding(outputs, attention_mask, args)
-                                with torch.no_grad():
+                                    
                                     noise_input_dict = {'inputs_embeds':noise_init_emb, 'attention_mask':attention_mask}
                                     noise_outputs = self.parties[-1].forward(1, defense_party_id, **noise_input_dict)
                                     noise_cls_embs = get_cls_embedding(noise_outputs, attention_mask, args)
-                            else:
-                                with torch.no_grad():
+                                else:
                                     clean_input_dict = {'inputs_embeds':init_emb, 'attention_mask':attention_mask}
                                     outputs = self.parties[-1].forward(1, defense_party_id, **clean_input_dict)
                                     # outputs = self.parties[-1].output_tensors[1] #self.parties[0].forward(2, **resp)
                                     self.parties[0].forward(2, **outputs)
                                     clean_cls_embs = get_cls_embedding(outputs, attention_mask, args)
-                                with torch.no_grad():
+                                    
                                     noise_input_dict = {'inputs_embeds':noise_init_emb, 'attention_mask':attention_mask}
                                     noise_outputs = self.parties[-1].forward(1, defense_party_id, **noise_input_dict)
                                     # noise_outputs = self.parties[-1].output_tensors[1] #self.parties[0].forward(2, **resp)
@@ -282,13 +280,16 @@ def create_main_task(global_model_type: GenerationMixin):
 
                         #### train denoise model
                         print('Train Denoise Model Into: ',self.parties[defense_party_id].denoise_model_path)
-                        denoise_optimizer = torch.optim.Adam(self.parties[defense_party_id].denoise_mod.parameters(), lr=self.args.defense_configs['denoise_lr'])
-                        denoise_dataloader = DataLoader(self.parties[defense_party_id].train_dst, batch_size=self.args.batch_size, shuffle=False, num_workers=0, drop_last=True)
+                        denoise_optimizer = torch.optim.Adam(self.parties[defense_party_id].denoise_mod.parameters(), lr=self.args.denoise_lr)
+                        denoise_dataloader = DataLoader(self.parties[defense_party_id].train_dst, batch_size=self.args.denoise_batch_size, shuffle=False, num_workers=0, drop_last=True)
+                        
                         epoch_pbar = tqdm(range(self.args.denoise_epoch), desc="Epochs")
                         decoder_start_token = None
                         total_t = 0
                         t1 = time.time()
                         for epoch in epoch_pbar:
+                            _iter = 0
+                            avg_loss = 0
                             for i, batch in enumerate(denoise_dataloader, start=1):
                                 input_ids = batch[0]['input_ids'] # bs, seq_len
                                 attention_masks = batch[0]['attention_mask']
@@ -312,12 +313,17 @@ def create_main_task(global_model_type: GenerationMixin):
                                     loss = loss_fn(y_pred, clean_cls_emb)
                                     loss.backward() 
                                     denoise_optimizer.step()
-
-                                    # if i % 50 == 0:
-                                    #     print(f'-- epoch {epoch} batch {i}, latest loss {loss.item()}')
-                            print(f'Epoch {epoch}, latest loss {loss.item()}')
+                                    
+                                    avg_loss += loss.item()
+                                    _iter +=1
+                            avg_loss = avg_loss/_iter
+                            print(f'Epoch {epoch}, latest loss {avg_loss}')
+                            if (epoch+1) % 4 ==0:
+                                print('Save:',self.parties[defense_party_id].denoise_model_dir+f"/epoch{str(epoch+1)}")
+                                torch.save(self.parties[defense_party_id].denoise_mod.state_dict(), \
+                                        self.parties[defense_party_id].denoise_model_dir+f"/epoch{str(epoch+1)}")
                         epoch_pbar.set_description(f"Denoise Model Training Completed Epoch {epoch+1}")             
-                        # print(f'Finished epoch {epoch}, latest loss {loss.item()}')
+                        print(f'Finished epoch {epoch}, latest loss {avg_loss}')
                         torch.save(self.parties[defense_party_id].denoise_mod.state_dict(), self.parties[defense_party_id].denoise_model_path)
                         
         @property
@@ -816,10 +822,6 @@ def create_main_task(global_model_type: GenerationMixin):
                                 reference_text = self.args.tokenizer.decode(reference_ids,skip_special_tokens=True)
                                 candidate_text = self.args.tokenizer.decode(candidate_ids,skip_special_tokens=True)
 
-                                # if len(candidate_ids) == 1:
-                                #     print(candidate_ids.shape)
-                                #     print(candidate_text)
-                                #     assert 1>2
                                 # Rouge-2 Recall: can be user-defined here
                                 try:
                                     rouge_result = rouger.get_scores(candidate_text, reference_text)
@@ -1059,7 +1061,6 @@ def create_main_task(global_model_type: GenerationMixin):
                     return target_label_list, predict_label_list, len(predict_label_list) 
 
             elif self.args.model_architect=='TQA': #.task_type == "QuestionAnswering":
-                # print('feature_list:',type(feature_list),len(feature_list),type(feature_list[0]))
                 start_logits = model_output.start_logits # bs, 512
                 end_logits = model_output.end_logits # bs, 512
                 sample_cnt = start_logits.shape[0] # bs
@@ -1455,7 +1456,7 @@ def create_main_task(global_model_type: GenerationMixin):
                     self.seq_length = data_inputs['input_ids'].shape[-1]
                 else:
                     self.seq_length = 0
-
+            
             ################ normal vertical federated learning ################
             # =================== Forward + Intermediate Commu ===================
             final_pred_dict = {}
@@ -1484,13 +1485,6 @@ def create_main_task(global_model_type: GenerationMixin):
             if self.args.model_architect == 'TQA':  # self.args.task_type == 'QuestionAnswering':
                 pred = final_pred  # QuestionAnsweringModelOutput
                 loss = self.parties[0].global_loss
-                
-                # feature_list = data_inputs['feature']
-                # batch_nbest, batch_gold_ans, sample_cnt = self.generate_result(pred, gt_one_hot_label, feature_list)
-                # result_dict = self.generate_assessment(batch_nbest, batch_gold_ans)
-                # exact_score = result_dict['exact_score']
-                # return loss.item(), exact_score
-            
                 return loss.item(), 0
             
 

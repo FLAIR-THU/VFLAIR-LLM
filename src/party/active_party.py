@@ -161,7 +161,6 @@ class ActiveParty_LLM(Party_LLM):
         self._tensor_to_device(passive_pred, self.device)
         intermediate = self.forward(model_index=1, client_id = current_client_id, **passive_pred)  # use_cache = use_cache,return_dict=True
         self.global_output_dict[current_client_id] = intermediate
-        
         return self._detach_tensor(self.global_output_dict[current_client_id])
 
 
@@ -199,13 +198,15 @@ class ActiveParty_LLM(Party_LLM):
     def cal_passive_local_gradient(self, ik, remote=True):
         if remote:
             ik = int(ik)
-        if self.args.vfl_model_slice_num== 2 and self.args.task_type == 'QuestionAnswering':
+        if self.args.vfl_model_slice_num== 2 and self.args.model_architect == 'TQA':
             global_output = self.global_output_dict[ik]
-            passive_local_gradient = torch.autograd.grad(global_output.start_logits + global_output.end_logits, self.input_tensors[ik][1],\
+            logits = torch.cat((global_output.start_logits.unsqueeze(-1), global_output.end_logits.unsqueeze(-1)), dim=-1)
+            passive_local_gradient = torch.autograd.grad(logits, self.input_tensors[ik][1],\
                 grad_outputs=self.global_gradient, retain_graph=True)[0].detach().clone()
         else:
-            passive_local_gradient = torch.autograd.grad(self.output_tensors[ik][1], self.input_tensors[ik][1], \
-                                    grad_outputs=self.global_gradient, retain_graph=True)[0].detach().clone()
+            _device = self.output_tensors[ik][1].device
+            passive_local_gradient = torch.autograd.grad(self.output_tensors[ik][1], self.input_tensors[ik][1].to(_device), \
+                                    grad_outputs=self.global_gradient.to(_device), retain_graph=True)[0].detach().clone()
         if remote:
             return convert_tensor_to_batch_msg(passive_local_gradient, 'test_logit')
         return passive_local_gradient
@@ -253,23 +254,30 @@ class ActiveParty_LLM(Party_LLM):
                 self.weights_grad_a_list = []
                 for client_id in range(self.args.k-1):
                     # load grads into parameters
-                    weights_grad_a_start = torch.autograd.grad(self.global_output_dict[client_id].start_logits,
-                                                            global_model_params, 
-                                                            grad_outputs=self.global_gradient_dict[client_id], 
-                                                            retain_graph=True,allow_unused=True)
-                    weights_grad_a_end = torch.autograd.grad(self.global_output_dict[client_id].end_logits,
-                                                            global_model_params, 
-                                                            grad_outputs=self.global_gradient_dict[client_id], 
-                                                            retain_graph=True,allow_unused=True)
+                    logits = torch.cat((self.global_output_dict[client_id].start_logits.unsqueeze(-1), self.global_output_dict[client_id].end_logits.unsqueeze(-1)), dim=-1)
+                    
+                    client_global_gradient = self.global_gradient_dict[client_id].to(self.output_tensors[client_id][1].device)
+                    weights_grad_a = torch.autograd.grad(logits,
+                                                        global_model_params, 
+                                                        grad_outputs=client_global_gradient, 
+                                                        allow_unused=True,
+                                                        retain_graph=True)
+                    self.weights_grad_a_list.append( list(weights_grad_a) )
+                    # weights_grad_a_start = torch.autograd.grad(self.global_output_dict[client_id].start_logits,
+                    #                                         global_model_params, 
+                    #                                         grad_outputs=self.global_gradient_dict[client_id], 
+                    #                                         retain_graph=True,allow_unused=True)
+                    # weights_grad_a_end = torch.autograd.grad(self.global_output_dict[client_id].end_logits,
+                    #                                         global_model_params, 
+                    #                                         grad_outputs=self.global_gradient_dict[client_id], 
+                    #                                         retain_graph=True,allow_unused=True)
 
-                    weights_grad_a = []
-                    for _i in range(len(weights_grad_a_start)):
-                        weights_grad_a.append(weights_grad_a_start[_i] + weights_grad_a_end[_i] if weights_grad_a_start[_i]!= None else None)
-                    self.weights_grad_a_list.append(weights_grad_a)
-                
-                
-                self.weights_grad_a = tuple( cal_avg_grad(self.weights_grad_a_list) )
-
+                    # weights_grad_a = []
+                    # for _i in range(len(weights_grad_a_start)):
+                    #     weights_grad_a.append(weights_grad_a_start[_i] + weights_grad_a_end[_i] if weights_grad_a_start[_i]!= None else None)
+                    # self.weights_grad_a_list.append(weights_grad_a)
+                    
+                    # self.weights_grad_a_list.append( list(weights_grad_a) )
             else:
                 self.global_model_optimizer.zero_grad()
                 
@@ -282,8 +290,7 @@ class ActiveParty_LLM(Party_LLM):
                                                             allow_unused=True,
                                                             retain_graph=True)
                     self.weights_grad_a_list.append( list(weights_grad_a) )
-                
-                self.weights_grad_a = tuple( cal_avg_grad(self.weights_grad_a_list) )
+            self.weights_grad_a = tuple( cal_avg_grad(self.weights_grad_a_list) )
             
             for w, g in zip(global_model_params, self.weights_grad_a):
                 if w.requires_grad and g!=None:

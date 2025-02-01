@@ -15,6 +15,7 @@ import os
 from peft.peft_model import PeftModel
 from .base import ModelPartitionPipeline, VFLModel
 
+# Model Splitter
 class GPT2ModelSplitter(GPT2Model, VFLModel):
     def vfl_split(self, idx_of_layers: Iterable[int]) -> bool:
         return self._split_layers(idx_of_layers)
@@ -33,10 +34,7 @@ class GPT2ModelSplitter(GPT2Model, VFLModel):
         
         return True
 
-    def _clear_past_key_values(self):
-        self.past_key_values = None
-    
-    
+# Model Head/Body/Tail
 class GPT2ModelHead(GPT2ModelSplitter):
     def __init__(self, config: GPT2Config):
         super().__init__(config)
@@ -44,9 +42,6 @@ class GPT2ModelHead(GPT2ModelSplitter):
         del self.ln_f
         # todo: del norm will cause error when load from original model weight
         # del self.norm
-
-    def _clear_past_key_values(self):
-        self.past_key_values = None
 
     def get_input_embeddings(self):
         return self.wte
@@ -696,8 +691,7 @@ class GPT2ModelTail(GPT2ModelSplitter):
             cross_attentions=all_cross_attentions,
         )
 
-
-# Global Model Wrapper
+# Model Tail Wrapper
 class GPT2TailForCausalLM(GPT2LMHeadModel, VFLModel):
     def __init__(self, config: GPT2Config, **kwargs):
         super().__init__(config)
@@ -707,9 +701,6 @@ class GPT2TailForCausalLM(GPT2LMHeadModel, VFLModel):
 
     def vfl_split(self, idx_of_layers: Iterable[int]) -> bool:
         return self.transformer.vfl_split(idx_of_layers)
-
-    def _clear_past_key_values(self):
-        self.transformer._clear_past_key_values()
 
     @property
     def head_layer(self):
@@ -755,14 +746,13 @@ class GPT2TailForCausalLM(GPT2LMHeadModel, VFLModel):
             return_dict=return_dict,
             **kwargs
         )
-        hidden_states = transformer_outputs[0] # last_hidden_state
-
+        hidden_states = transformer_outputs[0] # bs, seq_len, d_model
         # Set device for model parallelism
         if self.model_parallel:
             torch.cuda.set_device(self.transformer.first_device)
             hidden_states = hidden_states.to(self.lm_head.weight.device)
 
-        lm_logits = self.lm_head(hidden_states)
+        lm_logits = self.lm_head(hidden_states) # bs, seq_len, vocab_dim
 
         loss = None
         if labels is not None:

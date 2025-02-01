@@ -1,17 +1,17 @@
 {
-    "epochs": 2,
-    "lr": 0.0001,
+    "epochs": 10,
+    "lr": 0.00001,
     "k": 2,
     "batch_size": 128,
-    "pipeline": "pretrained",
+    "pipeline": "finetune",
     "model_architect":"CLS",
-    "early_stop_threshold": 1,
+    "early_stop_threshold": 2,
     "communication":{
         "communication_protocol": "FedSGD",
         "iteration_per_aggregation": 1
     },
     "dataset": {
-      "dataset_name": "SST-2",
+      "dataset_name": "SST-2-test",
       "num_classes": 2
     },
     "tokenizer": {
@@ -42,46 +42,52 @@
                 "embedding_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
+            },
+            "tail":{
+                "trainable": 1,
+                "head_layer_trainable": 0,
+                "encoder_trainable": 0,
+                "encoder_trainable_ids":[]
             }
             
         },
         "1": {
           "path": "/data/guzx0/Models/textattackbert-base-uncased-SST-2",
-            "tail":{
-                "trainable": 0,
-                "head_layer_trainable": 0,
-                "encoder_trainable": 0,
-                "encoder_trainable_ids":[]
+            "body":{
+                "trainable": 0
             }
         },
         "task":{
             "task_type": "SequenceClassification"
         },
-        "vfl_model_slice_num": 2,
+        "vfl_model_slice_num": 3,
         "local_encoders_num": 3,
-        "local_tail_encoders_num": 0
+        "local_tail_encoders_num": 1
     },
     "defense": {
         "name": "SnD",
         "parameters": {
             "party": [0],
-            "denoise_model": "MydenoiseModel_2slice",
-            "denoise_epoch": 20,
+            "denoise_model": "denoiseModelv3",
+            "denoise_epoch": 8,
             "denoise_lr": 0.0001,
-            "num_layers": 4,
-            "train_eta": 5,
-            "d_ff": 1280,
+            "denoise_batch_size": 12,
+            "denoise_sample_num": 10000,
+            "train_eta": 100,
+            "test_eta": 100,
+            "d_ff": 1024,
             "noise_per_sample": 2,
             "num_heads": 8,
+            "num_layers": 6,
             "dropout": 0.2,
-            "dim_head": 256,
+            "dim_head": 240,
             "att_pool": true,
             "comb": "att_w_output_v3"
         }
   },
   "attack_list": {
     
-      "1":{
+      "0":{
             "name": "BiSR",
             "parameters": {
                 "party": [1],
@@ -98,7 +104,7 @@
                 "attack_sample_num": 100
             }
         },
-      "0":{
+      "1":{
           "name": "VanillaModelInversion_WhiteBox",
           "parameters": {
               "party": [1],

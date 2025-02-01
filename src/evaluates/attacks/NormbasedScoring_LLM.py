@@ -115,6 +115,7 @@ class NormbasedScoring_LLM(Attacker):
     def attack(self):
         self.set_seed(123)
         for ik in self.party:  # attacker party #ik
+            attacked_party = 0
             # index = ik
             # # self.exp_res_dir = self.exp_res_dir + f'{index}/'
             # # if not os.path.exists(self.exp_res_dir):
@@ -122,7 +123,7 @@ class NormbasedScoring_LLM(Attacker):
             # # self.exp_res_path = self.exp_res_dir + self.file_name
 
             # # collect necessary information
-            true_label = self.vfl_info['label'].to(self.device)  # copy.deepcopy(self.gt_one_hot_label)
+            true_label = self.vfl_info['label'][attacked_party].to(self.device)  # CLM: bs, seq_len
             print('true_label:', true_label.size())
             sample_count = true_label.size()[0]
             pred_a_gradients_clone = self.vfl_info['global_gradient']

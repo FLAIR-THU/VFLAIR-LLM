@@ -1,18 +1,119 @@
 import torch
 from torch import nn
-
-# from models.layers import *
-
 import math
-# from torch.distributions.gamma import Gamma
-# from util.utils import get_token_embedding
-# from data.load_data import sample_noise_Gaussian, sample_noise_Chi
-# from util.globals import *
-# from baseline.ks_dist import ddKS
-# from transformers import BartForConditionalGeneration, AutoTokenizer
-
 import torch
 import torch.nn as nn
+
+
+class EnhancedClsModel(nn.Module):
+    def __init__(self, input_dim, n_class):
+        super().__init__()
+
+        hidden_dim = input_dim * 8 # 增加隐藏层维度
+        dropout_rate=0.5
+
+        self.model = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(p=dropout_rate),
+
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(p=dropout_rate),
+
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.BatchNorm1d(hidden_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(p=dropout_rate),
+
+            nn.Linear(hidden_dim // 2, hidden_dim // 4),
+            nn.BatchNorm1d(hidden_dim // 4),
+            nn.ReLU(),
+            nn.Dropout(p=dropout_rate),
+
+            nn.Linear(hidden_dim // 4, hidden_dim // 8),
+            nn.BatchNorm1d(hidden_dim // 8),
+            nn.ReLU(),
+            nn.Dropout(p=dropout_rate),
+
+            nn.Linear(hidden_dim // 8, n_class) # 输出层
+        )
+
+        # 初始化权重
+        self.model.apply(self.init_weights)
+
+    def init_weights(self, m):
+        if type(m) == nn.Linear:
+            nn.init.kaiming_uniform_(m.weight, nonlinearity='relu')
+            m.bias.data.fill_(0.01)
+
+    def forward(self, x):
+        logits = self.model(x)
+        return logits
+
+class denoiseModelv3(nn.Module):
+    def __init__(self, d_model, d_out, args, decoder=False): #change some attributes
+        super(denoiseModelv3, self).__init__()
+        # self.n_emb_block = args.n_emb_block
+        # self.n_noise_block = args.n_noise_block
+        self.d_model = d_model
+        self.d_out = d_out
+        self.num_heads = args.num_heads
+        self.num_layers = args.num_layers
+        self.d_ff = args.d_ff
+        # self.att_pool = args.att_pool
+        # self.comb = args.comb
+        self.linear_input_first = nn.Linear(2*d_out, d_out)
+        self.activation = nn.Tanh()
+        self.linear_input_sec = nn.Linear(d_out, d_out)
+        self.transformer = Transformer(d_model, d_out, args.num_heads, args.dim_head, args.num_layers, args.d_ff, args.dropout, decoder)
+
+    def forward(self, init_embedding, noise, output, attention_mask=None):
+        output = torch.cat([output.unsqueeze(dim=1), init_embedding, noise], dim = 1)
+        if attention_mask is not None:
+            batch_size = output.shape[0]
+            ones_ts = torch.ones(batch_size, 1, device = attention_mask.device)
+            attention_mask = torch.cat([ones_ts, attention_mask, attention_mask], dim=1)
+        output = self.transformer(output, mask=attention_mask)
+        return output
+
+# class denoiseModelv3(nn.Module):
+#     def __init__(self, d_model, d_out, args, decoder=False): #change some attributes
+#         super(denoiseModelv3, self).__init__()
+#         self.d_model = d_model
+#         self.d_out = d_out
+        
+#         self.num_heads = args.num_heads
+#         self.num_layers = args.num_layers
+#         self.d_ff = args.d_ff
+#         self.dim_head = args.dim_head
+#         self.dropout = args.dropout
+#         # self.comb = args.comb
+        
+#         self.linear_input_first = nn.Linear(2*d_out, d_out)
+#         self.activation = nn.Tanh()
+#         self.linear_input_sec = nn.Linear(d_out, d_out)
+#         self.transformer = Transformer(d_model, d_out, self.num_heads, self.dim_head, self.num_layers, self.d_ff, self.dropout, decoder)
+
+#     def forward(self, init_embedding, noise, output, attention_mask=None):
+#         '''
+#         attention_mask: bs, seq_len
+#         init_embedding/noise : bs, seq_len, d_model
+#         output: bs, d_model
+#         '''
+#         # print('init_embedding:',init_embedding.shape,' noise:',noise.shape,'  output:',output.shape)
+#         # print('self.d_model:',self.d_model,' self.d_out:',self.d_out)
+#         output = torch.cat([output.unsqueeze(dim=1), init_embedding, noise], dim = 1) # bs, 2seq_len+1, d_model
+#         if attention_mask is not None:
+#             batch_size = output.shape[0]
+#             ones_ts = torch.ones(batch_size, 1, device = attention_mask.device)
+#             attention_mask = torch.cat([ones_ts, attention_mask, attention_mask], dim=1)
+#         output = self.transformer(output, mask=attention_mask) # bs, d_out
+#         # print('transformer output:',output.shape)
+#         return output
+
 
 class MydenoiseModel_2slice(nn.Module):
     def __init__(self, d_model, d_out, args):
@@ -53,8 +154,8 @@ class MydenoiseModel_2slice(nn.Module):
         init_embedding, noise: [batch_size, seq_len, d_model]
         output: [batch_size, d_out] (e.g., num_classes or vocab_dim)
         '''
-        # print('init_embedding:',init_embedding.shape,' noise:',noise.shape,'  output:',output.shape)
-        # print('d_model:',self.d_model,'  d_out:',self.d_out)
+        print('init_embedding:',init_embedding.shape,' noise:',noise.shape,'  output:',output.shape)
+        print('d_model:',self.d_model,'  d_out:',self.d_out)
       
         # Combine init_embedding and noise for the encoder input
         encoder_input = torch.cat([init_embedding, noise], dim=1)  # [batch_size, 2*seq_len, d_model]
@@ -85,56 +186,6 @@ class MydenoiseModel_2slice(nn.Module):
         decoder_output = decoder_output.squeeze(0)  # [batch_size, d_model]
         final_output = self.final_layer(decoder_output)  # [batch_size, d_out]
         return final_output
-
-
-# class MydenoiseModel_2slice(nn.Module):
-#     def __init__(self, d_model, d_out, args,  dim_feedforward=2048):
-#         super(MydenoiseModel_2slice, self).__init__()
-#         self.d_model = d_model
-#         self.d_out = d_out
-        
-#         self.num_heads = args.num_heads
-#         self.num_layers = args.num_layers
-#         self.d_ff = args.d_ff
-#         self.dim_head = args.dim_head
-#         self.dropout = args.dropout
-        
-#         self.num_encoder_layers = args.defense_configs['num_layers']
-#         self.num_decoder_layers = args.defense_configs['num_layers']
-        
-        
-#         # Transformer encoder
-#         self.encoder_layer = nn.TransformerEncoderLayer(d_model, self.num_heads, self.dim_head)#dim_feedforward)
-#         self.encoder = nn.TransformerEncoder(self.encoder_layer, self.num_encoder_layers)
-        
-#         # Transformer decoder
-#         self.decoder_layer = nn.TransformerDecoderLayer(d_model, self.num_heads, self.dim_head)
-#         self.decoder = nn.TransformerDecoder(self.decoder_layer, self.num_decoder_layers)
-        
-#         # Linear mapping for d_out tensor
-#         self.class_embedding = nn.Linear(d_out, d_model)
-        
-#         # Final output projection
-#         self.output_layer = nn.Linear(d_model, d_out)
-    
-#     def forward(self, encoder_input, class_tensor):
-#         # Encoder: process [batch_size, seq_len, d_model]
-#         encoder_output = self.encoder(encoder_input)
-        
-#         # Map class_tensor [batch_size, d_out] to [batch_size, 1, d_model]
-#         class_embedding = self.class_embedding(class_tensor).unsqueeze(1)
-#         print('class_embedding:',class_embedding.shape)
-        
-#         # Decoder: process using encoder output and class embedding
-#         decoder_output = self.decoder(
-#             tgt=class_embedding.permute(1, 0, 2),  # [d_out, batch_size, d_model]
-#             memory=encoder_output.permute(1, 0, 2)  # [seq_len, batch_size, d_model]
-#         )
-        
-#         # Project to [batch_size, d_out]
-#         output = self.output_layer(decoder_output.permute(1, 0, 2).squeeze(1))
-#         return output
-
 
 class denoiseModelv3_2slice(nn.Module):
     def __init__(self, d_model, d_out, args, decoder=False): #change some attributes
@@ -184,7 +235,6 @@ class denoiseModelv3_2slice(nn.Module):
         output = self.transformer(output, mask=attention_mask) # [bs, 2seqlen+1, d_out] --> [bs, d_out]
         # print('transformer output:',output.shape)
         return output
-    
 
 class denoiseModelv3_3slice(nn.Module):
     def __init__(self, d_model, d_out, args, decoder=False): #change some attributes
@@ -223,41 +273,6 @@ class denoiseModelv3_3slice(nn.Module):
         transformed_output = torch.stack(transformed_output,dim=1)
         # print('transformed_output:',transformed_output.shape)
         return transformed_output
-
-
-class denoiseModelv3(nn.Module):
-    def __init__(self, d_model, d_out, args, decoder=False): #change some attributes
-        super(denoiseModelv3, self).__init__()
-        self.d_model = d_model
-        self.d_out = d_out
-        
-        # self.n_emb_block = args.n_emb_block
-        # self.n_noise_block = args.n_noise_block
-        self.num_heads = args.num_heads
-        self.num_layers = args.num_layers
-        self.d_ff = args.d_ff
-        self.dim_head = args.dim_head
-        self.dropout = args.dropout
-        # self.comb = args.comb
-        
-        self.linear_input_first = nn.Linear(2*d_out, d_out)
-        self.activation = nn.Tanh()
-        self.linear_input_sec = nn.Linear(d_out, d_out)
-        self.transformer = Transformer(d_model, d_out, self.num_heads, self.dim_head, self.num_layers, self.d_ff, self.dropout, decoder)
-
-    def forward(self, init_embedding, noise, output, attention_mask=None):
-        # print('init_embedding:',init_embedding.shape,' noise:',noise.shape,'  output:',output.shape)
-        # print('self.d_model:',self.d_model,' self.d_out:',self.d_out)
-        output = torch.cat([output.unsqueeze(dim=1), init_embedding, noise], dim = 1)
-        # output = torch.cat([output, init_embedding, noise], dim = 1)
-        
-        if attention_mask is not None:
-            batch_size = output.shape[0]
-            ones_ts = torch.ones(batch_size, 1, device = attention_mask.device)
-            attention_mask = torch.cat([ones_ts, attention_mask, attention_mask], dim=1)
-        output = self.transformer(output, mask=attention_mask)
-        # print('transformer output:',output.shape)
-        return output
 
 
 

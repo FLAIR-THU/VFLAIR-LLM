@@ -5,7 +5,7 @@ from peft import LoraConfig, TaskType, get_peft_model, PeftModel, PeftModelForCa
 
 
 class GPT2ModelLoader(LLMModelLoader):
-    _models = {}  # type:dict[int,PreTrainedModel]
+    _models = {}  
 
     def load(self, args, model_path, is_active_party, party_idx):
         if args.vfl_model_slice_num == 2:

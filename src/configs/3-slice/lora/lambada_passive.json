@@ -1,6 +1,6 @@
 {
     "epochs": 50,
-    "lr": 0.001,
+    "lr": 0.00001,
     "k": 2,
     "batch_size": 16,
     "test_batch_size": 1,
@@ -39,7 +39,7 @@
           "device_map": "auto"
         },
         "0": {
-        "path": "/shared/model/gpt2",
+        "path": "/data/guzx0/Models/gpt2",
             "head":{
               "trainable": 1,
               "embedding_trainable": 0,
@@ -51,7 +51,7 @@
             }
         },
         "1": {
-        "path": "/shared/model/gpt2",
+        "path": "/data/guzx0/Models/gpt2",
             "body":{
               "trainable": 0,
               "embedding_trainable": 0,

@@ -797,8 +797,15 @@ def do_load_basic_configs_llm(config_dict, args):
             args.defense_param_name = 'gradient_sparse_rate'
         
         elif args.defense_name == "TextObfuscator":
+            
             args.defense_param = args.defense_configs['epsilon']
             args.defense_param_name = 'epsilon'
+            
+            if 'defense_param_name' in args.defense_configs:
+                if args.defense_configs['defense_param_name'] == 'cluster_num':
+                    args.defense_param = args.defense_configs['cluster_num']
+                    args.defense_param_name = 'cluster_num'
+                
             args.cluster_method = args.defense_configs['cluster_method']
             args.cluster_num = args.defense_configs['cluster_num']
             args.w_cluster_close = args.defense_configs['w_cluster_close']
@@ -821,13 +828,17 @@ def do_load_basic_configs_llm(config_dict, args):
         
         elif args.defense_name == "SnD":
             args.defense_name = args.defense_name + '_'+args.defense_configs['denoise_model'] 
-            args.defense_param = args.defense_configs['train_eta']
-            args.defense_param_name = 'train_eta'
+            args.defense_param = args.defense_configs['test_eta']
+            args.defense_param_name = 'test_eta'
             
             args.denoise_model = args.defense_configs['denoise_model'] 
+            
             args.train_eta = args.defense_configs['train_eta'] 
+            args.test_eta = args.defense_configs['test_eta'] 
             args.noise_per_sample = args.defense_configs['noise_per_sample'] # number of noise matrices added to each samples
             args.denoise_epoch = args.defense_configs['denoise_epoch']
+            args.denoise_batch_size = args.defense_configs['denoise_batch_size']
+            args.denoise_lr = args.defense_configs['denoise_lr']
             
             args.dim_head = args.defense_configs['dim_head'] # dimension of each head
             args.dropout = args.defense_configs['dropout'] # dropout rate of the denoise model

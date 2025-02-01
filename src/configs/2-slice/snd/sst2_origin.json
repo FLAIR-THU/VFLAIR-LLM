@@ -1,11 +1,11 @@
 {
-    "epochs": 2,
+    "epochs": 10,
     "lr": 0.0001,
     "k": 2,
     "batch_size": 128,
-    "pipeline": "pretrained",
+    "pipeline": "finetune",
     "model_architect":"CLS",
-    "early_stop_threshold": 1,
+    "early_stop_threshold": 2,
     "communication":{
         "communication_protocol": "FedSGD",
         "iteration_per_aggregation": 1
@@ -44,8 +44,8 @@
                 "encoder_trainable_ids":[]
             },
             "tail":{
-                "trainable": 0,
-                "head_layer_trainable": 0,
+                "trainable": 1,
+                "head_layer_trainable": 1,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
             }
@@ -69,13 +69,17 @@
         "parameters": {
             "party": [0],
             "denoise_model": "denoiseModelv3",
-            "denoise_epoch": 20,
+            "denoise_model_path":"/data/guzx0/FedProjects/model/denoise_model_bert-base-uncased_mix_ttttsapbhpashdyaarww_denoiseModelv3_att_w_output_v3_True_True_True_8_6_256_norm_eta100.0/epoch_1",
+            "denoise_epoch": 4,
             "denoise_lr": 0.0001,
-            "train_eta": 10,
-            "d_ff": 1280,
+            "denoise_batch_size": 12,
+            "denoise_sample_num": 10000,
+            "train_eta": 100,
+            "test_eta": 100,
+            "d_ff": 1024,
             "noise_per_sample": 2,
             "num_heads": 8,
-            "num_layers": 4,
+            "num_layers": 6,
             "dropout": 0.2,
             "dim_head": 256,
             "att_pool": true,

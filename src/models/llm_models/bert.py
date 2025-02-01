@@ -555,6 +555,7 @@ class BertTailForSequenceClassification(BertForSequenceClassification, VFLModel)
 
         pooled_output = outputs[1]
 
+        # print('self.classifier:',type(self.classifier))
         pooled_output = self.dropout(pooled_output)
         logits = self.classifier(pooled_output)
 

@@ -12,6 +12,8 @@ src/models/model_parameters/clustering_models
 src/models/model_parameters/inferdpt_kit
 src/models/model_parameters/denoise_model
 src/models/model_parameters/custext_kit
+src/models/model_parameters/santext_kit
+
 
 # dataset files
 # dataset/

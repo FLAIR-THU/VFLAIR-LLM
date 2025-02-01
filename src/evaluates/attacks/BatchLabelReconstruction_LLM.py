@@ -101,7 +101,12 @@ class BatchLabelReconstruction_LLM(Attacker):
         return loss
 
     def attack(self):
-        self.set_seed(123)
+        # self.set_seed(123)
+        self.set_seed(self.args.current_seed)
+        if 'attack_seed' in self.args.attack_configs.keys():
+            attack_seed = self.args.attack_configs['attack_seed']
+            self.set_seed(attack_seed)
+        
 
 
         for attacker_ik in self.party: # attacker party #attacker_ik

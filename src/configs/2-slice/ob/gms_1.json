@@ -1,5 +1,5 @@
 {
-    "epochs": 2,
+    "epochs": 40,
     "lr": 1e-5,
     "k": 2,
     "batch_size": 8,
@@ -12,11 +12,11 @@
         "iteration_per_aggregation": 1
     },
     "finetune_configs":{
-        "name":"Vanilla",
+        "name":"LoRA",
         "configs":{
             "inference_mode":false,  
-            "r":4,  
-            "lora_alpha":16, 
+            "r":8,  
+            "lora_alpha":32, 
             "lora_dropout":0.1
         }
     },
@@ -79,7 +79,7 @@
             "party": [0],
             "cluster_method": "kmeans",
             "cluster_num": 100,
-            "epsilon": 0.01,
+            "epsilon": 1,
             "w_cluster_away": 0.5,
             "w_cluster_close": 0.1
         }

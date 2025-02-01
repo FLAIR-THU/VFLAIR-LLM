@@ -75,7 +75,7 @@
         "name": "InferDPT",
         "parameters": {
             "party": [0],
-            "epsilon": 10,
+            "epsilon": 15,
             "decode_model_path": "",
             "inferdpt_kit_path": "/data/guzx0/FedProjects/vflair_llm/src/models/model_parameters/inferdpt_kit/original",
             "decode_model_load_kwargs":{

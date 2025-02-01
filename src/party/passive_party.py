@@ -376,17 +376,36 @@ class PassiveParty_LLM(Party_LLM):
                 self.denoise_mod = denoise_model_type_dict[self.args.denoise_model]\
                     (d_model=embed_dim, d_out=d_out, args=self.args).to(self.args.device)
                 
-                denoise_model_dir = f"./models/model_parameters/denoise_model/{self.args.vfl_model_slice_num}-slice/{self.args.dataset}/"
-                if not os.path.exists(denoise_model_dir):
-                    os.makedirs(denoise_model_dir)
-                self.denoise_model_path = denoise_model_dir + f"/{self.args.denoise_model}_eta{str(self.args.train_eta)}_numlayer{str(self.args.num_layers)}_epoch{str(self.args.denoise_epoch)}"
-                
-                if os.path.exists(self.denoise_model_path):
-                    print('Load Denoise Model From: ',self.denoise_model_path)
+                if "denoise_model_path" in self.args.defense_configs:
+                    # denoise_model_path already specified
+                    self.denoise_model_path  = self.args.defense_configs["denoise_model_path"]
+                    print('External Denoise Model Path: Load Denoise Model From: ',self.denoise_model_path)
                     self.denoise_mod.load_state_dict(torch.load(self.denoise_model_path, map_location=self.args.device))
                 else:
-                    print('Denosie Model Unprepared, will be trained later afetr party initialization')
+                    self.denoise_model_dir = f"./models/model_parameters/denoise_model/{self.args.vfl_model_slice_num}-slice/{self.args.dataset}/{self.args.denoise_model}/eta{str(self.args.train_eta)}_numlayer{str(self.args.num_layers)}/bs{str(self.args.denoise_batch_size)}_lr{str(self.args.denoise_lr)}/"
+                    if not os.path.exists(self.denoise_model_dir):
+                        os.makedirs(self.denoise_model_dir)
+                    self.denoise_model_path = self.denoise_model_dir + f"/epoch{str(self.args.denoise_epoch)}"
                     
+                    if os.path.exists(self.denoise_model_path):
+                        print('Load Denoise Model From: ',self.denoise_model_path)
+                        self.denoise_mod.load_state_dict(torch.load(self.denoise_model_path, map_location=self.args.device))
+                    else:
+                        print('Denosie Model Unprepared, will be trained later afetr party initialization')
+                
+                # if self.args.pipeline == 'finetune':
+                #     print('Reset Classification Head to EnhancedClsModel')
+                #     self.cls_model = EnhancedClsModel(self.args.model_embedded_dim, self.args.num_classes).to(self.args.device)
+                #     # reset classifier
+                #     self.local_model_tail.classifier = self.cls_model
+                #     if self.local_model_tail_optimizer == None:
+                #         self.local_model_tail_optimizer = torch.optim.Adam(self.local_model_tail.classifier.parameters(),
+                #                                                     lr=self.args.main_lr)
+                #     else:
+                #         self.local_model_tail_optimizer.add_param_group(
+                #             {'params': self.local_model_tail.classifier.parameters(), 'lr': self.args.main_lr})
+
+                 
             elif self.args.apply_custext and (self.index in defense_configs["party"]):
                 print(f'Passive Party {self.index}: init CUSTEXT Defense')
                 custext_dict_path = f"./models/model_parameters/custext_kit/{self.args.dataset}/eps_{self.args.epsilon}_top_{self.args.topk}/"
@@ -526,28 +545,22 @@ class PassiveParty_LLM(Party_LLM):
         '''
         self.global_gradient = \partial global_loss / \partial global_pred
         '''
-        # if (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])
-        #       and (self.index < self.args.k - 1) and "tail" in self.mid_position):
-        #     global_loss = global_loss + self.tail_mid_loss.to(global_loss.device)
-       
         if self.args.task_type == 'QuestionAnswering':
-            _gradients_start = torch.autograd.grad(global_loss, global_pred.start_logits, retain_graph=True)
-            _gradients_end = torch.autograd.grad(global_loss, global_pred.end_logits, retain_graph=True)
-            global_gradient = _gradients_end + _gradients_start
-            global_gradient_clone = global_gradient[0].detach().clone()
-            global_gradient_clone = global_gradient_clone / 2
-            self.global_gradient = global_gradient_clone
+            gradients_start_logits = torch.autograd.grad(global_loss, global_pred.start_logits, retain_graph=True)
+            gradients_end_logits = torch.autograd.grad(global_loss, global_pred.end_logits, retain_graph=True)
+            logits_gradients = (torch.cat((gradients_start_logits[0].unsqueeze(-1), gradients_end_logits[0].unsqueeze(-1)), dim=-1))
         else:
             logits_gradients = torch.autograd.grad(global_loss, global_pred.logits, retain_graph=True)[0]
-            if vfl_basic_config.num_of_slice==2:
-                global_gradient_clone = logits_gradients.detach().clone()
+        
+        if vfl_basic_config.num_of_slice==2:
+            global_gradient_clone = logits_gradients.detach().clone()
+        else:
+            self.backward(2,retain_graph=True,gradient=logits_gradients)
+            if self.input_tensors[2].grad is not None:
+                global_gradient_clone=self.input_tensors[2].grad.detach().clone()
             else:
-                self.backward(2,retain_graph=True,gradient=logits_gradients)
-                if self.input_tensors[2].grad is not None:
-                    global_gradient_clone=self.input_tensors[2].grad.detach().clone()
-                else:
-                    global_gradient_clone=torch.autograd.grad(self.output_tensors[2],self.input_tensors[2],grad_outputs=logits_gradients,retain_graph=True)[0]
-            self.global_gradient = global_gradient_clone
+                global_gradient_clone=torch.autograd.grad(self.output_tensors[2],self.input_tensors[2],grad_outputs=logits_gradients,retain_graph=True)[0]
+        self.global_gradient = global_gradient_clone
 
         self.global_gradient = self.apply_defense_on_global_gradient(self.global_gradient)
 
@@ -558,10 +571,6 @@ class PassiveParty_LLM(Party_LLM):
         self.global_gradient = \partial global_loss / \partial global_intermediate
         self.input_tensors[2] = global_intermediate model body output/model tail input
         '''
-        # if (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])
-        #       and (self.index < self.args.k - 1) and "tail" in self.mid_position):
-        #     global_loss = global_loss + self.tail_mid_loss.to(self.global_loss.device)
-        
         global_gradient_clone=torch.autograd.grad(global_loss,global_intermediate,retain_graph=True)[0]
         self.global_gradient = global_gradient_clone
         self.global_gradient = self.apply_defense_on_global_gradient(self.global_gradient)
@@ -667,7 +676,6 @@ class PassiveParty_LLM(Party_LLM):
                 loss_fct = CrossEntropyLoss()
                 # loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
                 loss = loss_fct(next_token_logits, labels)
-                # print('loss:', loss)
 
         elif self.args.model_architect == 'MM':  # self.args.task_type == 'CausalLM':
             try:
@@ -704,9 +712,6 @@ class PassiveParty_LLM(Party_LLM):
             start_logits = pred.start_logits
             end_logits = pred.end_logits
 
-            # print('---- gt_one_hot_label -----') 
-            # print(gt_one_hot_label) # [ [gold_s, gold_e]*bs ]
-
             golden_start_positions = torch.tensor([gt_one_hot_label[i][0] for i in range(len(gt_one_hot_label))])
             golden_end_positions = torch.tensor([gt_one_hot_label[i][1] for i in range(len(gt_one_hot_label))])
 
@@ -725,19 +730,10 @@ class PassiveParty_LLM(Party_LLM):
             golden_start_positions = golden_start_positions.clamp(0, ignored_index)
             golden_end_positions = golden_end_positions.clamp(0, ignored_index)
 
-            # print('start_logits end_logits:',start_logits.shape, end_logits.shape)
-            # print('after clamp golden_start_positions golden_end_positions:')
-            # print(golden_start_positions.shape, golden_start_positions)
-            # print(golden_end_positions.shape, golden_end_positions)
-            # print('-'*100)
-
             loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
             start_loss = loss_fct(start_logits, golden_start_positions)
             end_loss = loss_fct(end_logits, golden_end_positions)
             loss = (start_loss + end_loss) / 2
-
-            # print('start_loss:',start_loss,' end_loss:',end_loss,' loss:',loss)
-
         else:
             assert 1 > 2, 'Task type not supported'
 
@@ -997,11 +993,6 @@ class PassiveParty_LLM(Party_LLM):
                     new_tokens = [token.replace("Ġ", "").replace("▁", "").replace("Ċ", "") for token in new_tokens]
                     new_sentence = " ".join(new_tokens)
                     new_sentence_list.append(new_sentence)
-                    
-                    # print('after:')
-                    # print(new_sentence)
-                    # print('----')
-                    # assert 1>2
                 
                 # Convert sentence back to tensor
                 tokenized_new_sentence = self.args.tokenizer(new_sentence_list, 
@@ -1049,7 +1040,7 @@ class PassiveParty_LLM(Party_LLM):
 
             elif self.args.apply_snd and (self.index in self.args.defense_configs["party"]):
                 # print('Passive Party Add noise')
-                self.snd_noise = sample_noise_Chi(self.output_tensors[0].shape, self.args.train_eta).to(self.output_tensors[0].device)
+                self.snd_noise = sample_noise_Chi(self.output_tensors[0].shape, self.args.test_eta).to(self.output_tensors[0].device)
                 # print('noise:',self.snd_noise.shape,'  origin:',self.output_tensors[0].shape)
                 self.local_pred_clone = self.output_tensors[0].detach().clone() + self.snd_noise
         ######### Defense Applied on Local Model Prediction Process ###########

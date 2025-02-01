@@ -17,7 +17,7 @@
       }
   },
   "dataset":{
-      "dataset_name": "Lambada_test",
+      "dataset_name": "Lambada",
       "num_classes": 1,
       "use_prompt": 1
   },
@@ -39,7 +39,7 @@
         "device_map": "auto"
       },
       "0": {
-      "path": "/home/DAIR/guzx/Git_FedProject/Models/gpt2",
+      "path": "/data/guzx0/Models/gpt2",
           "head":{
             "trainable": 0,
             "embedding_trainable": 0,
@@ -48,7 +48,7 @@
           }
       },
       "1": {
-      "path": "/home/DAIR/guzx/Git_FedProject/Models/gpt2",
+      "path": "/data/guzx0/Models/gpt2",
           "tail":{
             "trainable": 0,
             "head_layer_trainable": 0,
@@ -71,14 +71,12 @@
       "name": "InferDPT",
         "parameters": {
             "party": [0],
-            "epsilon": 0.00001,
-            "decode_model_path": "/home/DAIR/guzx/Git_FedProject/Models/QwenQwen1.5-0.5B",
+            "epsilon": 1,
+            "decode_model_path": "",
+            "inferdpt_kit_path": "/data/guzx0/FedProjects/vflair_llm/src/models/model_parameters/inferdpt_kit/original",
             "decode_model_load_kwargs":{
-                "device_map": "auto"
             },
             "decode_generation_kwargs":{
-                "temperature": 1,
-                "max_new_tokens": 256 
             }
         }
     },
@@ -100,7 +98,43 @@
                 "attack_sample_num": 200
             }
           },
-        "1":{
+          "1":{
+              "name": "BiSR",
+            "parameters": {
+                "party": [1],
+                "attacker_model_name": "NaMoE",
+                "expert_scales": [0, 10.0, 7.5, 5.0],
+                "expert_epoch": 20,
+                "gate_epoch": 15,
+                "full_epoch": 4,
+                "phase1_lr":0.001,
+                "lr": 0.01,
+                "batch_size": 6,
+                "epochs": 100,
+                "attack_seed":1,
+                "auxiliary_data_num": 100,
+                "attack_sample_num": 200
+            }
+          },
+          "2":{
+              "name": "BiSR",
+            "parameters": {
+                "party": [1],
+                "attacker_model_name": "NaMoE",
+                "expert_scales": [0, 10.0, 7.5, 5.0],
+                "expert_epoch": 20,
+                "gate_epoch": 15,
+                "full_epoch": 4,
+                "phase1_lr":0.001,
+                "lr": 0.01,
+                "batch_size": 6,
+                "epochs": 100,
+                "attack_seed":2,
+                "auxiliary_data_num": 100,
+                "attack_sample_num": 200
+            }
+          },
+        "3":{
             "name": "VanillaModelInversion_WhiteBox",
             "parameters": {
                 "party": [1],
@@ -110,7 +144,29 @@
                 "attack_sample_num": 200
                 }
         },
-        "2":{
+        "4":{
+            "name": "VanillaModelInversion_WhiteBox",
+            "parameters": {
+                "party": [1],
+                "lr": 0.001,
+                "epochs": 400,
+                "batch_size": 1,
+                "attack_seed":1,
+                "attack_sample_num": 200
+                }
+        },
+        "5":{
+            "name": "VanillaModelInversion_WhiteBox",
+            "parameters": {
+                "party": [1],
+                "lr": 0.001,
+                "epochs": 400,
+                "batch_size": 1,
+                "attack_seed":2,
+                "attack_sample_num": 200
+                }
+        },
+        "6":{
             "name": "WhiteBoxInversion",
             "parameters": {
                 "party": [1],
@@ -118,6 +174,30 @@
                 "lr": 0.005,
                 "epochs": 300,
                 "batch_size": 1,
+                "attack_sample_num": 200
+            }
+        },
+        "7":{
+            "name": "WhiteBoxInversion",
+            "parameters": {
+                "party": [1],
+                "T": 0.05,
+                "lr": 0.005,
+                "epochs": 300,
+                "batch_size": 1,
+                "attack_seed":1,
+                "attack_sample_num": 200
+            }
+        },
+        "8":{
+            "name": "WhiteBoxInversion",
+            "parameters": {
+                "party": [1],
+                "T": 0.05,
+                "lr": 0.005,
+                "epochs": 300,
+                "batch_size": 1,
+                "attack_seed":2,
                 "attack_sample_num": 200
             }
         }
