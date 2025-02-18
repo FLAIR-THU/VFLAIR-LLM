@@ -105,29 +105,32 @@ class WhiteBoxInversion(Attacker):
 
             attack_result = pd.DataFrame(columns = ['Pad_Length','Length','Precision', 'Recall'])
 
-            # attack_test_dataset = self.top_vfl.parties[0].test_dst
-            test_data = self.vfl_info["test_data"][0] 
-            test_label = self.vfl_info["test_label"][0] 
+            target_data = self.args.attack_configs['target_data']
+            if target_data == 'test':
+                attack_data = self.vfl_info["test_data"][0] 
+                attack_label = self.vfl_info["test_label"][0] 
+            elif target_data == 'train':
+                attack_data = self.vfl_info["train_data"][0] 
+                attack_label = self.vfl_info["train_label"][0] 
             
-            if len(test_data) > self.attack_sample_num:
-                sample_list = [i for i in range(len(test_data))]
+            torch.cuda.empty_cache()
+            if len(attack_data) > self.attack_sample_num:
+                print('len(attack_data):',len(attack_data),' self.attack_sample_num:',self.attack_sample_num)
+                sample_list = [i for i in range(len(attack_data))]
                 sample_list = random.sample(sample_list, self.attack_sample_num) 
-                test_data = [test_data[i] for i in sample_list] 
-                test_label = [test_label[i] for i in sample_list] 
-                
-                # test_data = test_data[:self.attack_sample_num]
-                # test_label = test_label[:self.attack_sample_num]
+                attack_data = [attack_data[i] for i in sample_list] 
+                attack_label = [attack_label[i] for i in sample_list] 
             
             if self.args.dataset == 'Lambada' or self.args.dataset == 'Lambada_test':
-                attack_test_dataset = LambadaDataset_LLM(self.args, test_data, test_label, 'test')
-            elif self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
-                attack_test_dataset = GSMDataset_LLM(self.args, test_data, test_label, 'test')
-            elif self.args.dataset in ['Alpaca']:
-                attack_test_dataset = AlpacaDataset_LLM(self.args, test_data, test_label, 'test')
+                attack_test_dataset = LambadaDataset_LLM(self.args, attack_data, attack_label, 'test')
             elif self.args.dataset == 'TextVQA' or self.args.dataset == 'TextVQA-test':
-                attack_test_dataset = TextVQADataset_train(self.args, test_data, test_label, vis_processor,'train')
+                attack_test_dataset = TextVQADataset_train(self.args, attack_data, attack_label, vis_processor,'train')
+            elif self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
+                attack_test_dataset = GSMDataset_LLM(self.args, attack_data, attack_label, 'test')
+            elif self.args.dataset in ['Alpaca','Alpaca-test']:
+                attack_test_dataset = AlpacaDataset_LLM(self.args, attack_data, attack_label, 'test')
             else:
-                attack_test_dataset = PassiveDataset_LLM(self.args, test_data, test_label)
+                attack_test_dataset = PassiveDataset_LLM(self.args, attack_data, attack_label)
 
             attack_info = f'Attack Sample Num:{len(attack_test_dataset)}'
             print(attack_info)

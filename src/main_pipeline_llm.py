@@ -108,7 +108,8 @@ def evaluate_inversion_attack(args):
         inference_party_time = vfl.inference_party_time
         precision, recall , attack_total_time= vfl.evaluate_attack()
 
-        exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|early_stop_threshold={args.early_stop_threshold}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|precision={precision}|recall={recall}|training_time={training_time}|attack_time={attack_total_time}|"
+        target_data = args.attack_configs['target_data']
+        exp_result = f"{args.attack_name}|{args.pad_info}|target_data={target_data}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|early_stop_threshold={args.early_stop_threshold}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|precision={precision}|recall={recall}|training_time={training_time}|attack_time={attack_total_time}|"
         print(exp_result)
         append_exp_res(args.exp_res_path, exp_result)
     return precision, recall

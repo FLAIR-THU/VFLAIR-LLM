@@ -31,7 +31,7 @@
       "kwargs_model_loading":{
       },
       "0": {
-        "path": "/data/guzx0/Models/Shunianyelp_review_classification",
+        "path": "//home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification",
 
           "head":{
               "trainable": 0,
@@ -42,9 +42,9 @@
           
       },
       "1": {
-        "path": "/data/guzx0/Models/Shunianyelp_review_classification",
+        "path": "//home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification",
           "tail":{
-              "head_layer_trainable": 1,
+              "head_layer_trainable": 0,
               "encoder_trainable": 0,
               "encoder_trainable_ids":[]
           }
@@ -62,14 +62,10 @@
             "party": [0],
             "epsilon": 20,
             "decode_model_path": "",
-            "inferdpt_kit_path": "/data/guzx0/FedProjects/vflair_llm/src/models/model_parameters/inferdpt_kit/original",
+            "inferdpt_kit_path": "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/model_parameters/inferdpt_kit/original",
             "decode_model_load_kwargs":{
-                "device_map": "auto"
             },
             "decode_generation_kwargs":{
-                "temperature": 1,
-                "early_stopping": true,
-                "max_new_tokens": 160 
             }
         }
     },

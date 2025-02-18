@@ -1653,8 +1653,8 @@ def load_dataset_per_party_llm(args, index):
             train_set_file = DATA_PATH + 'SST-2/train.tsv'
             test_set_file = DATA_PATH + 'SST-2/dev.tsv'
         df = pd.read_csv(train_set_file, delimiter='\t')  # names=[  'sentence','label'] , names=['label', 'sentence']
-        sentences = df.sentence.values[:]
-        labels = df.label.values[:]
+        sentences = df.sentence.values[:500]
+        labels = df.label.values[:500]
         X_train = np.array(sentences)
         y_train = np.array([int(_label) for _label in labels])
 

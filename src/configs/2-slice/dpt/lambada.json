@@ -39,7 +39,7 @@
         "device_map": "auto"
       },
       "0": {
-      "path": "/data/guzx0/Models/gpt2",
+      "path": "//home/DAIR/guzx/Git_FedProject/Models/gpt2",
           "head":{
             "trainable": 0,
             "embedding_trainable": 0,
@@ -48,7 +48,7 @@
           }
       },
       "1": {
-      "path": "/data/guzx0/Models/gpt2",
+      "path": "//home/DAIR/guzx/Git_FedProject/Models/gpt2",
           "tail":{
             "trainable": 0,
             "head_layer_trainable": 0,
@@ -73,7 +73,7 @@
             "party": [0],
             "epsilon": 1,
             "decode_model_path": "",
-            "inferdpt_kit_path": "/data/guzx0/FedProjects/vflair_llm/src/models/model_parameters/inferdpt_kit/original",
+            "inferdpt_kit_path": "/home/DAIR/guzx/Git_FedProject/vflair_llm/src/models/model_parameters/inferdpt_kit/original",
             "decode_model_load_kwargs":{
             },
             "decode_generation_kwargs":{

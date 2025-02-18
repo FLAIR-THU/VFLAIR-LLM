@@ -1,5 +1,5 @@
 {
-    "epochs": 50,
+    "epochs": 2,
     "lr": 0.0001,
     "k": 2,
     "batch_size": 64,
@@ -31,7 +31,7 @@
       "kwargs_model_loading":{
       },
       "0": {
-        "path": "/data/guzx0/Models/Shunianyelp_review_classification",
+        "path": "//home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification",
 
           "head":{
               "trainable": 0,
@@ -42,9 +42,9 @@
           
       },
       "1": {
-        "path": "/data/guzx0/Models/Shunianyelp_review_classification",
+        "path": "//home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification",
           "tail":{
-              "head_layer_trainable": 1,
+              "head_layer_trainable": 0,
               "encoder_trainable": 0,
               "encoder_trainable_ids":[]
           }
@@ -60,7 +60,7 @@
         "name": "CusText",
         "parameters": {
             "party": [0],
-            "epsilon": 1,
+            "epsilon": 5,
             "topk": 20
         }
     },
