@@ -1,6 +1,6 @@
 {
     "epochs": 40,
-    "lr": 0.0001,
+    "lr": 0.00001,
     "k": 2,
     "batch_size": 16,
     "early_stop_threshold": 2,
@@ -35,23 +35,23 @@
         "kwargs_model_loading":{
         },
         "0": {
-          "path": "/data/guzx0/Models/textattackbert-base-uncased-SST-2",
+          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
 
             "head":{
-                "trainable": 0,
+                "trainable": 1,
                 "embedding_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
             },
             "tail":{
-                "trainable": 0,
+                "trainable": 1,
                 "head_layer_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
             }
         },
         "1": {
-          "path": "/data/guzx0/Models/textattackbert-base-uncased-SST-2",
+          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
             "body":{
                 "trainable": 1,
                 "encoder_trainable": 0,
@@ -66,19 +66,43 @@
         "local_tail_encoders_num": 3
     },
     "attack_list": {
-      "1": {
-          "name": "NormbasedScoring_LLM",
-          "parameters": {
-            "party": [1]
-        }
-      },
+     
       "0": {
         "name": "BatchLabelReconstruction_LLM",
         "parameters": {
           "party": [1],
+          "target_data":"train",
           "lr": 0.05,
           "epochs": 500
         }
+      },
+      "1": {
+        "name": "BatchLabelReconstruction_LLM",
+        "parameters": {
+          "party": [1],
+          "target_data":"train",
+          "lr": 0.05,
+          "attack_seed": 1,
+          "epochs": 500
+        }
+      },
+      "2": {
+          "name": "NormbasedScoring_LLM",
+          "parameters": {
+            "party": [1],
+            "target_data":"train"
+        }
+      },
+      "3": {
+          "name": "NormbasedScoring_LLM",
+          "parameters": {
+            "party": [1],
+            "target_data":"train",
+            "attack_seed": 1
+        }
       }
+      
   }
 }
+
+

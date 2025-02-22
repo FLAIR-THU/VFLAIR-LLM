@@ -111,7 +111,7 @@
               "attack_sample_num": 1000
           }
         },
-        "3": {
+        "2": {
             "name": "VanillaModelInversion_WhiteBox",
             "parameters": {
                 "party": [1],
@@ -123,7 +123,7 @@
                 "attack_sample_num": 1000
             }
         },
-        "4": {
+        "3": {
             "name": "VanillaModelInversion_WhiteBox",
             "parameters": {
                 "party": [1],
@@ -136,7 +136,7 @@
                 "attack_sample_num": 1000
             }
         },
-        "5": {
+        "4": {
             "name": "WhiteBoxInversion",
             "parameters": {
                 "party": [1],
@@ -149,7 +149,7 @@
                 "attack_sample_num": 1000
             }
         },
-        "6": {
+        "5": {
             "name": "WhiteBoxInversion",
             "parameters": {
                 "party": [1],
@@ -164,7 +164,7 @@
             }
         },
 
-        "7":{
+        "6":{
             "name": "BiSR",
           "parameters": {
               "party": [1],
@@ -182,7 +182,7 @@
               "attack_sample_num": 1000
           }
         },
-        "8":{
+        "7":{
             "name": "BiSR",
           "parameters": {
               "party": [1],
@@ -201,7 +201,7 @@
               "attack_sample_num": 1000
           }
         },
-        "9": {
+        "8": {
             "name": "VanillaModelInversion_WhiteBox",
             "parameters": {
                 "party": [1],
@@ -213,7 +213,7 @@
                 "attack_sample_num": 1000
             }
         },
-        "10": {
+        "9": {
             "name": "VanillaModelInversion_WhiteBox",
             "parameters": {
                 "party": [1],
@@ -226,7 +226,7 @@
                 "attack_sample_num": 1000
             }
         },
-        "11": {
+        "10": {
             "name": "WhiteBoxInversion",
             "parameters": {
                 "party": [1],
@@ -239,7 +239,7 @@
                 "attack_sample_num": 1000
             }
         },
-        "12": {
+        "11": {
             "name": "WhiteBoxInversion",
             "parameters": {
                 "party": [1],
@@ -254,7 +254,7 @@
             }
         },
 
-        "13": {
+        "12": {
         "name": "BatchLabelReconstruction_LLM",
         "parameters": {
           "party": [1],
@@ -262,7 +262,7 @@
           "epochs": 200
           }
         },
-        "14": {
+        "13": {
           "name": "BatchLabelReconstruction_LLM",
           "parameters": {
             "party": [1],

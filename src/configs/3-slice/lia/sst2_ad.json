@@ -1,6 +1,6 @@
 {
     "epochs": 40,
-    "lr": 0,
+    "lr": 0.0001,
     "k": 2,
     "batch_size": 16,
     "early_stop_threshold": 2,
@@ -24,7 +24,7 @@
       "add_special_tokens": 1
     },
     "finetune_configs":{
-        "name":"Vanilla",
+        "name":"LoRA",
         "configs":{}
     },
     "model_list":{
@@ -38,13 +38,13 @@
           "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
 
             "head":{
-                "trainable": 0,
+                "trainable": 1,
                 "embedding_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
             },
             "tail":{
-                "trainable": 0,
+                "trainable": 1,
                 "head_layer_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
@@ -75,28 +75,49 @@
             "adversarial_model_lr": 0.0001,
             "imagined_adversary": "ImaginedAdversary_MLP3",
             "imagined_adversary_lr": 0.0001,
-
-            "tail_imagined_adversary": "ImaginedAdversary_Tail_MLP3",
-            "tail_imagined_adversary_lr": 0.0001,
-            "lambda": 0.001,
+            "lambda": 5.0,
             "seq_length": 70,
             "embed_dim": 768
         }
     },
     "attack_list": {
-      "1": {
-          "name": "NormbasedScoring_LLM",
-          "parameters": {
-            "party": [1]
-        }
-      },
+      
+
       "0": {
         "name": "BatchLabelReconstruction_LLM",
         "parameters": {
           "party": [1],
+          "target_data":"train",
           "lr": 0.05,
           "epochs": 500
         }
+      },
+      "1": {
+        "name": "BatchLabelReconstruction_LLM",
+        "parameters": {
+          "party": [1],
+          "target_data":"train",
+          "lr": 0.05,
+          "attack_seed": 1,
+          "epochs": 500
+        }
+      },
+      "2": {
+          "name": "NormbasedScoring_LLM",
+          "parameters": {
+            "party": [1],
+            "target_data":"train"
+        }
+      },
+      "3": {
+          "name": "NormbasedScoring_LLM",
+          "parameters": {
+            "party": [1],
+            "target_data":"train",
+            "attack_seed": 1
+        }
       }
+      
   }
 }
+

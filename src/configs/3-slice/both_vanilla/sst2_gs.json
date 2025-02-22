@@ -1,6 +1,6 @@
 {
   "epochs": 40,
-  "lr": 0.0001,
+  "lr": 0.00001,
   "k": 2,
   "batch_size": 16,
   "early_stop_threshold": 2,
@@ -62,7 +62,7 @@
       "parameters": {
         "party": [0],
         "position": ["grad","pred"],
-        "gradient_sparse_rate": 98
+        "gradient_sparse_rate": 95
       }
   },
   "attack_list": {

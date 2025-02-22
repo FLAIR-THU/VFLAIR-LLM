@@ -7,57 +7,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class MIDCLUB(nn.Module):  # CLUB: Mutual Information Contrastive Learning Upper Bound
-    '''
-        This class provides the CLUB estimation to I(X,Y)
-        Method:
-            forward() :      provides the estimation with input samples  
-            loglikeli() :   provides the log-likelihood of the approximation q(Y|X) with input samples
-        Arguments:
-            x_dim, y_dim :         the dimensions of samples from X, Y respectively
-            hidden_size :          the dimension of the hidden layer of the approximation network q(Y|X)
-            x_samples, y_samples : samples from X and Y, having shape [sample_size, x_dim/y_dim] 
-    '''
-
-    def __init__(self, x_dim, y_dim, hidden_size):
-        super(MIDCLUB, self).__init__()
-        # p_mu outputs mean of q(Y|X)
-        # print("create CLUB with dim {}, {}, hiddensize {}".format(x_dim, y_dim, hidden_size))
-        self.p_mu = nn.Sequential(nn.Linear(x_dim, hidden_size // 2),
-                                  nn.ReLU(),
-                                  nn.Linear(hidden_size // 2, y_dim))
-        # p_logvar outputs log of variance of q(Y|X)
-        self.p_logvar = nn.Sequential(nn.Linear(x_dim, hidden_size // 2),
-                                      nn.ReLU(),
-                                      nn.Linear(hidden_size // 2, y_dim),
-                                      nn.Tanh())
-
-    def get_mu_logvar(self, x_samples):
-        mu = self.p_mu(x_samples)
-        logvar = self.p_logvar(x_samples)
-        return mu, logvar
-
-    def forward(self, x_samples, y_samples):
-        mu, logvar = self.get_mu_logvar(x_samples)
-
-        # log of conditional probability of positive sample pairs
-        positive = - (mu - y_samples) ** 2 / 2. / logvar.exp()
-
-        prediction_1 = mu.unsqueeze(1)  # shape [nsample,1,dim]
-        y_samples_1 = y_samples.unsqueeze(0)  # shape [1,nsample,dim]
-
-        # log of conditional probability of negative sample pairs
-        negative = - ((y_samples_1 - prediction_1) ** 2).mean(dim=1) / 2. / logvar.exp()
-
-        return (positive.sum(dim=-1) - negative.sum(dim=-1)).mean()
-
-    def loglikeli(self, x_samples, y_samples):  # unnormalized loglikelihood
-        mu, logvar = self.get_mu_logvar(x_samples)
-        return (-(mu - y_samples) ** 2 / logvar.exp() - logvar).sum(dim=1).mean(dim=0)
-
-    def learning_loss(self, x_samples, y_samples):
-        return - self.loglikeli(x_samples, y_samples)
-
 
 class MIDModelCNN_MaxUnpool2d(nn.Module):
     def __init__(self, seq_length, embed_dim, mid_lambda, bottleneck_scale=1, std_shift=0.5):
@@ -324,15 +273,7 @@ class MIDModel_Linear(nn.Module):
         self.to(model_dtype) 
 
     def forward(self, x):
-        # print('== MID Model Forward ==')
-        # print('x:',x.dtype) # bs, 30 ,768
-        # print('mid_model:',self.enlarge_layer[0].weight.dtype)
-        # print('mid_model:',self.decoder_layer[0].weight.dtype)
-        
         input_shape = x.shape
-
-        # epsilon = torch.empty((x.size()[0],x.size()[1]*self.bottleneck_scale))
-
         epsilon = torch.empty((x.size()[0], x.size()[1], x.size()[2] * self.bottleneck_scale))
         torch.nn.init.normal(epsilon, mean=0, std=1)  # epsilon is initialized
         epsilon = epsilon.to(x.device)
@@ -347,22 +288,14 @@ class MIDModel_Linear(nn.Module):
         # print("std:",std.dtype)  # bs, 30, 768*bottleneck_scale
 
         z = mu + std * epsilon
-        z = z.to(x.device).to(self.model_dtype)
-        # print(f'z={z.dtype}')
-        # print('z:',z.shape) # bs, 30, 768*bottleneck_scale
+        z = z.to(x.device)#.to(self.model_dtype) # bs, 30, 768*bottleneck_scale
 
-        z = self.decoder_layer(z)
-        # print('decoded z:',z.shape) # bs, 30, 768
+        z = self.decoder_layer(z) # bs, 30, 768
 
         z = z.reshape(input_shape)
 
-        # z = torch.tensor(z, dtype=origin_dtype)
-
-        # print('reshape z:',z.shape) # bs, 23040
-
         mid_loss = self.mid_lambda * torch.mean(
             torch.sum((-0.5) * (1 + 2 * torch.log(std) - mu ** 2 - std ** 2), 1)) / (input_shape[1] * input_shape[2])
-        # print('mid_loss:',mid_loss)
 
         return z, mid_loss
 

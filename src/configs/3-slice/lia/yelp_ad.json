@@ -2,8 +2,8 @@
   "epochs": 40,
   "lr": 0.0001,
   "k": 2,
-  "batch_size": 32,
-  "early_stop_threshold": 2,
+  "batch_size": 16,
+  "early_stop_threshold": 1,
   "pipeline": "finetune",
     "model_architect":"CLS",
     "communication":{
@@ -35,23 +35,23 @@
         "kwargs_model_loading":{
         },
         "0": {
-          "path": "/data/guzx0/Models/Shunianyelp_review_classification",
+          "path": "/home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification",
 
             "head":{
-                "trainable": 0,
+                "trainable": 1,
                 "embedding_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
             },
             "tail":{
-                "trainable": 0,
+                "trainable": 1,
                 "head_layer_trainable": 0,
                 "encoder_trainable": 0,
                 "encoder_trainable_ids":[]
             }
         },
         "1": {
-          "path": "/data/guzx0/Models/Shunianyelp_review_classification",
+          "path": "/home/DAIR/guzx/Git_FedProject/Models/Shunianyelp_review_classification",
             "body":{
                 "trainable": 1,
                 "encoder_trainable": 0,
@@ -84,22 +84,23 @@
         }
     },
     "attack_list": {
-      "0": {
+        "0": {
         "name": "BatchLabelReconstruction_LLM",
         "parameters": {
           "party": [1],
           "lr": 0.1,
           "epochs": 200
+          }
+        },
+        "1": {
+          "name": "BatchLabelReconstruction_LLM",
+          "parameters": {
+            "party": [1],
+            "lr": 0.1,
+            "epochs": 200,
+            "attack_seed": 1
+          }
         }
-      },
-      "1": {
-        "name": "BatchLabelReconstruction_LLM",
-        "parameters": {
-          "party": [1],
-          "lr": 0.1,
-          "epochs": 200,
-          "attack_seed": 1
-        }
-      }
+    
   }
 }

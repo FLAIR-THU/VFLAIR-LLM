@@ -1,6 +1,6 @@
 {
     "epochs": 40,
-    "lr": 0.0001,
+    "lr": 0.00001,
     "k": 2,
     "batch_size": 16,
     "early_stop_threshold": 2,
@@ -71,7 +71,7 @@
             "party": [0],
             "mid_model_name":"MIDModel_Linear",
             "lr": 0.0001,
-            "lambda": 0.5,
+            "lambda": 0.1,
             "mid_position": ["head","tail"],
             "current_bottleneck_scale": 1,
             "seq_length": 70,

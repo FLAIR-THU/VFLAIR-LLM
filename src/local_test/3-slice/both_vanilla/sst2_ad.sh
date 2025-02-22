@@ -5,6 +5,7 @@
 #SBATCH --output exp_result/sst2_vanilla_ad.out
 
 
+
 for seed in 60 61 62 63 64 65
     do
 

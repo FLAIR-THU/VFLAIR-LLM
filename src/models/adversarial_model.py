@@ -143,7 +143,6 @@ class Mapping_MLP3(nn.Module):
         if origin_shape[1] != self.seq_length:
             x = x.transpose(0,1) # should be [bs, seq_len, embed_dim]
 
-        x = torch.tensor(x,dtype=torch.float32)
         x1 = self.net1(x)
         # print('x1:',x1.shape)
 

@@ -137,12 +137,13 @@ class PassiveParty_LLM(Party_LLM):
 
                 self.adversary_crit = nn.CrossEntropyLoss()
                 self.adversary_lambda = defense_configs['lambda']
+                
 
                 # AD at model head
                 if 'head' in self.ad_position:
                     # prepare adversarial model --  for adversarial training
                     self.head_adversarial_model = globals()[adversarial_model_name](seq_length, embed_dim,
-                                                    self.adversarial_model_hidden_size).to(self.args.device)
+                                                    self.adversarial_model_hidden_size ).to(self.args.device)
                     if self.local_model_optimizer == None:
                         self.local_model_optimizer = torch.optim.Adam(self.head_adversarial_model.parameters(),
                                                                     lr=self.adversarial_model_lr)
@@ -571,22 +572,31 @@ class PassiveParty_LLM(Party_LLM):
         self.global_gradient = \partial global_loss / \partial global_intermediate
         self.input_tensors[2] = global_intermediate model body output/model tail input
         '''
-        global_gradient_clone=torch.autograd.grad(global_loss,global_intermediate,retain_graph=True)[0]
+        if (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"]))\
+            and ('tail' in self.ad_position):
+            
+            global_gradient_clone=torch.autograd.grad(global_loss,
+                                                      global_intermediate,
+                                                      retain_graph=True, 
+                                                      )[0]
+           
+        else:
+            global_gradient_clone=torch.autograd.grad(global_loss,global_intermediate,retain_graph=True)[0]
         self.global_gradient = global_gradient_clone
-        self.global_gradient = self.apply_defense_on_global_gradient(self.global_gradient)
+        # self.global_gradient = self.apply_defense_on_global_gradient(self.global_gradient)
 
         return self.global_gradient
 
-    def apply_defense_on_global_gradient(self, origin_global_gradient):
-        ######### Defense Applied on Global Gradients ###########
-        if (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"]))\
-            and ('tail' in self.ad_position):
-            self.origin_global_gradient = origin_global_gradient.clone()
-            final_global_gradient = self.tail_adversarial_model(origin_global_gradient)
-            return final_global_gradient
-        ######### Defense Applied on Global Gradients ###########
-        else:
-            return origin_global_gradient
+    # def apply_defense_on_global_gradient(self, origin_global_gradient):
+    #     # ######### Defense Applied on Global Gradients ###########
+    #     # if (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"]))\
+    #     #     and ('tail' in self.ad_position):
+    #     #     self.origin_global_gradient = origin_global_gradient.clone()
+    #     #     final_global_gradient = origin_global_gradient #self.tail_adversarial_model(origin_global_gradient)
+    #     #     return final_global_gradient
+    #     # ######### Defense Applied on Global Gradients ###########
+    #     # else:
+    #     return origin_global_gradient
 
     def process_received_result(self,final_output):
         '''
@@ -738,7 +748,7 @@ class PassiveParty_LLM(Party_LLM):
             assert 1 > 2, 'Task type not supported'
 
         self.global_loss = loss
-
+        
         # ########### Defense on Loss ###############
         if self.args.apply_adversarial and (self.index in self.args.defense_configs["party"]) and \
             ('head' in self.ad_position):
@@ -747,29 +757,35 @@ class PassiveParty_LLM(Party_LLM):
             adversary_recovered_embedding = self.head_imagined_adversary(intermediate) # bs, seq_len, embed_dim
             real_embedding = self.local_model.embedding_output  # bs, seq_len, embed_dim
 
-            if intermediate.shape != real_embedding.shape:
-                real_embedding.transpose(0,1)
-            if intermediate.shape != adversary_recovered_embedding.shape:
-                adversary_recovered_embedding.transpose(0,1)
+            # if intermediate.shape != real_embedding.shape:
+            #     real_embedding.permute(0, 2, 1)#.transpose(0,1)
+            # if intermediate.shape != adversary_recovered_embedding.shape:
+            #     adversary_recovered_embedding.permute(0, 2, 1)#.transpose(0,1)
+            
+            if adversary_recovered_embedding.shape != real_embedding.shape:
+                real_embedding.permute(0, 2, 1)#.transpose(0,1)
+            # if intermediate.shape != adversary_recovered_embedding.shape:
+            #     adversary_recovered_embedding.permute(0, 2, 1)#.transpose(0,1)
             
             self.head_adversary_attack_loss = self.adversary_crit(adversary_recovered_embedding.to(real_embedding.device), real_embedding) / \
                                          intermediate.shape[0]
 
-            # avrage mapping distance on bs*seq_len   self.origin_pred: bs, seq_len, embed_dim
-            self.head_mapping_distance = torch.norm(self.origin_pred - self.output_tensors[0], p=2) / (
-                    self.origin_pred.shape[0] * self.origin_pred.shape[1])
-
-            # print(f'main_loss={self.global_loss},mapping_distance={self.mapping_distance},adversary_attack_loss={self.adversary_attack_loss}')
-
-            # renew global loss function : loss used to update adversarial model mapping
             self.head_adversarial_model_loss = self.adversary_lambda * self.head_mapping_distance.to(self.global_loss.device) - self.head_adversary_attack_loss.to(self.global_loss.device)
+            
             self.global_loss = self.global_loss + self.head_adversarial_model_loss
         
-        elif self.args.apply_mid == True and (self.index in self.args.defense_configs['party']):
+        if self.args.apply_adversarial and ('tail' in self.ad_position) and (self.index in self.args.defense_configs["party"]):
+         
+            self.global_loss = self.global_loss #+ self.adversary_lambda * self.tail_mapping_distance.to(self.global_loss.device)
+
+            
+        if self.args.apply_mid == True and (self.index in self.args.defense_configs['party']):
             if ("tail" in self.mid_position):
+                
                 self.global_loss = self.global_loss + self.tail_mid_loss.to(self.global_loss.device)
-        
-        elif self.args.apply_textobfuscator == True and (self.index in self.args.defense_configs['party']):
+
+                
+        if self.args.apply_textobfuscator == True and (self.index in self.args.defense_configs['party']):
             valid_ids = (self.local_data_input['attention_mask']==1) & (self.local_data_input['input_ids']!=2) & (self.local_data_input['input_ids']!=0) # [bs, seq_len]
             client_hidden_states = self.output_tensors[0][valid_ids]
             # self.origin_pred[valid_ids] # valid model head output [id_num, embed_dim]
@@ -792,21 +808,13 @@ class PassiveParty_LLM(Party_LLM):
         # ########### Defense on Loss ###############
         if self.args.apply_adversarial and (self.index in self.args.defense_configs["party"]) and \
             ("tail" in self.ad_position):
-            intermediate_gradient = self.global_gradient # gradient transmitted from model tail
-            # print(f'intermediate_gradient:{intermediate_gradient.shape}')
-            
+            intermediate_gradient = self.global_gradient.requires_grad_(True) # gradient transmitted from model tail
             real_label = self.gt_one_hot_label  # bs, seq_len, embed_dim
-            # print(f'real_label:{real_label.shape}')
             adversary_recovered_label = self.tail_imagined_adversary(intermediate_gradient) # bs, seq_len, embed_dim
-
             self.tail_adversary_attack_loss = self.adversary_crit(adversary_recovered_label, real_label)
-            # avrage mapping distance on bs*seq_len   self.origin_global_gradient: bs, seq_len, embed_dim
-            self.tail_mapping_distance = torch.norm(self.origin_global_gradient - self.global_gradient, p=2) / (
-                    self.global_gradient.shape[0] * self.global_gradient.shape[1])
 
-            # renew global loss function : loss used to update adversarial model mapping
-            self.tail_adversarial_model_loss = self.adversary_lambda * self.tail_mapping_distance.to(self.global_loss.device) - self.tail_adversary_attack_loss.to(self.global_loss.device)
-            self.global_loss = self.global_loss + self.tail_adversarial_model_loss
+            
+            self.global_loss = self.global_loss + self.adversary_lambda * self.tail_mapping_distance.to(self.global_loss.device) - self.tail_adversary_attack_loss.to(self.global_loss.device)
         # ########### Defense on Loss ###############
 
         return 
@@ -1030,7 +1038,11 @@ class PassiveParty_LLM(Party_LLM):
                 and ('head' in self.ad_position):
                 self.origin_pred = self.output_tensors[0].clone().to(next(self.head_adversarial_model.parameters()).device)
                 self.output_tensors[0] = self.head_adversarial_model(self.origin_pred)
-                self.local_pred_clone = self.output_tensors[0].detach().clone()
+                
+                # avrage mapping distance on bs*seq_len   self.origin_pred: bs, seq_len, embed_dim
+                self.head_mapping_distance = torch.norm(self.origin_pred - self.output_tensors[0], p=2) / (
+                    self.origin_pred.shape[0] * self.origin_pred.shape[1])
+                self.local_pred_clone = self.output_tensors[0].clone().detach()
             
             elif self.args.apply_textobfuscator == True and (self.index in self.args.defense_configs["party"]):
                 self.origin_pred = self.output_tensors[0].clone()
@@ -1087,25 +1099,28 @@ class PassiveParty_LLM(Party_LLM):
         return extracted_answer
     
     def give_final_pred(self, resp):
+        self.resp = resp
         ######### Defense Applied on Local Model Tail Prediction Process ###########
         if self.args.vfl_model_slice_num == 3 and self.args.apply_mid and \
             (self.index in self.args.defense_configs["party"]) and ("tail" in self.mid_position):
-            received_pred = resp['inputs_embeds'] 
+            received_pred = self.resp['inputs_embeds'] 
             received_pred, self.tail_mid_loss = self.tail_mid_model(received_pred)  # , self.local_attention_mask
-            resp['inputs_embeds'] = received_pred
+            self.resp['inputs_embeds'] = received_pred
             
         if self.args.vfl_model_slice_num == 3 and self.args.apply_snd and self.index in self.args.defense_configs["party"]:
             # print('3-slice Passive Party Denoise:')
-            resp['denoise_mod'] = self.denoise_mod
-            resp['snd_noise'] = self.snd_noise
-            resp['original_embedding'] = self.output_tensors[0]
-            
-            # origin_device = resp['inputs_embeds'].device
-            # received_pred = resp['inputs_embeds']
-            # resp['inputs_embeds'] = self.denoise_mod(self.output_tensors[0], self.snd_noise, \
-            #     received_pred, self.local_data_input['attention_mask']).to(origin_device)
+            self.resp['denoise_mod'] = self.denoise_mod
+            self.resp['snd_noise'] = self.snd_noise
+            self.resp['original_embedding'] = self.output_tensors[0]
+        
+        if self.args.vfl_model_slice_num == 3 and (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"])) \
+            and ('tail' in self.ad_position):
+            origin_received = self.resp['inputs_embeds']
+            self.resp['inputs_embeds'] = self.tail_adversarial_model(origin_received)  
+            self.tail_mapping_distance = torch.norm(self.resp['inputs_embeds'] - origin_received, p=2) / (
+                    self.resp['inputs_embeds'].shape[0] * self.resp['inputs_embeds'].shape[1])
         ######### Defense Applied on Local Model Tail Prediction Process ###########
-        return self.forward(2, **resp)
+        return self.forward(2, **self.resp)
 
     def local_backward(self):
         self.num_local_updates += 1  # another update
@@ -1117,7 +1132,7 @@ class PassiveParty_LLM(Party_LLM):
             # update imagined_adversary_model
             self.head_imagined_adversary_optimizer.zero_grad()
             self.head_adversary_attack_loss.backward(retain_graph=True)
-            self.head_imagined_adversary_optimizer.step()
+            
 
             self.local_model_optimizer.zero_grad()
             # local model trainable part
@@ -1128,26 +1143,30 @@ class PassiveParty_LLM(Party_LLM):
 
             self.local_gradient=self.local_gradient.to(self.output_tensors[0].device)
 
-            weights_grad_a = torch.autograd.grad(
+            main_weights_grad_a = torch.autograd.grad(
                 self.output_tensors[0],
                 local_model_params,
                 grad_outputs=self.local_gradient,
                 retain_graph=True,
                 allow_unused=True
             )
-            for w, g in zip(local_model_params, weights_grad_a):
-                if w.requires_grad and g != None:
-                    if w.grad != None:
-                        w.grad += g.detach()
-                    else:
-                        w.grad = g.detach()
-
+            
+            
             weights_grad_a = torch.autograd.grad(
                 self.head_adversarial_model_loss,
                 self.head_adversarial_model.parameters(),
                 retain_graph=True,
                 allow_unused=True,
             )
+            
+            for w, g in zip(local_model_params, main_weights_grad_a):
+                if w.requires_grad and g != None:
+                    if w.grad != None:
+                        w.grad += g.detach()
+                    else:
+                        w.grad = g.detach()
+
+
             for w, g in zip(self.head_adversarial_model.parameters(), weights_grad_a):
                 if w.requires_grad:
                     if w.grad != None:
@@ -1155,6 +1174,7 @@ class PassiveParty_LLM(Party_LLM):
                     else:
                         w.grad = g.detach()
 
+            self.head_imagined_adversary_optimizer.step()
             self.local_model_optimizer.step()
         
         elif (self.args.apply_mid == True and (self.index in self.args.defense_configs["party"])
@@ -1362,3 +1382,30 @@ class PassiveParty_LLM(Party_LLM):
             else:
                 # further extention
                 return gradients_list
+    
+    def are_tensors_connected(self, tensor1, tensor2):
+        """
+        判断两个 Tensor 是否通过计算图连接。
+        """
+        def get_grad_fn_chain(grad_fn):
+            """递归获取 grad_fn 链中的所有节点"""
+            chain = set()
+            stack = [grad_fn]
+            while stack:
+                node = stack.pop()
+                if node is None:
+                    continue
+                if node in chain:
+                    continue
+                chain.add(node)
+                for next_fn, _ in node.next_functions:
+                    stack.append(next_fn)
+            return chain
+
+        # 获取两个张量的 grad_fn 链
+        chain1 = get_grad_fn_chain(tensor1.grad_fn)
+        chain2 = get_grad_fn_chain(tensor2.grad_fn)
+
+        # 检查是否有交集
+        return len(chain1.intersection(chain2)) > 0
+

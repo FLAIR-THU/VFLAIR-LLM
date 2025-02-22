@@ -7,6 +7,7 @@ import random
 import logging
 import argparse
 import torch
+torch.autograd.set_detect_anomaly(True)
 # import torch.nn as nn
 # import torchvision.transforms as transforms
 # from torchvision import datasets

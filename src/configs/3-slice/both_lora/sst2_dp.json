@@ -11,7 +11,7 @@
         "iteration_per_aggregation": 1
     },
     "dataset": {
-      "dataset_name": "SST-2",
+      "dataset_name": "QNLI",
       "num_classes": 2
     },
     "tokenizer": {
@@ -28,14 +28,14 @@
         "configs":{}
     },
     "model_list":{
-        "name": "textattackbert-base-uncased-SST-2",
+        "name": "textattackbert-base-uncased-QNLI",
         "pretrained": 1,
         "model_type": "Bert",
         "max_sequence": 512,
         "kwargs_model_loading":{
         },
         "0": {
-          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
+          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-QNLI",
 
             "head":{
                 "trainable": 1,
@@ -51,7 +51,7 @@
             }
         },
         "1": {
-          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
+          "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-QNLI",
             "body":{
                 "trainable": 1,
                 "encoder_trainable": 0,

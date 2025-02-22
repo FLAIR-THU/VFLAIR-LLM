@@ -1,6 +1,6 @@
 {
-  "epochs": 40,
-  "lr": 0.0001,
+  "epochs": 1,
+  "lr": 0.0,
   "k": 2,
   "batch_size": 16,
   "early_stop_threshold": 2,

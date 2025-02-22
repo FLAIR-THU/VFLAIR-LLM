@@ -61,7 +61,7 @@ def do_load_basic_configs(config_dict, args):
     args.main_epochs = config_dict['epochs'] if ('epochs' in config_dict) else 50
 
     # args.early_stop_threshold, early stop max epoch
-    args.early_stop_threshold = config_dict['early_stop_threshold'] if ('early_stop_threshold' in config_dict) else 5
+    args.early_stop_threshold = config_dict['early_stop_threshold'] if ('early_stop_threshold' in config_dict) else -1
 
     # args.k, number of participants
     args.k = config_dict['k'] if ('k' in config_dict) else 2
@@ -454,7 +454,7 @@ def do_load_basic_configs_llm(config_dict, args):
     args.main_epochs = config_dict['epochs'] if ('epochs' in config_dict) else 50
 
     # args.early_stop_threshold, early stop max epoch
-    args.early_stop_threshold = config_dict['early_stop_threshold'] if ('early_stop_threshold' in config_dict) else 5
+    args.early_stop_threshold = config_dict['early_stop_threshold'] if ('early_stop_threshold' in config_dict) else -1
 
     # args.k, number of participants
     args.k = config_dict['k'] if ('k' in config_dict) else 2

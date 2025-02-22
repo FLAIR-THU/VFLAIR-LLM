@@ -494,6 +494,7 @@ def create_main_task(global_model_type: GenerationMixin):
             ik = self.current_client_id
             self.parties[ik].cal_loss(final_pred)
 
+            
             if self.args.vfl_model_slice_num == 2:
                 global_gradient = self.parties[ik].cal_global_gradient_2slice(self.parties[ik].global_loss, final_pred)
             else:
@@ -505,9 +506,10 @@ def create_main_task(global_model_type: GenerationMixin):
                 if (ik in self.args.defense_configs['party']):
                     if (not self.args.apply_mid) and (not self.args.apply_adversarial):
                         global_gradient = self.apply_defense_on_grad_transmission(global_gradient)
-
-            # Update_loss_with_defense after gradient calculation -- for ad defense at model tail
+            
+            # Update_loss_with_defense
             self.parties[ik].update_loss_with_defense()
+            
             #### Defense ####
   
             self._communication.send_global_loss_and_gradients(global_gradient, self.current_client_id) 
@@ -1648,8 +1650,8 @@ def create_main_task(global_model_type: GenerationMixin):
 
                     del (parties_data)
 
-                    # if self.epochs == 1 :
-                    #     break
+                    if self.epochs == 1 :
+                        break
 
                 # LR decay
                 self.LR_Decay(i_epoch)
@@ -1664,7 +1666,9 @@ def create_main_task(global_model_type: GenerationMixin):
                 # Early Stop
                 if self.loss >= last_loss:
                     early_stop_count = early_stop_count + 1
-                if early_stop_count >= early_stop_threshold:
+
+                    
+                if early_stop_threshold>0 and early_stop_count >= early_stop_threshold:
                     self.final_epoch = i_epoch + 1
                     break
                 last_loss = min(last_loss, self.loss)
@@ -1712,10 +1716,10 @@ def create_main_task(global_model_type: GenerationMixin):
 
             
             
-            try:
-                self.save_pretrained(model_index=[1,2], model_id=model_id)
-            except Exception as e:
-                logger.warning(repr(e))
+            # try:
+            #     self.save_pretrained(model_index=[1,2], model_id=model_id)
+            # except Exception as e:
+            #     logger.warning(repr(e))
             
             self.training_time = total_time
             

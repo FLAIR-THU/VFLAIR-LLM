@@ -1775,7 +1775,7 @@ def load_dataset_per_party_llm(args, index):
             'not_entailment': 1
         }
         text_path = DATA_PATH + 'QNLI/train.tsv'
-        df = pd.read_csv(text_path, sep='\t', error_bad_lines=False)
+        df = pd.read_csv(text_path, sep='\t')#, error_bad_lines=False)
         sentence_pairs = np.array(list(zip(df.question.values, df.sentence.values)))
         labels = df.label.values
         labels = [label_dict[_label] for _label in labels]
@@ -1784,7 +1784,7 @@ def load_dataset_per_party_llm(args, index):
         y_train = np.array(labels)
 
         text_path = DATA_PATH + 'QNLI/dev.tsv'
-        df = pd.read_csv(text_path, sep='\t', error_bad_lines=False)
+        df = pd.read_csv(text_path, sep='\t')#, error_bad_lines=False)
         sentence_pairs = np.array(list(zip(df.question.values, df.sentence.values)))
         labels = df.label.values
         labels = [label_dict[_label] for _label in labels]
@@ -1853,7 +1853,7 @@ def load_dataset_per_party_llm(args, index):
             'not_entailment': 1
         }
         text_path = DATA_PATH + 'RTE/train.tsv'
-        df = pd.read_csv(text_path, sep='\t', error_bad_lines=False)
+        df = pd.read_csv(text_path, sep='\t')#, error_bad_lines=False)
         df = df.dropna()
         sentence_pairs = np.array(list(zip(df.sentence1.values, df.sentence2.values)))
         labels = df.label.values
@@ -1863,7 +1863,7 @@ def load_dataset_per_party_llm(args, index):
         y_train = np.array(labels)
 
         text_path = DATA_PATH + 'RTE/dev.tsv'
-        df = pd.read_csv(text_path, sep='\t', error_bad_lines=False)
+        df = pd.read_csv(text_path, sep='\t')#, error_bad_lines=False)
         df = df.dropna()
         sentence_pairs = np.array(list(zip(df.sentence1.values, df.sentence2.values)))
         labels = df.label.values

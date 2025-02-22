@@ -78,181 +78,14 @@
 
             "tail_imagined_adversary": "ImaginedAdversary_Tail_MLP3",
             "tail_imagined_adversary_lr": 0.0001,
-            "lambda": 0.001,
+            "lambda": 5.0,
             "seq_length": 70,
             "embed_dim": 768
         }
     },
     "attack_list": {
-      "0":{
-            "name": "VanillaModelInversion_WhiteBox",
-            "parameters": {
-                "party": [1],
-                "target_data":"train",
-                "lr": 0.01,
-                "epochs": 100,
-                "batch_size": 32,
-                "attack_sample_num": 100
-            }
-        },
-        "1":{
-            "name": "VanillaModelInversion_WhiteBox",
-            "parameters": {
-                "party": [1],
-                "target_data":"train",
-                "lr": 0.01,
-                "epochs": 100,
-                "batch_size": 32,
-          "attack_seed": 1,
-                "attack_sample_num": 100
-            }
-        },
-        "2":{
-            "name": "WhiteBoxInversion",
-            "parameters": {
-                "party": [1],
-                "target_data":"train",
-                "T": 0.05,
-                "lr": 0.005,
-                "epochs": 500,
-                "batch_size": 32,
-                "attack_sample_num": 100
-            }
-        },
-        "3":{
-            "name": "WhiteBoxInversion",
-            "parameters": {
-                "party": [1],
-                "target_data":"train",
-                "T": 0.05,
-                "lr": 0.005,
-                "epochs": 500,
-                "batch_size": 32,
-          "attack_seed": 1,
-                "attack_sample_num": 100
-            }
-        },
-      "4":{
-            "name": "BiSR",
-            "parameters": {
-                "party": [1],
-                "attacker_model_name": "NaMoE",
-            "target_data":"train",
-                "expert_scales": [0, 10.0, 7.5, 5.0],
-                "expert_epoch": 20,
-                "gate_epoch": 15,
-                "full_epoch": 4,
-                "phase1_lr":0.001,
-                "lr": 0.01,
-                "batch_size": 6,
-                "epochs": 100,
-                "attack_sample_num": 100
-            }
-        },
-        "5":{
-            "name": "BiSR",
-            "parameters": {
-                "party": [1],
-                "attacker_model_name": "NaMoE",
-                "target_data":"train",
-                "expert_scales": [0, 10.0, 7.5, 5.0],
-                "expert_epoch": 20,
-                "gate_epoch": 15,
-                "full_epoch": 4,
-                "phase1_lr":0.001,
-                "lr": 0.01,
-                "batch_size": 6,
-                "epochs": 100,
-                "attack_seed":1,
-                "attack_sample_num": 100
-            }
-        },
       
-        "6":{
-            "name": "VanillaModelInversion_WhiteBox",
-            "parameters": {
-                "party": [1],
-                "target_data":"test",
-                "lr": 0.01,
-                "epochs": 100,
-                "batch_size": 32,
-                "attack_sample_num": 100
-            }
-        },
-        "7":{
-            "name": "VanillaModelInversion_WhiteBox",
-            "parameters": {
-                "party": [1],
-                "target_data":"test",
-                "lr": 0.01,
-                "epochs": 100,
-                "batch_size": 32,
-          "attack_seed": 1,
-                "attack_sample_num": 100
-            }
-        },
-        "8":{
-            "name": "WhiteBoxInversion",
-            "parameters": {
-                "party": [1],
-                "target_data":"test",
-                "T": 0.05,
-                "lr": 0.005,
-                "epochs": 500,
-                "batch_size": 32,
-                "attack_sample_num": 100
-            }
-        },
-        "9":{
-            "name": "WhiteBoxInversion",
-            "parameters": {
-                "party": [1],
-                "target_data":"test",
-                "T": 0.05,
-                "lr": 0.005,
-                "epochs": 500,
-                "batch_size": 32,
-          "attack_seed": 1,
-                "attack_sample_num": 100
-            }
-        },
-      "10":{
-            "name": "BiSR",
-            "parameters": {
-                "party": [1],
-                "attacker_model_name": "NaMoE",
-            "target_data":"test",
-                "expert_scales": [0, 10.0, 7.5, 5.0],
-                "expert_epoch": 20,
-                "gate_epoch": 15,
-                "full_epoch": 4,
-                "phase1_lr":0.001,
-                "lr": 0.01,
-                "batch_size": 6,
-                "epochs": 100,
-                "attack_sample_num": 100
-            }
-        },
-        "11":{
-            "name": "BiSR",
-            "parameters": {
-                "party": [1],
-                "attacker_model_name": "NaMoE",
-                "target_data":"test",
-                "expert_scales": [0, 10.0, 7.5, 5.0],
-                "expert_epoch": 20,
-                "gate_epoch": 15,
-                "full_epoch": 4,
-                "phase1_lr":0.001,
-                "lr": 0.01,
-                "batch_size": 6,
-                "epochs": 100,
-                "attack_seed":1,
-                "attack_sample_num": 100
-            }
-        },
-
-      "12": {
+      "0": {
         "name": "BatchLabelReconstruction_LLM",
         "parameters": {
           "party": [1],
@@ -261,32 +94,13 @@
           "epochs": 500
         }
       },
-      "13": {
-        "name": "BatchLabelReconstruction_LLM",
-        "parameters": {
-          "party": [1],
-          "target_data":"train",
-          "lr": 0.05,
-          "attack_seed": 1,
-          "epochs": 500
-        }
-      },
-      "14": {
+      "1": {
           "name": "NormbasedScoring_LLM",
           "parameters": {
             "party": [1],
             "target_data":"train"
         }
-      },
-      "15": {
-          "name": "NormbasedScoring_LLM",
-          "parameters": {
-            "party": [1],
-            "target_data":"train",
-            "attack_seed": 1
-        }
       }
-      
   }
 }
 

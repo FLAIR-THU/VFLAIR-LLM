@@ -1,6 +1,6 @@
 {
     "epochs": 40,
-    "lr": 0.0001,
+    "lr": 0.00001,
     "k": 2,
     "batch_size": 16,
     "early_stop_threshold": 2,
@@ -78,7 +78,7 @@
 
             "tail_imagined_adversary": "ImaginedAdversary_Tail_MLP3",
             "tail_imagined_adversary_lr": 0.0001,
-            "lambda": 0.001,
+            "lambda": 0.01,
             "seq_length": 70,
             "embed_dim": 768
         }

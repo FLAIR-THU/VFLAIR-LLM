@@ -56,6 +56,7 @@ def update_all_norm_leak_auc(norm_leak_auc_dict, grad_list, y):
         predicted_value = (predicted_value - val_min + 1e-16) / (val_max - val_min + 1e-16)
         predicted_value = predicted_value.numpy()
         y = y.numpy()
+        print("y_true:",len(y),y)
         auc = roc_auc_score(y_true=y, y_score=predicted_value)
 
         ###### acc #######
