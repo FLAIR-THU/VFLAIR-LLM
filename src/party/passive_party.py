@@ -113,6 +113,7 @@ class PassiveParty_LLM(Party_LLM):
                 if not 'party' in defense_configs:
                     defense_configs['party'] = [0]
                     print('[warning] default passive party selected for applying adversarial training')
+                
                 # read adversarial defense configs
                 self.ad_position = defense_configs['position']
                 self.adversarial_model_lr = defense_configs['adversarial_model_lr']
@@ -124,9 +125,9 @@ class PassiveParty_LLM(Party_LLM):
                     adversarial_model_name = defense_configs['adversarial_model']
                 seq_length = defense_configs['seq_length']
                 embed_dim = self.args.model_embedded_dim  # defense_configs['embed_dim']
-
                 if self.args.model_architect=='CLS':
                     self.label_size = self.args.num_classes
+                    
                 imagined_adversary_model_name = defense_configs['imagined_adversary']
                 tail_imagined_adversary_model_name = defense_configs['tail_imagined_adversary']  if (
                         'tail_imagined_adversary' in defense_configs) else 'ImaginedAdversary_Tail_MLP3'
@@ -199,44 +200,45 @@ class PassiveParty_LLM(Party_LLM):
                 seq_length = self.args.defense_configs['seq_length']
                 embed_dim = self.args.model_embedded_dim  # defense_configs['embed_dim']
                 label_size = self.args.num_classes
-                mid_model_path = self.args.defense_configs[
-                    'mid_model_path'] if 'mid_model_path' in self.args.defense_configs else None
+                head_mid_model_path = self.args.defense_configs[
+                    'head_mid_model_path'] if 'head_mid_model_path' in self.args.defense_configs else None
+                tail_mid_model_path = self.args.defense_configs[
+                    'tail_mid_model_path'] if 'tail_mid_model_path' in self.args.defense_configs else None
 
                 print('init defense: mid on model head')
                 print(self.mid_model_name)
 
-                if mid_model_path != None and mid_model_path != "":
-                    print('Load Mid Model:', mid_model_path)
-                    with open(mid_model_path, 'rb') as f:
-                        self.mid_model = pickle.load(f)
-                else:
-                    self.mid_model = globals()[self.mid_model_name](seq_length, embed_dim, label_size,\
-                                                                    mid_lambda=self.mid_lambda,
-                                                                    bottleneck_scale=current_bottleneck_scale,
-                                                                    std_shift=std_shift_hyperparameter,
-                                                                    model_dtype=model_dtype).to(
-                        self.args.device)
+                if "head" in self.mid_position:
+                    # self.head_mid_model = globals()[self.mid_model_name](seq_length, embed_dim, label_size,\
+                    #                                                 mid_lambda=self.mid_lambda,
+                    #                                                 bottleneck_scale=current_bottleneck_scale,
+                    #                                                 std_shift=std_shift_hyperparameter,
+                    #                                                 model_dtype=model_dtype).to(self.args.device)
 
-                if self.mid_position == "head" or "head" in self.mid_position:
-                    # if mid_model_path != None and mid_model_path != "":
-                    #     print('Load Mid Model on head:', mid_model_path)
-                    #     with open(mid_model_path, 'rb') as f:
-                    #         self.mid_model = pickle.load(f)
-                    # else:
-                    self.head_mid_model = globals()[self.mid_model_name](seq_length, embed_dim, label_size,\
-                                                                    mid_lambda=self.mid_lambda,
-                                                                    bottleneck_scale=current_bottleneck_scale,
-                                                                    std_shift=std_shift_hyperparameter,
-                                                                    model_dtype=model_dtype).to(
-                        self.args.device)
-
+                    if head_mid_model_path != None:
+                        print(f'Load head MID model from:{head_mid_model_path}')
+                        with open(head_mid_model_path, 'rb') as f:
+                            self.head_mid_model = pickle.load(f)
+                    else:
+                        head_mid_model_path = self.args.defense_model_folder + '/head_mid_model.pkl'
+                        if os.path.exists(head_mid_model_path):
+                            print(f'Find and Load head MID model from:{head_mid_model_path}')
+                            with open(head_mid_model_path, 'rb') as f:
+                                self.head_mid_model = pickle.load(f)
+                        else:
+                            self.head_mid_model = globals()[self.mid_model_name](seq_length, embed_dim, label_size,\
+                                                                        mid_lambda=self.mid_lambda,
+                                                                        bottleneck_scale=current_bottleneck_scale,
+                                                                        std_shift=std_shift_hyperparameter,
+                                                                        model_dtype=model_dtype).to(self.args.device)
+                    
                     if self.local_model_optimizer == None:
                         self.local_model_optimizer = torch.optim.Adam(self.head_mid_model.parameters(), lr=self.mid_lr)
                     else:
                         self.local_model_optimizer.add_param_group(
                             {'params': self.head_mid_model.parameters(), 'lr': self.mid_lr})
                 
-                if self.mid_position == "tail" or "tail" in self.mid_position:
+                if "tail" in self.mid_position:
                     self.tail_mid_model = globals()[self.mid_model_name](seq_length, embed_dim, label_size,\
                                                                     mid_lambda=self.mid_lambda,
                                                                     bottleneck_scale=current_bottleneck_scale,
@@ -563,7 +565,7 @@ class PassiveParty_LLM(Party_LLM):
                 global_gradient_clone=torch.autograd.grad(self.output_tensors[2],self.input_tensors[2],grad_outputs=logits_gradients,retain_graph=True)[0]
         self.global_gradient = global_gradient_clone
 
-        self.global_gradient = self.apply_defense_on_global_gradient(self.global_gradient)
+        # self.global_gradient = self.apply_defense_on_global_gradient(self.global_gradient)
 
         return self.global_gradient
 
@@ -574,7 +576,6 @@ class PassiveParty_LLM(Party_LLM):
         '''
         if (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"]))\
             and ('tail' in self.ad_position):
-            
             global_gradient_clone=torch.autograd.grad(global_loss,
                                                       global_intermediate,
                                                       retain_graph=True, 
@@ -1031,7 +1032,7 @@ class PassiveParty_LLM(Party_LLM):
         if self.is_first_forward_iter:
             if self.args.apply_mid and (self.index in self.args.defense_configs["party"]) and\
              ("head" in self.mid_position):
-                self.output_tensors[0], self.head_mid_loss = self.head_mid_model(self.output_tensors[0].to(next(self.mid_model.parameters()).device))  # , self.local_attention_mask
+                self.output_tensors[0], self.head_mid_loss = self.head_mid_model(self.output_tensors[0].to(next(self.head_mid_model.parameters()).device))  # , self.local_attention_mask
                 self.local_pred_clone = self.output_tensors[0].detach().clone()
             
             elif (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"])) \

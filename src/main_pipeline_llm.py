@@ -55,7 +55,6 @@ def evaluate_no_attack_pretrained(args):
 
     return vfl, metric_val
 
-
 def evaluate_no_attack_finetune(args):
     # No Attack
     set_seed(args.current_seed)
@@ -163,6 +162,7 @@ def evaluate_label_inference_attack(args):
         append_exp_res(args.exp_res_path, exp_result)
     # return rec_rate
 
+
 def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
     if architecture == 'MM':
         from src.models.llm_models.llama import LlamaTailForCausalLM_forMM
@@ -186,6 +186,9 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
         elif model_type == 'baichuan':
             from models.llm_models import baichuan
             target_cls = getattr(baichuan, "BaiChuanForCausalLM")
+        elif model_type == 'deepseek_v3':
+            from models.llm_models import deepseek
+            target_cls = getattr(deepseek, "DeepseekV3TailForCausalLM")
         elif model_type == 'llama':
             from models.llm_models import llama
             target_cls = getattr(llama, "LlamaTailForCausalLM")
@@ -205,148 +208,91 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
         
     return target_cls
 
-
-def create_exp_dir_and_file(dataset, vfl_model_slice_num, split_info, model_name, pipeline, defense_name='', defense_param='',prefix = ''):
-    exp_res_dir = f'exp_result/{dataset}/{prefix}/{str(vfl_model_slice_num)}-slice/{split_info}/'
+def create_exp_dir_and_file(args):
+    # dataset, vfl_model_slice_num, split_info, model_name, pipeline, defense_name='', defense_param='',prefix = ''):
+    args.model_name = args.model_list["name"]  
+    args.split_info = f'{str(args.local_encoders_num)}_{str(args.local_tail_encoders_num)}'
+    exp_res_dir = f'exp_result/{args.dataset}/{args.prefix}/{str(args.vfl_model_slice_num)}-slice/{args.split_info}/'
     if not os.path.exists(exp_res_dir):
         os.makedirs(exp_res_dir)
-    if pipeline == 'pretrained':
-        filename = f'{defense_name}_{defense_param},pretrained_model={model_name}.txt'
+    if args.pipeline == 'pretrained':
+        filename = f'{args.defense_name}_{args.defense_param},pretrained_model={args.model_name}.txt'
     else:
-        filename = f'{defense_name}_{defense_param},finetuned_model={model_name}.txt'
+        filename = f'{args.defense_name}_{args.defense_param},finetuned_model={args.model_name}.txt'
     exp_res_path = exp_res_dir + str(filename).replace('/', '')
-    return exp_res_dir, exp_res_path
+    
+    defense_model_folder = get_defense_model_folder(args)
+    trained_model_folder = get_model_folder(args)
+    
+    return exp_res_dir, exp_res_path, defense_model_folder, trained_model_folder
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("backdoor")
     parser.add_argument('--device', type=str, default='cuda', help='use gpu or cpu')
     parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
-    parser.add_argument('--seed', type=int, default=97, help='random seed')
+    parser.add_argument('--seed', type=int, default=60, help='random seed')
     parser.add_argument('--prefix', type=str, default="", help='result_file_prefix')
     parser.add_argument('--configs', type=str, default='basic_configs_news', help='configure json file path')
     parser.add_argument('--save_model', type=bool, default=False, help='whether to save the trained model')
+    parser.add_argument('--save_defense_model', type=bool, default=True, help='whether to save the defense model')
     parser.add_argument('--attack_only', type=bool, default=False, help='attack_only')
+    
     
     args = parser.parse_args()
 
-    # for seed in range(97,102): # test 5 times
-    # for seed in [97]:
-    if args.seed != 97:
-        seed_list = [args.seed]
-    else:
-        seed_list = [60, 61, 62, 63, 64]
-    for seed in seed_list:  # [60,61,62,63,64]: # test 5 times
+    seed_list = [args.seed]
+    
+    for seed in seed_list:  
         args.current_seed = seed
         set_seed(seed)
         print('================= iter seed ', seed, ' =================')
 
-        args = load_basic_configs_llm(args.configs, args)
-        args.need_auxiliary = 0  # no auxiliary dataset for attackerB
+        
 
+        ####### load configs from *.json files #######
+        
+        ############ Basic Configs ############
+        args = load_basic_configs_llm(args.configs, args)
+        args.need_auxiliary = 0  
         if args.device == 'cuda':
             cuda_id = args.gpu
             torch.cuda.set_device(cuda_id)
             print(f'running on cuda{torch.cuda.current_device()}')
         else:
             print('running on cpu')
-
-        ####### load configs from *.json files #######
-        ############ Basic Configs ############
-        assert args.dataset_split != None, "dataset_split attribute not found config json file"
         assert 'dataset_name' in args.dataset_split, 'dataset not specified, please add the name of the dataset in config json file'
         args.dataset = args.dataset_split['dataset_name']
+        print('Dataset:',args.dataset)
+        
         print('======= Defense ========')
         print('Defense_Name:', args.defense_name)
         print('Defense_Config:', str(args.defense_configs))
+        
         print('===== Total Attack Tested:', args.attack_num, ' ======')
         print('inversion:', args.inversion_list, args.inversion_index)
 
         # Save record for different defense method
-        model_name = args.model_list["name"]  
-        split_info = f'{str(args.local_encoders_num)}_{str(args.local_tail_encoders_num)}'
-        exp_res_dir, exp_res_path = create_exp_dir_and_file(args.dataset, args.vfl_model_slice_num, split_info, model_name, args.pipeline, args.defense_name,args.defense_param, args.prefix)
+        exp_res_dir, exp_res_path, defense_model_folder, trained_model_folder = create_exp_dir_and_file(args)
         args.exp_res_dir = exp_res_dir
         args.exp_res_path = exp_res_path
-        print(args.exp_res_path)
+        args.defense_model_folder = defense_model_folder
+        args.trained_model_folder = trained_model_folder
+        print('Experiment Result Path:',args.exp_res_path)
+        print('Save Defense Model Path:',args.defense_model_folder)
         print('=================================\n')
 
-        iterinfo = '===== iter ' + str(seed) + ' ===='
-        # append_exp_res(args.exp_res_path, iterinfo)
-        print(iterinfo)
-
-        args.basic_vfl_withaux = None
-        args.main_acc_noattack_withaux = None
-        args.basic_vfl = None
-        args.main_acc_noattack = None
-
-        args = load_attack_configs(args.configs, args, -1)
-
         
-
-        # if args.dataset == 'MMLU':
-        #     # subject_list = ['business_ethics',\
-        #     # 'abstract_algebra','anatomy', 'astronomy', 'business_ethics', 'clinical_knowledge', \
-        #     # 'college_biology', 'college_chemistry', 'college_computer_science','college_mathematics','college_medicine',\
-        #     # 'college_physics', 'computer_security', 'conceptual_physics', 'econometrics', 'electrical_engineering', \
-        #     # 'elementary_mathematics', 'formal_logic', 'global_facts', 'high_school_biology', 'high_school_chemistry',\
-        #     # 'high_school_computer_science', 'high_school_european_history','high_school_geography', 'high_school_government_and_politics', \
-        #     # 'high_school_macroeconomics', 'high_school_mathematics', 'high_school_microeconomics', 'high_school_physics', 'high_school_psychology',\
-        #     # 'high_school_statistics', 'high_school_us_history', 'high_school_world_history', 'human_aging', 'human_sexuality', 'international_law',\
-        #     # 'jurisprudence', 'logical_fallacies', 'machine_learning', 'management', 'marketing', 'medical_genetics', 'miscellaneous', 'moral_disputes', \
-        #     # 'moral_scenarios', 'nutrition', 'philosophy', 'prehistory', 'professional_accounting', 'professional_law', 'professional_medicine', 'professional_psychology', \
-        #     # 'public_relations', 'security_studies', 'sociology', 'us_foreign_policy', 'virology', 'world_religions']
-
-        #     # acc_list = []
-        #     # for _subject in subject_list:
-        #     #     print(' ===== Subject ',_subject,' ===== ')
-        #     #     subject_info = f"subject={_subject}"
-        #     #     append_exp_res(args.exp_res_path, subject_info)
-        #     #     args.subject = _subject
-
-        #     args = load_parties_llm(args)
-
-        #     # inherit generation functions from global model
-        #     # args.global_model_type = type(args.parties[-1].global_model)
-        #     # ancestor_cls = args.global_model_type
-        #     # todo: infer from model_type might be enough, would also work under 3-slice
-        #     ancestor_cls = get_cls_ancestor(args.config.model_type, args.model_architect)
-        #     MainTaskVFL_LLM = create_main_task(ancestor_cls)
-
-        #     # vanilla
-        #     if args.pipeline == 'pretrained':
-        #         args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_pretrained(args)
-        #     elif args.pipeline == 'finetune':
-        #         args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_finetune(args)
-        #     # acc_list.append(args.main_acc_noattack)
-
-        #     # with attack
-        #     precision_list = []
-        #     recall_list = []
-        #     if args.inversion_list != []:
-        #         precision, recall = evaluate_inversion_attack(args)
-        #         precision_list.append(precision)
-        #         recall_list.append(recall)
-
-        #     torch.cuda.empty_cache()
-
-        #     # avg_acc = np.mean(acc_list)
-        #     # avg_precision = np.mean(precision_list)
-        #     # avg_recall = np.mean(recall_list)
-        #     # final_info = f"MMLU_avg_acc={avg_acc}|precision={avg_precision}|recall={avg_recall}"
-        #     # append_exp_res(args.exp_res_path, final_info)
-        # else:
+        args = load_attack_configs(args.configs, args, -1)
 
         args = load_parties_llm(args)
 
-        ###### inherit generation functions from global model
-        # args.global_model_type = type(args.parties[-1].global_model)
-        # ancestor_cls = args.global_model_type
-        # todo: infer from model_type might be enough, would also work under 3-slice
+        # Build Main Task: inherit generation functions from global model
         ancestor_cls = get_cls_ancestor(args.config.model_type, args.model_architect)
         MainTaskVFL_LLM = create_main_task(ancestor_cls)
 
-        # commuinfo='== metrics:'+args.metric_type
-        # append_exp_res(args.exp_res_path, commuinfo)
+        
+        args.basic_vfl = None
+        args.main_acc_noattack = None
 
         # vanilla
         if args.pipeline == 'pretrained':

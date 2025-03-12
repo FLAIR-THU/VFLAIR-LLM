@@ -2394,9 +2394,8 @@ def load_dataset_per_party_llm(args, index):
         sources = [
             prompt_input.format_map(example) if example.get("input", "") != "" else prompt_no_input.format_map(example)
             for example in list_data_dict
-        ]  # instructions
-        # targets = [f"{example['output']}{args.tokenizer.eos_token}" for example in list_data_dict] # local
-        targets = [f"{example['output']}" for example in list_data_dict]  # local
+        ]  
+        targets = [f"{example['output']}{args.tokenizer.eos_token}" for example in list_data_dict] \
 
         X_data = sources[:] # list of instruction text
         y_data = targets[:] # list of answer text

@@ -14,6 +14,7 @@ from evaluates.defenses.defense_api import DefenderLoader
 from load.LoadDataset import load_dataset_per_party, load_dataset_per_party_llm, load_dataset_per_party_backdoor, \
     load_dataset_per_party_noisysample
 from load.LoadModels import load_models_per_party_llm
+from models.llm_models.base import ModelPartitionPipeline
 
 from utils import timer
 from utils.noisy_label_functions import add_noise
@@ -190,7 +191,7 @@ class Party(object):
 
     def prepare_tokenizer(self, args, model_path):
         # Load Tokenizer
-        print('--- Load Tokenizer')
+        print('---- Load Tokenizer')
 
         self.args.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
         self.args.tokenizer.padding_side = args.padding_side if (args.padding_side in ["left", "right"]) else "left"
@@ -267,7 +268,6 @@ class Party(object):
         # self.lr_schedulers.update({i: scheduler})
 
     def prepare_model(self, args, index):
-        print(f'---- prepare_model for party {index}')
         # Load Tokenizer
         model_path = args.model_path[index]
         self.prepare_tokenizer(args, model_path)
@@ -524,12 +524,13 @@ class Party(object):
         self.optimizers[model_index].step()
         self.optimizers[model_index].zero_grad()
 
-    # def save_pretrained(self,model_index,model_id,model_folder=None,**kwargs):
-    #     if model_folder is None:
-    #         model_folder = get_model_folder()
-    #     for i,m in self.models.items():
-    #         if m and i in model_index:
-    #             logger.debug(f"save model {i}")
-    #             ModelPartitionPipeline.save_pretrained(model_name_or_path=os.path.join(*filter(lambda x:x is not None,[model_folder,model_id])),
-    #                                         models={i:m},
-    #                                         **kwargs)
+    def save_pretrained(self,model_folder=None,**kwargs):
+        
+        if model_folder is None:
+            model_folder = get_model_folder(self.args)
+            
+        for i,m in self.models.items():
+            if m:
+                ModelPartitionPipeline.save_pretrained(model_name_or_path=model_folder, 
+                                            models={i:m},
+                                            **kwargs)

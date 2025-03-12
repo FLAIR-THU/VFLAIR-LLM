@@ -3,14 +3,14 @@ import torch.nn.functional as F
 from torch import nn
 from torch.autograd import Function
 
-class ImaginedAdversary_MLP3_v1(nn.Module):
+class ImaginedAdversary_MLP3_noflatten(nn.Module):
     '''
     input --- intermediate : bs, seq_length, 768(embed_dim)
     output --- embedding : bs, seq_length, 768(embed_dim)
     '''
 
     def __init__(self, seq_length, embed_dim , hidden_size=80):
-        super(ImaginedAdversary_MLP3_v1, self).__init__()
+        super(ImaginedAdversary_MLP3_noflatten, self).__init__()
         # print('Adversarial_MLP init:',seq_length, embed_dim)
         self.seq_length = seq_length
         self.embed_dim = embed_dim
@@ -99,7 +99,6 @@ class ImaginedAdversary_MLP3(nn.Module):
 
         return x3
 
-
 class ImaginedAdversary_Tail_MLP3(nn.Module):
     '''
     input --- intermediate : bs, seq_length, 768(embed_dim)
@@ -153,7 +152,7 @@ class ImaginedAdversary_Tail_MLP3(nn.Module):
         x3 = self.net3(x2)  
 
         return x3
-    
+
 # class ImaginedAdversary_Tail_MLP3(nn.Module):
 #     '''
 #     input --- intermediate : bs, seq_length, 768(embed_dim)

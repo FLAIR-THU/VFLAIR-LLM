@@ -6,7 +6,6 @@ import argparse
 import numpy as np
 import pickle
 from transformers import BertTokenizer, GPT2Tokenizer, LlamaTokenizer
-from transformers import BertModel, GPT2Model, LlamaModel
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, AutoModelForSeq2SeqLM, \
     AutoModelForCausalLM, AutoModelForQuestionAnswering
 from transformers.modeling_outputs import (
@@ -40,6 +39,8 @@ from .llm_model_loaders.MambaModelLoader import *
 from .llm_model_loaders.XLNetModelLoader import *
 from .llm_model_loaders.Qwen2ModelLoader import *
 from .llm_model_loaders.T5ModelLoader import *
+from .llm_model_loaders.DeepSeekV3ModelLoader import *
+
 
 from .llm_model_loaders.MiniCPMModelLoader import *
 from .llm_model_loaders.MiniCPMVModelLoader import *
@@ -67,6 +68,7 @@ Loader_Map = {
     'XLNet': XLNetModelLoader,
     'Qwen2': Qwen2ModelLoader,
     'T5':T5ModelLoader,
+    'DeepSeekV3':DeepSeekV3ModelLoader,
 
     'MiniGPT4': MiniGPT4ModelLoader,
     'MiniCPM': MiniCPMModelLoader,
@@ -129,6 +131,7 @@ MODEL_PATH = {
     "mistralaiMistral-7B-Instruct-v0.2": YOUR_MODEL_PATH + "mistralaiMistral-7B-Instruct-v0.2",
 
     "googlegemma-2b": YOUR_MODEL_PATH + "googlegemma-2b",
+    "v2rayDeepSeek-V3-1B-Test": YOUR_MODEL_PATH + "v2rayDeepSeek-V3-1B-Test"
 }
 MODEL_PATH.update({'Qwen/Qwen1.5-0.5B-Chat': None})
 

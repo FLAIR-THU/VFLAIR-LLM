@@ -10,9 +10,9 @@ class LlamaModelLoader(LLMModelLoader):
 
     def load(self, args, model_path, is_active_party, party_idx):
         if is_active_party:
-            print(f'== Load Active Party Model From:{model_path}')
+            print(f'---- Load Active Party Model From:{model_path}')
         else:
-            print(f'== Load Passive Party Model From:{model_path}')
+            print(f'---- Load Passive Party Model From:{model_path}')
 
         if args.vfl_model_slice_num == 2:
             split_index = (args.local_encoders_num, )
@@ -39,7 +39,6 @@ class LlamaModelLoader(LLMModelLoader):
                 if not (i == 2 and args.local_tail_encoders_num == 0):
                     peft_model = self._set_peft(m, args.finetune_detail_configs)
                     self._models.update({i: peft_model})
-            print('after lora trainable param:')
             for _key in self._models.keys():
                 print(_key)
                 self._models[_key].print_trainable_parameters()
@@ -108,7 +107,6 @@ class LlamaModelLoader(LLMModelLoader):
                     print(f'active_model_tail: all trainable')
 
 
-        print('final trainable param:')
         for _key in self._models.keys():
             self._models[_key].print_trainable_parameters()
 
@@ -158,15 +156,7 @@ class LlamaModelLoader(LLMModelLoader):
         else:
             raise ValueError(f"Not supported vfl_model_slice_num:{args.vfl_model_slice_num}") 
         
-        # model_config = AutoConfig.from_pretrained(model_path) # full model config
-        # if hasattr(model_config, 'generation_config'):
-        #     generation_config = model_config.generation_config
-        # else:
-        #     generation_config = None
-        # model_architectures = model_config.architectures
-        # model_embedded_dim = model_config.hidden_size # change with model type
-        # all_encoders_num = model_config.num_hidden_layers # change with model type
-
+      
         model_partition_pipeline = ModelPartitionPipelineLlama(args=args, all_layer_num = args.all_encoders_num, 
                             split_index=split_index)
         

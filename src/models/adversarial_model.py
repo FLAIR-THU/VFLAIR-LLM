@@ -48,7 +48,6 @@ class Mapping_MLP3_noflatten(nn.Module):
     '''
     def __init__(self, seq_length, embed_dim, hidden_size=200):
         super(Mapping_MLP3_noflatten, self).__init__()
-        print('Adversarial_MLP init:',seq_length, embed_dim)
         self.seq_length = seq_length
         self.embed_dim = embed_dim
         # self.batch_first = batch_first
@@ -86,7 +85,7 @@ class Mapping_MLP3_noflatten(nn.Module):
             # print('x after:',x.shape,x.dtype)
         # print(self.seq_length*self.embed_dim)
 
-        x = torch.tensor(x,dtype=torch.float32)
+        # x = torch.tensor(x,dtype=torch.float32)
         x1 = self.net1(x)
         # print('x1:',x1.shape)
 
@@ -133,9 +132,9 @@ class Mapping_MLP3(nn.Module):
         )
 
     def forward(self, x):
-        # print('=== ad model ===')
-        # print('self.seq_length:',self.seq_length,'  self.embed_dim:',self.embed_dim)
-
+        print('=== ad model ===')
+        print('self.seq_length:',self.seq_length,'  self.embed_dim:',self.embed_dim)
+        print('x:',x.shape)
         origin_shape = x.shape 
         origin_dtype = x.dtype
 

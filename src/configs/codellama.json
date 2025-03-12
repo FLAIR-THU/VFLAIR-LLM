@@ -1,0 +1,68 @@
+{
+    "epochs": 50,
+    "lr": 0.001,
+    "k": 2,
+    "batch_size": 4,
+    "test_batch_size": 1,
+    "early_stop_threshold": 1,
+    "pipeline": "pretrained",
+    "model_architect":"CLM",
+    "communication":{
+        "communication_protocol": "FedSGD",
+        "iteration_per_aggregation": 1
+    },
+    "finetune_configs":{
+        "name":"Vanilla",
+        "configs":{
+        }
+    },
+    "dataset":{
+        "dataset_name": "CodeAlpaca",
+        "num_classes": 1,
+        "use_prompt": 1
+    },
+    "tokenizer":{
+        "padding": "max_length",
+        "padding_type": "outside",
+        "pad_token": "default",
+        "truncation": "True",
+        "max_length": 256,
+        "padding_side": "right",
+        "add_special_tokens": 1
+    },
+    "model_list":{
+        "name": "codellamaCodeLlama-7b-hf",
+        "pretrained": 1,
+        "model_type": "Llama",
+        "max_sequence": 512,
+        "kwargs_model_loading":{
+            "device_map": "balanced_low_0"
+        },
+        "0": {
+            "path": "/home/DAIR/guzx/Git_FedProject/Models/codellamaCodeLlama-7b-hf",
+                "head":{
+                    "trainable": 0
+                }
+        },
+        "1": {
+                "path": "/home/DAIR/guzx/Git_FedProject/Models/codellamaCodeLlama-7b-hf",
+                "tail":{
+                    "trainable": 0
+            }
+        },
+        "task":{
+            "task_type": "CausalLM",
+            "generation_config_dict":{
+                "do_sample": true,
+                "temperature" : 0.1, 
+                "top_p" : 0.95, 
+                "top_k" : 10,
+                "num_return_sequences": 1,
+                "max_new_tokens": 200
+            },
+            "max_new_tokens": 200
+        },
+        "vfl_model_slice_num": 2,
+        "local_encoders_num": 2
+    }
+}

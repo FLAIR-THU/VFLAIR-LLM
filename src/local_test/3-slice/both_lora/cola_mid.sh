@@ -5,6 +5,8 @@
 #SBATCH --output exp_result/cola_both_lora_mid.out
 
 
+# python main_pipeline_llm.py --prefix "both_lora_test" --seed 60 --configs 3-slice/both_lora/cola_mid
+
 for seed in 60 61 62 63 64 65
     do
 

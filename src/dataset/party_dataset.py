@@ -733,7 +733,6 @@ class LambadaDataset_LLM(Dataset):
         return input_dict, label
 
 
-
 class MMLUDataset_LLM(Dataset):
     def __init__(self, args, texts, labels, split_name='test'):
         '''
@@ -847,14 +846,16 @@ class AlpacaDataset_LLM(Dataset):
             for i in range(len(data_dict['input_ids'])) ] 
         self.labels = data_dict["labels"]  
 
-        # if split_name == 'train':
-        #     print(f'=== Dataset Split = {split_name} ===')
-        #     for i in [0]:
-        #         print('text:',self.input_dicts[i]['input_ids'].shape, self.args.tokenizer.decode(self.input_dicts[i]['input_ids'], skip_special_tokens=True))
-        #         print('-'*25)
-        #         print('label:',self.labels[i].shape, self.args.tokenizer.decode(self.labels[i],skip_special_tokens=True))
-        #         print('='*50)
-        #     assert 1>2
+ 
+        print(f'=== Dataset Split = {split_name} ===')
+        for i in [0]:
+            print('text:',self.input_dicts[i]['input_ids'].shape)
+            print(self.args.tokenizer.decode(self.input_dicts[i]['input_ids'], skip_special_tokens=True))
+            print('-'*25)
+            print('label:')
+            print(self.labels[i].shape, self.args.tokenizer.decode(self.labels[i],skip_special_tokens=True))
+            print('='*50)
+        # assert 1>2
 
     def __len__(self):
         return len(self.labels)
@@ -880,7 +881,6 @@ class AlpacaDataset_LLM(Dataset):
         label = torch.tensor(self.labels[item_idx]).squeeze().to(self.args.device)
         
         return input_dict, label
-
 
 class CNNDailyMailDataset(Dataset):
     def __init__(self, args, articles, highlights, split_name='train'):

@@ -19,9 +19,21 @@ import logging
 import copy
 from sklearn.metrics import roc_auc_score
 from utils.noisy_sample_functions import noisy_sample
+from transformers import StoppingCriteria
+
 
 tp = transforms.ToTensor()
 
+
+
+class EosTokenStoppingCriteria(StoppingCriteria):
+    def __init__(self, eos_token_id):
+        self.eos_token_id = [eos_token_id]
+
+    def __call__(self, input_ids, scores, **kwargs):
+        return input_ids[0][-1] == self.eos_token_id
+    
+    
 class ModelTrainableConfig:
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
