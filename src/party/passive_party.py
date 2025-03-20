@@ -6,6 +6,10 @@ from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
+import torchvision.transforms as T
+from torchvision.transforms.functional import InterpolationMode
+import contextlib
+
 from collections import Counter
 import re
 import time
@@ -504,7 +508,6 @@ class PassiveParty_LLM(Party_LLM):
                         pickle.dump(self.all_words, f)
                     np.save(santext_dict_path+'/prob_matrix.npy', self.prob_matrix)
                     
-                    
     def prepare_data(self, args, index):
         if not args.dataset:
             return None
@@ -532,12 +535,98 @@ class PassiveParty_LLM(Party_LLM):
             self.train_dst = CCSBUAlignDataset(args, self.train_data, self.train_label, self.vis_processors['train'],self.text_processors['train'], 'train')
             self.test_dst = CCSBUAlignDataset(args, self.test_data, self.test_label, self.vis_processors['eval'],self.text_processors['eval'],'test')
         elif args.dataset == 'TextVQA' or args.dataset == 'TextVQA-test':
-            self.train_dst = TextVQADataset_train(args, self.train_data, self.train_label,self.vis_processors['train'],'train')
-            self.test_dst = TextVQADataset_test(args, self.test_data, self.test_label,self.vis_processors['eval'],'test')
+            if 'minicpm' in self.args.model_type:
+                self.train_dst = TextVQADataset_forMiniCPM(args, self.train_data, self.train_label,self.vis_processors['train'],'train')
+                self.test_dst = TextVQADataset_forMiniCPM(args, self.test_data, self.test_label,self.vis_processors['eval'],'test')
+            else: # videochat
+                self.train_dst = TextVQADataset_forBlip(args, self.train_data, self.train_label,'train')
+                self.test_dst = TextVQADataset_forBlip(args, self.test_data, self.test_label,'test')
+                
         else:
             self.train_dst = PassiveDataset_LLM(args, self.train_data, self.train_label, 'train')
             self.test_dst = PassiveDataset_LLM(args, self.test_data, self.test_label, 'test')
+    
+    
+    def maybe_autocast(self, dtype=torch.float16):
+        # if on cpu, don't use autocast
+        # if on gpu, use autocast with dtype if provided, otherwise use torch.float16
+        enable_autocast = self.device != torch.device("cpu")
+
+        if enable_autocast:
+            return torch.cuda.amp.autocast(dtype=dtype)
+        else:
+            return contextlib.nullcontext()
+
+    def get_context_emb(self, prompt, img_list):
+        # prompt = get_prompt(conv)
+        if '<VideoHere>' in prompt:
+            prompt_segs = prompt.split('<VideoHere>')
+        else:
+            prompt_segs = prompt.split('<ImageHere>')
+        assert len(prompt_segs) == len(img_list) + 1, "Unmatched numbers of visual placeholders and videos."
+        seg_tokens = [
+            self.args.tokenizer(
+                seg, return_tensors="pt", add_special_tokens=i == 0).input_ids
+            # only add bos to the first seg
+            for i, seg in enumerate(prompt_segs)
+        ]
+        
+        seg_embs = [self.local_model.embed_tokens(seg_t).to(self.local_model.device) for seg_t in seg_tokens]
+
+        mixed_embs = [emb for pair in zip(seg_embs[:-1], img_list) for emb in pair] + [seg_embs[-1]]
             
+        mixed_embs = torch.cat(mixed_embs, dim=1)
+        return mixed_embs
+    
+    def encode_img(self, image):
+        # device = image.device
+
+        with self.maybe_autocast():
+            T = image.shape[1]
+            # use_image = True if T == 1 else False
+            image = image.permute(0, 2, 1, 3, 4) # [B,T,C,H,W] -> [B,C,T,H,W]
+
+            image_embeds = self.ln_vision(self.visual_encoder(image)).to(self.Qformer.device)#.to(device)
+            image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(self.Qformer.device)#.to(device)
+
+            query_tokens = torch.cat([self.query_tokens, self.extra_query_tokens], dim=1)
+            query_tokens = query_tokens.expand(image_embeds.shape[0], -1, -1).to(self.Qformer.device)
+            query_output = self.Qformer.bert(
+                query_embeds=query_tokens,
+                encoder_hidden_states=image_embeds,
+                encoder_attention_mask=image_atts,
+                return_dict=True,
+            )
+
+            inputs_llama = self.llama_proj(query_output.last_hidden_state)
+            atts_llama = torch.ones(inputs_llama.size()[:-1], dtype=torch.long).to(image.device)
+        return inputs_llama, atts_llama
+
+    def pre_generation(self, samples):
+        images = samples['images']
+        transform = T.Compose(
+                [
+                    T.Resize(
+                        (224, 224), interpolation=InterpolationMode.BICUBIC
+                    ),
+                    T.ToTensor(),
+                    T.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+                ]
+            )
+        
+        img_list = []
+        for img in images:
+            img = transform(img).unsqueeze(0).unsqueeze(0).cuda()
+            image_emb, _ = self.encode_img(img)
+            img_list.append(image_emb)
+        # conv.messages.append([
+        #     conv.roles[0],
+        #     f"<Image><ImageHere></Image>\n"
+        # ])
+        prompt = samples['prompt'][0]
+        embs = self.get_context_emb(prompt, img_list)
+        return embs
+         
     def update_local_pred(self, pred):
         self.pred_received[self.args.k - 1] = pred
 
@@ -1384,6 +1473,16 @@ class PassiveParty_LLM(Party_LLM):
                 # further extention
                 return gradients_list
     
+    def eval(self):
+        for m in self.models.values():
+            if m:
+                m.eval()
+        if self.args.task_type == 'MultiModality':
+            self.visual_encoder.eval()
+            self.ln_vision.eval()
+            self.Qformer.eval()
+            self.llama_proj.eval()
+            
     def are_tensors_connected(self, tensor1, tensor2):
         """
         判断两个 Tensor 是否通过计算图连接。

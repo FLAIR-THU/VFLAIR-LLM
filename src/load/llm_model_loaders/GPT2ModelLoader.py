@@ -29,8 +29,8 @@ class GPT2ModelLoader(LLMModelLoader):
                             split_index=split_index, is_server=is_active_party)
         args.model_partition_pipeline = p
         
-        self._models=p.from_pretrained(model_path, **args.kwargs_model_loading)# **vfl_basic_config.kwargs_model_loading))
-        print(f'===== is_active_party={is_active_party}---{self._models.keys()} ======')
+        self._models=p.from_pretrained(model_path, **args.kwargs_model_loading)
+        # print(f'===== is_active_party={is_active_party}---{self._models.keys()} ======')
 
 
         if args.finetune_name == "LoRA":
@@ -39,10 +39,9 @@ class GPT2ModelLoader(LLMModelLoader):
                 if not (i == 2 and args.local_tail_encoders_num == 0):
                     peft_model = self._set_peft(m, args.finetune_detail_configs)
                     self._models.update({i: peft_model})
-            print('after lora trainable param:')
-            for _key in self._models.keys():
-                print(_key)
-                self._models[_key].print_trainable_parameters()
+        # for _key in self._models.keys():
+        #     print(_key)
+        #     self._models[_key].print_trainable_parameters()
 
         model_trainable_info = args.model_trainable_info[party_idx]
         
@@ -108,10 +107,10 @@ class GPT2ModelLoader(LLMModelLoader):
                     print(f'active_model_tail: all trainable')
 
 
-        print('final trainable param:')
-        for _key in self._models.keys():
-            print(_key)
-            self._models[_key].print_trainable_parameters()
+        # print('final trainable param:')
+        # for _key in self._models.keys():
+        #     print(_key)
+        #     self._models[_key].print_trainable_parameters()
 
 
         for _key in self._models.keys():
@@ -136,54 +135,33 @@ class GPT2ModelLoader(LLMModelLoader):
         else:
             raise ValueError(f"Not supported vfl_model_slice_num:{args.vfl_model_slice_num}") 
         
-        # model_config = AutoConfig.from_pretrained(model_path) # full model config
-        # if hasattr(model_config, 'generation_config'):
-        #     generation_config = model_config.generation_config
-        # else:
-        #     generation_config = None
-        # model_architectures = model_config.architectures
-        # model_embedded_dim = model_config.hidden_size # change with model type
-        # all_encoders_num = model_config.num_hidden_layers # change with model type
-
-        model_partition_pipeline = ModelPartitionPipelineGPT2(args=args, all_layer_num = args.all_encoders_num, 
-                            split_index=split_index)
-        
-        print('load slice args.vfl_model_slice_num:',args.vfl_model_slice_num,' slice_index:',slice_index)
-        if args.vfl_model_slice_num == 3:
-            if slice_index == 0:
-                return model_partition_pipeline._load_model_head(model_path, do_split=True)
-            elif slice_index == 1:
-                return model_partition_pipeline._load_model_body(model_path, do_split=True)
-            else:
-                return model_partition_pipeline._load_model_tail(model_path, do_split=True)
+        if slice_index in [0,2]:
+            model_partition_pipeline = ModelPartitionPipelineGPT2(args=args, all_layer_num = args.all_encoders_num, 
+                            split_index=split_index, is_server=False)
         else:
-            if slice_index == 0:
-                return model_partition_pipeline._load_model_head(model_path, do_split=True)
-            else:
-                return model_partition_pipeline._load_model_tail(model_path, do_split=True)
-
-
-        # return {
-        #     "models": self._models,
-        #     "config": model_config,
-        #     "generation_config": generation_config,
-        #     "model_architectures": model_architectures,
-        #     "model_embedded_dim": model_embedded_dim,
-        #     "all_encoders_num": all_encoders_num,
-        #     "model_dtype": model_dtype
-        # }
+            model_partition_pipeline = ModelPartitionPipelineGPT2(args=args, all_layer_num = args.all_encoders_num, 
+                            split_index=split_index, is_server=True)
+        
+        local_split_model_path = model_partition_pipeline._vfl_model_folder(model_path) + f"/model_{slice_index}/"
+        if slice_index == 0:
+            model_slice = model_partition_pipeline._load_model_head(local_split_model_path,**args.kwargs_model_loading)
+        elif slice_index == 2:
+            model_slice = model_partition_pipeline._load_model_tail(local_split_model_path,**args.kwargs_model_loading)
+            
+        # from_pretrained(model_path, **args.kwargs_model_loading)[slice_index]
+        
+        return model_slice
+       
 
     def _set_peft(self, model, finetune_detail_configs):
         """
         peft training or load trained peft weights
         :return:
         """
-        # print('args.finetune_detail_configs:',args.finetune_detail_configs)
         if finetune_detail_configs != None and finetune_detail_configs!={}:
             lora_config = LoraConfig(
                 **finetune_detail_configs
             )
-            # print('finetune_detail_configs:',finetune_detail_configs)
         else:
             lora_config = LoraConfig(
                 inference_mode=False,  

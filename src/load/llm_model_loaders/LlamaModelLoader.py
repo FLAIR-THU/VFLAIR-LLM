@@ -115,22 +115,22 @@ class LlamaModelLoader(LLMModelLoader):
             break
         # print('_get_model_dtype:',model_dtype)
 
-        if args.model_architect == 'MM':
-            print('args.vit_encoder_config:',args.vit_encoder_config)
-            if args.vfl_model_slice_num == 3:
-                for _key in self._models.keys():
-                    if _key == 0:
-                        self._models[_key] = MiniGPT4Head(self._models[_key], args.tokenizer,**args.vit_encoder_config)
-                    elif _key == 1:
-                        self._models[_key] = MiniGPT4Body(self._models[_key], args.tokenizer)
-                    elif _key == 2:
-                        self._models[_key] = MiniGPT4Tail(self._models[_key], args.tokenizer)
-            else:
-                for _key in self._models.keys():
-                    if _key == 0:
-                        self._models[_key] = MiniGPT4Head(self._models[_key], args.tokenizer,**args.vit_encoder_config)
-                    elif _key == 1:
-                        self._models[_key] = MiniGPT4Tail(self._models[_key], args.tokenizer)
+        # if args.model_architect == 'MM':
+        #     print('args.vit_encoder_config:',args.vit_encoder_config)
+        #     if args.vfl_model_slice_num == 3:
+        #         for _key in self._models.keys():
+        #             if _key == 0:
+        #                 self._models[_key] = MiniGPT4Head(self._models[_key], args.tokenizer,**args.vit_encoder_config)
+        #             elif _key == 1:
+        #                 self._models[_key] = MiniGPT4Body(self._models[_key], args.tokenizer)
+        #             elif _key == 2:
+        #                 self._models[_key] = MiniGPT4Tail(self._models[_key], args.tokenizer)
+        #     else:
+        #         for _key in self._models.keys():
+        #             if _key == 0:
+        #                 self._models[_key] = MiniGPT4Head(self._models[_key], args.tokenizer,**args.vit_encoder_config)
+        #             elif _key == 1:
+        #                 self._models[_key] = MiniGPT4Tail(self._models[_key], args.tokenizer)
 
         for _key in self._models.keys():
             # self._models[_key].to(args.device)
@@ -141,7 +141,6 @@ class LlamaModelLoader(LLMModelLoader):
             "tokenizer": tokenizer,
             "models": self._models,
             "config": model_config,
-            # "generation_config": generation_config,
             "model_architectures": model_architectures,
             "model_embedded_dim": model_embedded_dim,
             "all_encoders_num": all_encoders_num,

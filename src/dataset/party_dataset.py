@@ -180,51 +180,8 @@ class PassiveDataset_LLM(Dataset):
         label = torch.tensor(self.labels[item_idx]).squeeze().to(self.args.device)
         return input_dict, label
 
-class TextVQADataset_test(Dataset):
-    def __init__(self, args, data , labels, transform, split_name='test'
-    ):
-        '''
-        data_dict = {
-                'question':data[idx]['question'],
-                'img_path':os.path.join(image_dir, f"{data[idx]['image_id']}.jpg")
-            }
-        '''
-        self.args = args
-        self.split_name = split_name
-        self.data = data
-        self.labels = labels
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        # prompt = "Answer the question directly with single word." + '\n'
-        prompt = "Answer the question directly with single short sentence." + '\n'
-        
-        data_input = self.data[idx]
-        answer = self.labels[idx]
-
-        input_dict = {
-                'question':prompt + data_input['question'],
-                'image':Image.open(data_input['img_path']).convert('RGB')
-        }
-        
-        if self.split_name == 'train':
-                input_dict['decoder_input_ids'] = input_dict['input_ids']
-                # input_dict['label'] = self.labels[item_idx].to(self.args.device)
-        else:
-            bos_tensor = torch.tensor( [self.args.tokenizer.bos_token_id] ).to(input_dict['input_ids'].device)
-            input_dict['decoder_input_ids'] = bos_tensor
-        # print('-- get item input_dict question:',input_dict['question'])
-        # print('-- get item input_dict image:',type(input_dict['image']))
-        # print('-- get item answer:',answer)
-
-        return input_dict, answer
-    
-class TextVQADataset_train(Dataset):
-    def __init__(self, args, data , labels, transform, split_name='test'
-        ):
+class TextVQADataset_forMiniCPM(Dataset):
+    def __init__(self, args, data , labels, transform, split_name='test'):
         '''
         data_dict = {
                 'question':data[idx]['question'],
@@ -242,71 +199,140 @@ class TextVQADataset_train(Dataset):
         return len(self.data)
     
     def __getitem__(self, idx):
-        data_input = self.data[idx]
-        answer = self.labels[idx][0]
-
-        images_dict = { "<image>" : Image.open(data_input['img_path']).convert('RGB') }
-
-        conversation = [{'role': 'user', 'content': data_input['question']},
-                {'role': 'assistant', 'content': answer}]
-
-        ret = preprocess(
-            images_dict,
-            conversation,
-            self.tokenizer,
-            self.transform,
-            # query_nums=self.query_nums,
-            # slice_config=self.slice_config,
-            # llm_type=self.llm_type,
-            # patch_size=self.patch_size,
-            # batch_vision=self.batch_vision,
-            max_length=self.args.max_length
-        )
-
-        # print(f'ret-input_ids:{ret["input_ids"].shape}') #[81]
-        # print(f'ret-position_ids:{ret["position_ids"].shape}') #[81]
-        # print(f'ret-attention_mask:{ret["attention_mask"].shape}')
-
-
-        padded_input_ids = torch.cat((ret["input_ids"], torch.full((self.args.max_length - len(ret["input_ids"]),), 
-            fill_value=self.tokenizer.pad_token_id)))
-
-        attention_mask = torch.cat((ret["input_ids"], torch.full((self.args.max_length - len(ret["input_ids"]),), 
-            fill_value=0)))
-        # torch.tensor([1 if token != self.tokenizer.pad_token_id else 0 for token in padded_input_ids])
-
-        position_ids = torch.cat((ret["position_ids"], torch.full((self.args.max_length - len(ret["input_ids"]),), 
-            fill_value=0)))
-
-        input_dict = dict(
-            input_ids= padded_input_ids.to(self.args.device),
-            position_ids= position_ids.to(self.args.device),
-            attention_mask= attention_mask.to(self.args.device),
-            pixel_values=[pixel_value.to(self.args.device) for pixel_value in ret["pixel_values"]],
-            tgt_sizes=ret["tgt_sizes"],
-            image_bound=ret["image_bound"],
-        )
+        if self.split_name == 'test':
+            prompt = "Answer the question directly with single short sentence." + '\n'
         
-        if self.split_name == 'train':
-                input_dict['decoder_input_ids'] = input_dict['input_ids']
-                # input_dict['label'] = self.labels[item_idx].to(self.args.device)
-        else:
+            data_input = self.data[idx]
+            answer = self.labels[idx]
+
+            input_dict = {
+                    'question':prompt + data_input['question'],
+                    'image':Image.open(data_input['img_path']).convert('RGB')
+            }
+        
             bos_tensor = torch.tensor( [self.args.tokenizer.bos_token_id] ).to(input_dict['input_ids'].device)
             input_dict['decoder_input_ids'] = bos_tensor
+        
+        else:
+            data_input = self.data[idx]
+            answer = self.labels[idx][0]
+
+            images_dict = { "<image>" : Image.open(data_input['img_path']).convert('RGB') }
+
+            conversation = [{'role': 'user', 'content': data_input['question']},
+                    {'role': 'assistant', 'content': answer}]
+
+            ret = preprocess(
+                images_dict,
+                conversation,
+                self.tokenizer,
+                self.transform,
+                # query_nums=self.query_nums,
+                # slice_config=self.slice_config,
+                # llm_type=self.llm_type,
+                # patch_size=self.patch_size,
+                # batch_vision=self.batch_vision,
+                max_length=self.args.max_length
+            )
+
+
+            padded_input_ids = torch.cat((ret["input_ids"], torch.full((self.args.max_length - len(ret["input_ids"]),), 
+                fill_value=self.tokenizer.pad_token_id)))
+
+            attention_mask = torch.cat((ret["input_ids"], torch.full((self.args.max_length - len(ret["input_ids"]),), 
+                fill_value=0)))
+            # torch.tensor([1 if token != self.tokenizer.pad_token_id else 0 for token in padded_input_ids])
+
+            position_ids = torch.cat((ret["position_ids"], torch.full((self.args.max_length - len(ret["input_ids"]),), 
+                fill_value=0)))
+
+            input_dict = dict(
+                input_ids= padded_input_ids.to(self.args.device),
+                position_ids= position_ids.to(self.args.device),
+                attention_mask= attention_mask.to(self.args.device),
+                pixel_values=[pixel_value.to(self.args.device) for pixel_value in ret["pixel_values"]],
+                tgt_sizes=ret["tgt_sizes"],
+                image_bound=ret["image_bound"],
+            )
+            input_dict['decoder_input_ids'] = input_dict['input_ids']
+            label = torch.cat((ret["target"], torch.full((self.args.max_length - len(ret["target"]),),
+            fill_value=-100)))
+            return input_dict, label
+
+class TextVQADataset_forBlip(Dataset):
+    def __init__(self, args, data , labels, split_name='test'):
+        self.args = args
+        self.split_name = split_name
+        self.data = data
+        self.labels = labels
+        self.tokenizer = args.tokenizer
+
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        if self.split_name == 'test':
+            prompt = "Answer the question directly with single short sentence." + "\n<Image><ImageHere></Image>\n "
+        
+            data_input = self.data[idx]
+            answer = self.labels[idx]
+
+            input_dict = {
+                    'prompt':prompt + data_input['question'],
+                    'images': Image.open(data_input['img_path']).convert('RGB')
+            }
+        
+            bos_tensor = torch.tensor( [self.args.tokenizer.bos_token_id] ).to(self.args.device)
+            input_dict['decoder_input_ids'] = bos_tensor
             
-        
-        label = torch.cat((ret["target"], torch.full((self.args.max_length - len(ret["target"]),),
-         fill_value=-100)))
-        
+            return input_dict, answer
+        else:
+            data_input = self.data[idx]
+            answer = self.labels[idx][0]
 
-        # print('--- get item input_dict:',input_dict.keys())
-        # print('--- get item image_bound:',input_dict['image_bound'].shape) # size(1,2) [[4,68]]
+            images_dict = { "<image>" : Image.open(data_input['img_path']).convert('RGB') }
 
-        # print('--- get item input_ids:',input_dict['input_ids'].shape)
-        # print(self.tokenizer.decode(input_dict['input_ids']))
-        # print('--- get item label:',label.shape)
+            conversation = [{'role': 'user', 'content': data_input['question']},
+                    {'role': 'assistant', 'content': answer}]
 
-        return input_dict, label
+            ret = preprocess(
+                images_dict,
+                conversation,
+                self.tokenizer,
+                self.transform,
+                # query_nums=self.query_nums,
+                # slice_config=self.slice_config,
+                # llm_type=self.llm_type,
+                # patch_size=self.patch_size,
+                # batch_vision=self.batch_vision,
+                max_length=self.args.max_length,
+            )
+
+
+            padded_input_ids = torch.cat((ret["input_ids"], torch.full((self.args.max_length - len(ret["input_ids"]),), 
+                fill_value=self.tokenizer.pad_token_id)))
+
+            attention_mask = torch.cat((ret["input_ids"], torch.full((self.args.max_length - len(ret["input_ids"]),), 
+                fill_value=0)))
+            # torch.tensor([1 if token != self.tokenizer.pad_token_id else 0 for token in padded_input_ids])
+
+            position_ids = torch.cat((ret["position_ids"], torch.full((self.args.max_length - len(ret["input_ids"]),), 
+                fill_value=0)))
+
+            input_dict = dict(
+                input_ids= padded_input_ids.to(self.args.device),
+                position_ids= position_ids.to(self.args.device),
+                attention_mask= attention_mask.to(self.args.device),
+                pixel_values=[pixel_value.to(self.args.device) for pixel_value in ret["pixel_values"]],
+                tgt_sizes=ret["tgt_sizes"],
+                image_bound=ret["image_bound"],
+            )
+            input_dict['decoder_input_ids'] = input_dict['input_ids']
+            label = torch.cat((ret["target"], torch.full((self.args.max_length - len(ret["target"]),),
+            fill_value=-100)))
+            return input_dict, label
+
+
 
 def preprocess(
     images_dict,
@@ -847,15 +873,15 @@ class AlpacaDataset_LLM(Dataset):
         self.labels = data_dict["labels"]  
 
  
-        print(f'=== Dataset Split = {split_name} ===')
-        for i in [0]:
-            print('text:',self.input_dicts[i]['input_ids'].shape)
-            print(self.args.tokenizer.decode(self.input_dicts[i]['input_ids'], skip_special_tokens=True))
-            print('-'*25)
-            print('label:')
-            print(self.labels[i].shape, self.args.tokenizer.decode(self.labels[i],skip_special_tokens=True))
-            print('='*50)
-        # assert 1>2
+        # print(f'=== Dataset Split = {split_name} ===')
+        # for i in [0]:
+        #     print('text:',self.input_dicts[i]['input_ids'].shape)
+        #     print(self.args.tokenizer.decode(self.input_dicts[i]['input_ids'], skip_special_tokens=True))
+        #     print('-'*25)
+        #     print('label:')
+        #     print(self.labels[i].shape, self.args.tokenizer.decode(self.labels[i],skip_special_tokens=True))
+        #     print('='*50)
+        # # assert 1>2
 
     def __len__(self):
         return len(self.labels)

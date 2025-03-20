@@ -1,0 +1,90 @@
+{
+    "epochs": 5,
+    "lr": 0.0001,
+    "k": 2,
+    "batch_size": 12,
+    "test_batch_size": 1,
+    "early_stop_threshold": 5,
+    "pipeline": "pretrained",
+    "model_architect":"MM",
+    "communication":{
+        "communication_protocol": "FedSGD",
+        "iteration_per_aggregation": 1
+    },
+    "dataset": {
+      "dataset_name": "TextVQA",
+      "num_classes": 1
+    },
+    "tokenizer": {
+      "padding": "max_length",
+      "padding_type": "outside",
+      "pad_token": "[PAD]",
+      "truncation": "longest_first",
+      "max_length": 160,
+      "padding_side": "left",
+      "add_special_tokens": 1
+    },
+    "finetune_configs":{
+        "name":"Vanilla",
+        "configs":{}
+    },
+    "model_list":{
+        "name": "Llama-2-7b-hf",
+        "pretrained": 1,
+        "model_type": "videochat",
+        "max_sequence": 512,
+        "kwargs_model_loading":{
+            "device_map":"auto"
+        },
+        "0": {
+          "path": "/shared/model/Llama-2-7b-hf",
+            "head":{
+                "trainable": 0,
+                "vit_configs":{
+                    "vit_model": "eva_clip_g",
+                    "vit_model_path": "/shared/model/eva_vit_g.pth",
+                    "freeze_vit": true,
+                    "vit_precision": "float32",
+                    "img_size": 224,
+                    "drop_path_rate": 0.0,
+                    "use_grad_checkpoint": false,
+                    "freeze_mhra": false,
+                    "temporal_downsample": false,
+                    "no_lmhra": true,
+                    "double_lmhra": false,
+                    "lmhra_reduction": 2.0,
+                    "gmhra_layers": 8,
+                    "gmhra_drop_path_rate": 0.0,
+                    "gmhra_dropout": 0.5
+                },
+                "qformer_configs":{
+                    "q_former_model_path": "/shared/model/blip2_pretrained_flant5xxl.pth",
+                    "freeze_qformer": true,
+                    "num_query_token": 32,
+                    "extra_num_query_token": 64
+                }
+            }
+            
+        },
+        "1": {
+          "path": "/shared/model/Llama-2-7b-hf",
+            "tail":{
+                "trainable": 0
+            }
+        },
+        "task":{
+            "task_type": "MultiModality",
+            "generation_method":"generate",
+            "generation_config_dict":{
+                "max_new_tokens": 20,
+                "sampling":false,
+                "num_beams":3
+            },
+            "max_new_tokens": 20
+        },
+        "vfl_model_slice_num": 2,
+        "local_encoders_num": 2,
+        "local_tail_encoders_num": 0
+      }
+  }
+  

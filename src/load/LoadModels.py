@@ -73,6 +73,7 @@ Loader_Map = {
     'MiniGPT4': MiniGPT4ModelLoader,
     'MiniCPM': MiniCPMModelLoader,
     'MiniCPMV': MiniCPMVModelLoader,
+    'videochat': LlamaModelLoader,
 
 }
 
@@ -359,11 +360,13 @@ def load_models_per_party(args, index):
     return args, local_model, local_model_optimizer, global_model, global_model_optimizer
 
 
-def load_llm_slice(args, slice_index):
+def load_llm_slice(args, slice_index, model_path=None):
     assert args.model_type in Loader_Map.keys(), f'{args.model_type} not supported'
     # is_active_party = (index == args.k - 1)
     loader = Loader_Map[args.model_type]()
-    model_path = args.model_path[0]
+    if not model_path:
+        model_path = args.model_path[0]
+    print(f'Load LLM Model Slice {slice_index} From:{model_path}')
     result = loader.load_slice(args=args, model_path=model_path, slice_index = slice_index)
     return result
 

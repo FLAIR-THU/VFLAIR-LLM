@@ -61,7 +61,7 @@ def do_load_basic_configs(config_dict, args):
     args.main_epochs = config_dict['epochs'] if ('epochs' in config_dict) else 50
 
     # args.early_stop_threshold, early stop max epoch
-    args.early_stop_threshold = config_dict['early_stop_threshold'] if ('early_stop_threshold' in config_dict) else -1
+    args.early_stop_threshold = config_dict['early_stop_threshold'] if ('early_stop_threshold' in config_dict) else 5
 
     # args.k, number of participants
     args.k = config_dict['k'] if ('k' in config_dict) else 2
@@ -454,7 +454,7 @@ def do_load_basic_configs_llm(config_dict, args):
     args.main_epochs = config_dict['epochs'] if ('epochs' in config_dict) else 50
 
     # args.early_stop_threshold, early stop max epoch
-    args.early_stop_threshold = config_dict['early_stop_threshold'] if ('early_stop_threshold' in config_dict) else -1
+    args.early_stop_threshold = config_dict['early_stop_threshold'] if ('early_stop_threshold' in config_dict) else 5
 
     # args.k, number of participants
     args.k = config_dict['k'] if ('k' in config_dict) else 2
@@ -555,6 +555,7 @@ def do_load_basic_configs_llm(config_dict, args):
     # Model
     if 'model_list' in config_dict:
         config_model_dict = config_dict['model_list']
+        
         args.model_name = config_model_dict['name']
         args.vfl_model_slice_num = config_model_dict['vfl_model_slice_num'] if('vfl_model_slice_num' in config_model_dict) else 2
         args.local_encoders_num = config_model_dict['local_encoders_num'] if('local_encoders_num' in config_model_dict) else 1
@@ -577,9 +578,11 @@ def do_load_basic_configs_llm(config_dict, args):
             args.n_best_size = args.task_dict['n_best_size'] if('n_best_size' in args.task_dict) else 20
             args.max_new_tokens = args.task_dict['max_new_tokens'] if('max_new_tokens' in args.task_dict) else 1
 
-            args.vis_processor_config = args.task_dict['vis_processor'] if('vis_processor' in args.task_dict) else {}
-            args.text_processor_config = args.task_dict['text_processor'] if('text_processor' in args.task_dict) else {}
-            args.vit_encoder_config = args.task_dict['vit_encoder'] if('vit_encoder' in args.task_dict) else {}
+            # # MiniCPM
+            # args.vis_processor_config = args.task_dict['vis_processor'] if('vis_processor' in args.task_dict) else {}
+            # args.text_processor_config = args.task_dict['text_processor'] if('text_processor' in args.task_dict) else {}
+            # args.vit_encoder_config = args.task_dict['vit_encoder'] if('vit_encoder' in args.task_dict) else {}
+            
         else:
             args.task_type = None
             args.generation_config_dict = None
@@ -596,6 +599,7 @@ def do_load_basic_configs_llm(config_dict, args):
             args.pretrained = config_model_dict['pretrained'] if 'pretrained' in config_model_dict else 1
         else:
             args.pretrained = 1
+            
         # Overall LLM type/None for non-llm scenario
         args.model_type = config_model_dict['model_type'] if 'model_type' in config_model_dict else None  
         args.model_path = []
@@ -603,14 +607,15 @@ def do_load_basic_configs_llm(config_dict, args):
         # Finetune Configs  
         args.model_trainable_info = []
         
-        # Passive Party Models
+        ############# Passive Party Models #####################
         # dict:{model_slice: value}  model_slice = head/body/tail
         args.model_slice_trainable = [False, False, False]
         args.embedding_trainable = False
-        args.vision_processor_trainable = False
         args.head_layer_trainable = False
         args.encoder_trainable = {}
         args.encoder_trainable_ids = {}
+        args.vision_processor_trainable = False
+        
         assert '0' in config_model_dict, "Passive Party not specified in model list"
         for ik in range(args.k-1):
             passive_model_dict = config_model_dict[str(ik)]
@@ -620,9 +625,18 @@ def do_load_basic_configs_llm(config_dict, args):
             args.encoder_trainable['head'] = passive_model_dict['head']['encoder_trainable'] if 'encoder_trainable' in passive_model_dict['head'] else False
             args.encoder_trainable_ids['head'] = passive_model_dict['head']['encoder_trainable_ids'] if 'encoder_trainable_ids' in passive_model_dict['head'] else []
             args.embedding_trainable = passive_model_dict['head']['embedding_trainable'] if 'embedding_trainable' in passive_model_dict['head'] else False
-            
-            args.vision_processor_trainable = passive_model_dict['head']['vision_processor_trainable'] if 'vision_processor_trainable' in passive_model_dict['head'] else False
             args.model_slice_trainable[0] = passive_model_dict['head']['trainable'] if 'trainable' in passive_model_dict['head'] else False
+            
+            # MiniCPM
+            args.vis_processor_config = passive_model_dict['head']['vis_processor_config'] if('vis_processor_config' in passive_model_dict['head']) else {}
+            args.text_processor_config = passive_model_dict['head']['text_processor_config'] if('text_processor_config' in passive_model_dict['head']) else {}
+            args.vit_encoder_config = passive_model_dict['head']['vit_encoder_config'] if('vit_encoder_config' in passive_model_dict['head']) else {}
+            args.vision_processor_trainable = passive_model_dict['head']['vision_processor_trainable'] if 'vision_processor_trainable' in passive_model_dict['head'] else False
+            
+            # VideoChat
+            args.vit_configs = passive_model_dict['head']['vit_configs'] if('vit_configs' in passive_model_dict['head']) else {}
+            args.qformer_configs = passive_model_dict['head']['qformer_configs'] if('qformer_configs' in passive_model_dict['head']) else {}
+            
             
             args.head_layer_trainable = 0
             if args.vfl_model_slice_num==3:
@@ -645,10 +659,9 @@ def do_load_basic_configs_llm(config_dict, args):
                 )
             )
             
-        # Active Party Models
+        ############# Active Party Models #####################
         args.model_slice_trainable = [False, False, False]
         args.embedding_trainable = False
-        args.vision_processor_trainable = False
         args.head_layer_trainable = False
         args.encoder_trainable = {}
         args.encoder_trainable_ids = {}

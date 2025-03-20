@@ -34,6 +34,9 @@ class GPT2ModelSplitter(GPT2Model, VFLModel):
         
         return True
 
+    def _clear_past_key_values(self):
+        self.past_key_values = None
+
 # Model Head/Body/Tail
 class GPT2ModelHead(GPT2ModelSplitter):
     def __init__(self, config: GPT2Config):
@@ -43,6 +46,7 @@ class GPT2ModelHead(GPT2ModelSplitter):
         # todo: del norm will cause error when load from original model weight
         # del self.norm
 
+    
     def get_input_embeddings(self):
         return self.wte
 
@@ -674,7 +678,6 @@ class GPT2ModelTail(GPT2ModelSplitter):
             # print('original_embedding:',original_embedding.shape,'  snd_noise:',snd_noise.shape)
             hidden_states = denoise_mod(\
                 original_embedding, snd_noise, hidden_states, attention_mask)
-            print('after denoise hidden_states:',hidden_states.shape)
         
         if not return_dict:
             return tuple(
@@ -710,6 +713,9 @@ class GPT2TailForCausalLM(GPT2LMHeadModel, VFLModel):
     def head_layer(self, lm_head):
         self.lm_head = lm_head
     
+    def _clear_past_key_values(self):
+        self.transformer._clear_past_key_values()
+
     def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,
@@ -846,7 +852,6 @@ class ModelPartitionPipelineGPT2(ModelPartitionPipeline):
             model_tail = GPT2TailForQuestionAnswering.from_pretrained(model_name_or_path, **kwargs)
         else:
             raise ValueError(f"model_architect {self.args.model_architect} not supported for {model_name_or_path}")
-        
         if do_split:
             if self.num_of_slices == 2:
                 split_range = range(self.split_index[0],model_tail.config.n_layer)

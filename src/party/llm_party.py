@@ -6,6 +6,7 @@ import random
 sys.path.append(os.pardir)
 
 import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader
 from loguru import logger
 
@@ -48,7 +49,7 @@ class Party(object):
         self.args = args
         args.need_auxiliary = 0
         args.dataset = args.dataset_split['dataset_name']
-        # data for training and testing
+
         self.half_dim = -1
         self.train_data = None
         self.test_data = None
@@ -70,6 +71,7 @@ class Party(object):
         self.local_batch_data = None
         self.local_batch_attention_mask = None
         self.local_batch_token_type_ids = None
+        
         # backdoor poison data and label and target images list
         self.train_poison_data = None
         self.train_poison_label = None
@@ -77,6 +79,7 @@ class Party(object):
         self.test_poison_label = None
         self.train_target_list = None
         self.test_target_list = None
+        
         # store attributes of model slices
         self.input_tensors = {}  # input intermediate type:dict[int,torch.Tensor]
         self.output_tensors = {}  # output embeddings type:dict[int,torch.Tensor]
@@ -99,16 +102,14 @@ class Party(object):
         self.global_model = None
         self.global_model_optimizer = None
         
-        # tokenizer
+        # Load tokenizer and model
         self.tokenizer = None
         self.vis_processors = {}
         self.text_processors = {}
-
         if need_model:
             self.prepare_model(args, index)
-        
 
-        # Data
+        # Load Data
         if need_data:
             self.prepare_data(args, index)
             self.prepare_data_loader()
@@ -123,8 +124,6 @@ class Party(object):
         self.prev_batches = []
         self.num_local_updates = 0
 
-        self.party_time = 0
-
         ####### predict results ######
         self.input_shape = None
         self.global_pred = None
@@ -133,6 +132,7 @@ class Party(object):
         self.local_sequence_lengths = None  # GPT2 Classification
         self.local_attention_mask = None  # Llama
 
+        ######### defence
         # for adversarial training
         self.adversary_loss = None
         self.mapping_distance = None
@@ -153,7 +153,7 @@ class Party(object):
         for m in self.models.values():
             if m:
                 m.eval()
-
+            
     def train(self,*args,**kwargs):
         for m in self.models.values():
             if m:
@@ -184,8 +184,7 @@ class Party(object):
         batch_size = self.args.batch_size
         test_batch_size = self.args.test_batch_size
         self.train_loader = DataLoader(self.train_dst, batch_size=batch_size, collate_fn=lambda x: x)  # ,
-        self.test_loader = DataLoader(self.test_dst, batch_size=test_batch_size,
-                                      collate_fn=lambda x: x)  # , shuffle=True ,collate_fn=my_collate
+        self.test_loader = DataLoader(self.test_dst, batch_size=test_batch_size, collate_fn=lambda x: x)  # , shuffle=True ,collate_fn=my_collate
         if need_auxiliary == 1 and self.aux_dst != None:
             self.aux_loader = DataLoader(self.aux_dst, batch_size=batch_size, collate_fn=lambda x: x)
 
@@ -216,30 +215,187 @@ class Party(object):
         print('pad_token:',self.args.pad_token,'  pad_id:',self.args.pad_id)
 
         self.tokenizer = args.tokenizer
+    
+    def init_Qformer(self,
+        num_query_token, vision_width, 
+        qformer_hidden_dropout_prob=0.,
+        qformer_attention_probs_dropout_prob=0.,
+        qformer_drop_path_rate=0.,
+    ):
+        from models.Qformer import BertConfig, BertLMHeadModel
+        encoder_config = BertConfig.from_pretrained("/shared/model/bert-base-uncased")
+        encoder_config.encoder_width = vision_width
+        # insert cross-attention layer every other block
+        encoder_config.add_cross_attention = True
+        encoder_config.cross_attention_freq = 2
+        encoder_config.query_length = num_query_token
+        encoder_config.hidden_dropout_prob = qformer_hidden_dropout_prob
+        encoder_config.attention_probs_dropout_prob = qformer_attention_probs_dropout_prob
+        encoder_config.drop_path_list = [x.item() for x in torch.linspace(0, qformer_drop_path_rate, encoder_config.num_hidden_layers)]
+        # print(f"Drop_path:{encoder_config.drop_path_list}")
+        # print(encoder_config)
+        Qformer = BertLMHeadModel(config=encoder_config)
+        query_tokens = nn.Parameter(
+            torch.zeros(1, num_query_token, encoder_config.hidden_size)
+        )
+        query_tokens.data.normal_(mean=0.0, std=encoder_config.initializer_range)
+        return Qformer, query_tokens
 
+    def init_vision_encoder(self,
+        vit_model_name, img_size, drop_path_rate, 
+        use_grad_checkpoint, precision, vit_model_path,
+        temporal_downsample=True,
+        no_lmhra=False, 
+        double_lmhra=False,
+        lmhra_reduction=2.0, 
+        gmhra_layers=8, 
+        gmhra_drop_path_rate=0.,
+        gmhra_dropout=0.5, 
+    ):
+        from models.eva_vit import create_eva_vit_g,LayerNorm
+        assert vit_model_name == "eva_clip_g", "vit model must be eva_clip_g for current version of VideoChat"
+        visual_encoder = create_eva_vit_g(self.args.device,
+            img_size, drop_path_rate, 
+            use_grad_checkpoint, precision, vit_model_path,
+            temporal_downsample=temporal_downsample,
+            no_lmhra=no_lmhra, 
+            double_lmhra=double_lmhra,
+            lmhra_reduction=lmhra_reduction, 
+            gmhra_layers=gmhra_layers, 
+            gmhra_drop_path_rate=gmhra_drop_path_rate,
+            gmhra_dropout=gmhra_dropout, 
+        ).to(self.args.device)
+        ln_vision = LayerNorm(visual_encoder.num_features).to(self.args.device)
+        return visual_encoder, ln_vision
+    
     def prepare_processor(self, args):
         print('---- Load processor')
-        vis_proc_cfg = args.vis_processor_config
-        txt_proc_cfg = args.text_processor_config 
+        if args.model_type in ['minicpm','minicpmv']:
+            vis_proc_cfg = args.vis_processor_config
+            txt_proc_cfg = args.text_processor_config 
 
-        if vis_proc_cfg is not None:
-            vis_train_cfg = vis_proc_cfg.get("train")
-            vis_eval_cfg = vis_proc_cfg.get("eval")
+            if vis_proc_cfg is not None:
+                vis_train_cfg = vis_proc_cfg.get("train")
+                vis_eval_cfg = vis_proc_cfg.get("eval")
 
-            self.vis_processors["train"] = self._build_proc_from_cfg(vis_train_cfg)
-            self.vis_processors["eval"] = self._build_proc_from_cfg(vis_eval_cfg)
+                self.vis_processors["train"] = self._build_proc_from_cfg(vis_train_cfg)
+                self.vis_processors["eval"] = self._build_proc_from_cfg(vis_eval_cfg)
 
-        if txt_proc_cfg is not None:
-            txt_train_cfg = txt_proc_cfg.get("train")
-            txt_eval_cfg = txt_proc_cfg.get("eval")
+            if txt_proc_cfg is not None:
+                txt_train_cfg = txt_proc_cfg.get("train")
+                txt_eval_cfg = txt_proc_cfg.get("eval")
 
-            self.text_processors["train"] = self._build_proc_from_cfg(txt_train_cfg)
-            self.text_processors["eval"] = self._build_proc_from_cfg(txt_eval_cfg)
+                self.text_processors["train"] = self._build_proc_from_cfg(txt_train_cfg)
+                self.text_processors["eval"] = self._build_proc_from_cfg(txt_eval_cfg)
 
-        print('vis_processors:',self.vis_processors.keys())
-        print('text_processors:',self.text_processors.keys())
+            print('vis_processors:',self.vis_processors.keys())
+            print('text_processors:',self.text_processors.keys())
+            
+        elif args.model_type == 'videochat':
+            vit_configs = args.vit_configs
+            vit_model = vit_configs.get("vit_model", "eva_clip_g")
+            vit_model_path = vit_configs.get("vit_model_path", None)
+            img_size = vit_configs.get("img_size",224)
+            drop_path_rate = vit_configs.get("drop_path_rate", 0)
+            use_grad_checkpoint = vit_configs.get("use_grad_checkpoint", False)
+            vit_precision = vit_configs.get("vit_precision", "fp16")
+            freeze_vit = vit_configs.get("freeze_vit", True)
+            # uniformerv2
+            freeze_mhra = vit_configs.get("freeze_mhra", False)
+            temporal_downsample = vit_configs.get("temporal_downsample", True)
+            no_lmhra = vit_configs.get("no_lmhra", False)
+            double_lmhra = vit_configs.get("double_lmhra", False)
+            lmhra_reduction = vit_configs.get("lmhra_reduction", 2.0)
+            gmhra_layers = vit_configs.get("gmhra_layers", 8)
+            gmhra_drop_path_rate = vit_configs.get("gmhra_drop_path_rate", 0.)
+            gmhra_dropout = vit_configs.get("gmhra_dropout", 0.5)
+            
+            print(f'Loading VIT. Use fp16: {vit_precision}')
+            self.visual_encoder, self.ln_vision = self.init_vision_encoder(
+                vit_model, img_size, drop_path_rate, 
+                use_grad_checkpoint, vit_precision, vit_model_path,
+                temporal_downsample=temporal_downsample,
+                no_lmhra=no_lmhra, 
+                double_lmhra=double_lmhra,
+                lmhra_reduction=lmhra_reduction, 
+                gmhra_layers=gmhra_layers, 
+                gmhra_drop_path_rate=gmhra_drop_path_rate,
+                gmhra_dropout=gmhra_dropout, 
+            )
+            if freeze_vit:
+                print("freeze vision encoder")
+                def disabled_train(self, mode=True):
+                    """Overwrite model.train with this function to make sure train/eval mode
+                    does not change anymore."""
+                    return self
+                if not freeze_mhra:
+                    open_list = []
+                    for name, param in self.visual_encoder.named_parameters():
+                        if 'mhra' not in name:
+                            param.requires_grad = False
+                        else:
+                            open_list.append(name)
+                    # print(f"open module: {open_list}")
+                    # print("open ln_vision")
+                else:
+                    for name, param in self.visual_encoder.named_parameters():
+                        param.requires_grad = False
+                    self.visual_encoder = self.visual_encoder.eval()
+                    self.visual_encoder.train = disabled_train
+                    for name, param in self.ln_vision.named_parameters():
+                        param.requires_grad = False
+                    self.ln_vision = self.ln_vision.eval()
+                    self.ln_vision.train = disabled_train
+            print('Loading VIT Done')
+            
+            ###############################################
+            qformer_configs = args.qformer_configs
+            q_former_model_path = qformer_configs.get("q_former_model_path", None)
+            freeze_qformer = qformer_configs.get("freeze_qformer", True)
+            num_query_token = qformer_configs.get("num_query_token")
+            extra_num_query_token = qformer_configs.get("extra_num_query_token", 64)
+            print('num_query_token:',num_query_token)
+            self.Qformer, self.query_tokens = self.init_Qformer(
+                num_query_token, self.visual_encoder.num_features,
+            )
+            self.Qformer.cls = None
+            self.Qformer.bert.embeddings.word_embeddings = None
+            self.Qformer.bert.embeddings.position_embeddings = None
+            for layer in self.Qformer.bert.encoder.layer:
+                layer.output = None
+                layer.intermediate = None
+            print('Loading Q-Former')
+            if q_former_model_path is not None and os.path.isfile(q_former_model_path):
+                checkpoint = torch.load(q_former_model_path, map_location="cpu")
+            else:
+                raise RuntimeError("checkpoint url or path is invalid")
+            self.Qformer.load_state_dict(checkpoint, strict=False )
+            
+            self.Qformer = self.Qformer.to(self.args.device)
+            self.query_tokens = self.query_tokens.to(self.args.device)
+            # print(f"Add extra {extra_num_query_token} tokens in QFormer")
+            self.extra_query_tokens = nn.Parameter(
+                torch.zeros(1, extra_num_query_token, self.query_tokens.shape[-1])
+            ).to(self.args.device)
 
+            if freeze_qformer:
+                print("freeze Qformer")
+                for name, param in self.Qformer.named_parameters():
+                    param.requires_grad = False
+                self.Qformer = self.Qformer.eval()
+                self.Qformer.train = disabled_train
+                # self.query_tokens.requires_grad = False
+                self.query_tokens = self.query_tokens.detach()
+                
+            print('Loading Q-Former Done')
+            
+            ##################################
+            self.llama_proj = nn.Linear(
+                self.Qformer.config.hidden_size, self.local_model.config.hidden_size
+            ).to(self.args.device)
+            
         return
+    
     
     @staticmethod
     def _build_proc_from_cfg(cfg):
@@ -272,25 +428,22 @@ class Party(object):
         model_path = args.model_path[index]
         self.prepare_tokenizer(args, model_path)
 
-        # Load Preprocessor [for multimodaolity tasks]
-        if self.index != self.args.k -1 and self.args.task_type == 'MultiModality':
-            self.prepare_processor(args)
-        
         # Load Model
         result = load_models_per_party_llm(args, index)
-        self.models=result['models'] #.update(result['models'])
-        
-
+        self.models=result['models'] 
+        self.full_model_config = result['config'] 
         model_tail_key = args.vfl_model_slice_num - 1
         for _key in self.models.keys(): 
-            # update pad token configs
+            # update pad token 
             self.models[_key].config.pad_token_id = args.pad_id
-            
             # update generation_config
             if int(_key) == int(model_tail_key):
                 self.args.generation_config = self.models[_key].generation_config
 
-        # self.args.generation_config = result['generation_config'] 
+        # Load Preprocessor [for multimodaolity tasks]
+        if self.index != self.args.k -1 and self.args.task_type == 'MultiModality':
+            self.prepare_processor(args)
+
 
         self.args.model_config = result['config']
         self.args.model_dtype = result['model_dtype']
@@ -390,9 +543,8 @@ class Party(object):
                 self.output_tensors[model_index] = resp.get('encoder_outputs')['last_hidden_state']
 
             self.output_attention_mask[model_index] = resp.get('attention_mask')
-        # self.output_tensors[model_index].requires_grad = True
-        return resp #self._detach_tensor(resp)
-
+        return resp 
+    
     def give_current_lr(self):
         return (self.local_model_optimizer.state_dict()['param_groups'][0]['lr'])
 
@@ -531,6 +683,8 @@ class Party(object):
             
         for i,m in self.models.items():
             if m:
+                if self.args.finetune_name == "LoRA":
+                    m = m.merge_and_unload()
                 ModelPartitionPipeline.save_pretrained(model_name_or_path=model_folder, 
                                             models={i:m},
                                             **kwargs)

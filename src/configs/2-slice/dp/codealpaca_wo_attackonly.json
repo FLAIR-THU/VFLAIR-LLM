@@ -1,8 +1,8 @@
 {
     "epochs": 50,
-    "lr": 0.001,
+    "lr": 0.0001,
     "k": 2,
-    "batch_size": 4,
+    "batch_size": 8,
     "test_batch_size": 1,
     "early_stop_threshold": 1,
     "pipeline": "pretrained",
@@ -31,7 +31,7 @@
         "add_special_tokens": 1
     },
     "model_list":{
-        "name": "Llama-7b-hf",
+        "name": "codellamaCodeLlama-7b-hf",
         "pretrained": 1,
         "model_type": "Llama",
         "max_sequence": 512,
@@ -39,13 +39,13 @@
             "device_map": "balanced_low_0"
         },
         "0": {
-            "path": "/shared/model/Llama-7b-hf",
+            "path": "/shared/model/codellamaCodeLlama-7b-hf",
                 "head":{
                     "trainable": 0
                 }
         },
         "1": {
-                "path": "/shared/model/Llama-7b-hf",
+                "path": "/shared/model/codellamaCodeLlama-7b-hf",
                 "tail":{
                     "trainable": 0
             }
@@ -64,5 +64,33 @@
         },
         "vfl_model_slice_num": 2,
         "local_encoders_num": 2
+    },
+    "attack_list": {
+       
+        "0":{
+            "name": "VanillaModelInversion_WhiteBox",
+            "parameters": {
+                "party": [1],
+                "loss_type":"cross_entropy",
+                "lr": 0.005,
+                "epochs": 200,
+                "batch_size": 1,
+                "target_data":"test",
+                "attack_sample_num": 100
+            }
+        },
+        "1":{
+            "name": "VanillaModelInversion_WhiteBox",
+            "parameters": {
+                "party": [1],
+                "loss_type":"cross_entropy",
+                "lr": 0.005,
+                "epochs": 200,
+                "batch_size": 1,
+              "attack_seed": 1,
+              "target_data":"test",
+                "attack_sample_num": 100
+            }
+        }
     }
 }

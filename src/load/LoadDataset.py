@@ -49,8 +49,8 @@ from utils.basic_functions import get_class_i, get_labeled_data, fetch_data_and_
 from utils.cora_utils import *
 from utils.graph_functions import load_data1, split_graph
 
-DATA_PATH = '../../../share_dataset/'
-# DATA_PATH = '/shared/data/'
+# DATA_PATH = '../../../share_dataset/'
+DATA_PATH = '/shared/data/'
 
 IMAGE_DATA = ['mnist', 'cifar10', 'cifar100', 'cifar20', 'utkface', 'facescrub', 'places365']
 TABULAR_DATA = ['breast_cancer_diagnose', 'diabetes', 'adult_income', 'criteo', 'credit', 'nursery', 'avazu']
@@ -2228,11 +2228,11 @@ def load_dataset_per_party_llm(args, index):
         #     return f
 
         # def jload(f, mode="r"):
-            # """Load a .json file into a dictionary."""
-            # f = _make_r_io_base(f, mode)
-            # jdict = json.load(f)
-            # f.close()
-            # return jdict
+        #     """Load a .json file into a dictionary."""
+        #     f = _make_r_io_base(f, mode)
+        #     jdict = json.load(f)
+        #     f.close()
+        #     return jdict
 
         # list_data_dict = jload(data_path)
      
@@ -2265,11 +2265,6 @@ def load_dataset_per_party_llm(args, index):
         ]
         targets = [f"{example['output']}{args.tokenizer.eos_token}" for example in list_data_dict]
 
-        # sources = [
-        #     prompt_input.format_map(example) if example.get("input", "") != "" else prompt_no_input.format_map(example)
-        #     for example in list_data_dict
-        # ]  
-        # targets = [f"{example['output']}" for example in list_data_dict]  
 
         X_data = sources[:] # list of instruction text
         y_data = targets[:] # list of answer text
@@ -2277,6 +2272,9 @@ def load_dataset_per_party_llm(args, index):
         X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.05,
                                                             random_state=args.current_seed)
 
+        # X_test = X_test[:100]
+        # y_test = y_test[:100]
+        
         print('train data:', len(X_train), len(y_train))
         print('test data:', len(X_test), len(y_test))
 
@@ -2677,9 +2675,7 @@ def load_dataset_per_party_llm(args, index):
             image_dir = DATA_PATH+"/TextVQA/train_images"
             ann_path = DATA_PATH+"/TextVQA/TextVQA_0.5.1_train.json"
 
-        # image_dir = DATA_PATH+"/TextVQA/test_images"
-        # ann_path = DATA_PATH+"/TextVQA/TextVQA_0.5.1_test.json"
-        raw_data = json.load(open(ann_path, "r"))["data"]
+        raw_data = json.load(open(ann_path, "r"))["data"][:20]
 
         data = []
         answers = []

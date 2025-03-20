@@ -78,7 +78,7 @@ class ModelPartitionPipeline(ABC):
 
     def from_pretrained(self, model_name_or_path: str, **kwargs):
         try:
-            return self.from_vfl(model_name_or_path, **kwargs)
+            return self.from_local_split_model(model_name_or_path, **kwargs)
         except Exception as e:
             logger.warning(f"{repr(e)}\nTry to load from raw model")
             return self._from_raw(model_name_or_path, **kwargs)
@@ -88,22 +88,23 @@ class ModelPartitionPipeline(ABC):
         for i, m in models.items():
             m.save_pretrained(os.path.join(model_name_or_path, f"model_{i}"), **kwargs) 
 
-    def from_vfl(self, model_name_or_path, **kwargs) -> Dict[int, Union[PreTrainedModel, VFLModel]]:
+    def from_local_split_model(self, model_name_or_path, model_index=None, **kwargs) -> Dict[int, Union[PreTrainedModel, VFLModel]]:
         """
         try to load from local split model
         :param model_name_or_path:
         :param kwargs:
         :return:
         """
+        if model_index == None:
+            model_index = self._model_index
         _models = {}
-
-        for i in self._model_index:
+        for i in model_index:
             model_path = os.path.join(model_name_or_path, f"model_{i}")
             if not os.path.exists(model_path):
                 # check if vfl model exists
                 if os.path.exists(self._vfl_model_folder(model_name_or_path)):
                     logger.info(f"Try existing vfl model: {self._vfl_model_folder(model_name_or_path)}")
-                    return self.from_vfl(self._vfl_model_folder(model_name_or_path), **kwargs)
+                    return self.from_local_split_model(self._vfl_model_folder(model_name_or_path), **kwargs)
                 else:
                     raise ValueError(f"Not found required vfl model in {model_name_or_path}")
             if i == 0:
@@ -138,7 +139,7 @@ class ModelPartitionPipeline(ABC):
             torch.cuda.empty_cache()
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, trust_remote_code=True)
         tokenizer.save_pretrained(self._vfl_model_folder(model_name_or_path))
-        return self.from_vfl(self._vfl_model_folder(model_name_or_path), **kwargs)
+        return self.from_local_split_model(self._vfl_model_folder(model_name_or_path), **kwargs)
 
     @abstractmethod
     def _load_model_head(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:

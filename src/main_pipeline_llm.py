@@ -8,12 +8,6 @@ import logging
 import argparse
 import torch
 torch.autograd.set_detect_anomaly(True)
-# import torch.nn as nn
-# import torchvision.transforms as transforms
-# from torchvision import datasets
-# import torch.utils
-# import torch.backends.cudnn as cudnn
-# from tensorboardX import SummaryWriter
 from peft.peft_model import PeftModel
 
 from load.LoadConfigs import *  # load_configs load_basic_configs_llm
@@ -104,8 +98,6 @@ def evaluate_inversion_attack(args):
 
         print('=== Begin Attack ===')
         training_time = vfl.training_time
-        train_party_time = vfl.train_party_time
-        inference_party_time = vfl.inference_party_time
         precision, recall , attack_total_time= vfl.evaluate_attack()
 
         target_data = args.attack_configs['target_data']
@@ -141,8 +133,6 @@ def evaluate_label_inference_attack(args):
 
         print('=== Begin Attack ===')
         training_time = vfl.training_time
-        train_party_time = vfl.train_party_time
-        inference_party_time = vfl.inference_party_time
 
         rec_rate , attack_total_time= vfl.evaluate_attack()
         if isinstance(rec_rate, dict):
@@ -222,9 +212,9 @@ def create_exp_dir_and_file(args):
     exp_res_path = exp_res_dir + str(filename).replace('/', '')
     
     defense_model_folder = get_defense_model_folder(args)
-    trained_model_folder = get_model_folder(args)
+    model_folder, trained_model_folder = get_model_folder(args)
     
-    return exp_res_dir, exp_res_path, defense_model_folder, trained_model_folder
+    return exp_res_dir, exp_res_path, model_folder, defense_model_folder, trained_model_folder
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("backdoor")
@@ -233,9 +223,9 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=60, help='random seed')
     parser.add_argument('--prefix', type=str, default="", help='result_file_prefix')
     parser.add_argument('--configs', type=str, default='basic_configs_news', help='configure json file path')
-    parser.add_argument('--save_model', type=bool, default=False, help='whether to save the trained model')
+    parser.add_argument('--save_model', type=int, default=0, help='whether to save the trained model')
     parser.add_argument('--save_defense_model', type=bool, default=True, help='whether to save the defense model')
-    parser.add_argument('--attack_only', type=bool, default=False, help='attack_only')
+    parser.add_argument('--attack_only', type=int, default=0, help='attack_only')
     
     
     args = parser.parse_args()
@@ -272,9 +262,10 @@ if __name__ == '__main__':
         print('inversion:', args.inversion_list, args.inversion_index)
 
         # Save record for different defense method
-        exp_res_dir, exp_res_path, defense_model_folder, trained_model_folder = create_exp_dir_and_file(args)
+        exp_res_dir, exp_res_path, model_folder, defense_model_folder, trained_model_folder = create_exp_dir_and_file(args)
         args.exp_res_dir = exp_res_dir
         args.exp_res_path = exp_res_path
+        args.model_folder = model_folder
         args.defense_model_folder = defense_model_folder
         args.trained_model_folder = trained_model_folder
         print('Experiment Result Path:',args.exp_res_path)
