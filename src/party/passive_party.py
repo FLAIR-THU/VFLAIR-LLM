@@ -6,10 +6,6 @@ from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
-import torchvision.transforms as T
-from torchvision.transforms.functional import InterpolationMode
-import contextlib
-
 from collections import Counter
 import re
 import time
@@ -78,13 +74,12 @@ class PassiveParty_LLM(Party_LLM):
         super().__init__(args, index, need_data=need_data, need_model=need_model)
         logger.debug(f'running on cuda{os.getenv("CUDA_VISIBLE_DEVICES").split(",")[torch.cuda.current_device()]}')
 
-        self.init_apply_defense(args.apply_defense, args.apply_adversarial, 
+        self.init_apply_defense(args.apply_defense,
                                 args.defense_configs, args.main_lr,
                                 args.device)
 
         self.criterion = cross_entropy_for_onehot
 
-        # self.encoder = args.encoder
         self.train_index = None  # args.idx_train
         self.test_index = None  # args.idx_test
 
@@ -108,10 +103,10 @@ class PassiveParty_LLM(Party_LLM):
         self.weights_grad_a_tail = None
         # self.encoder_trainable = args.encoder_trainable[index]
 
-    def init_apply_defense(self, need_apply_defense, apply_adversarial, defense_configs, main_lr, device):
+    def init_apply_defense(self, need_apply_defense, defense_configs, main_lr, device):
         # some defense need model, add here
         if need_apply_defense:
-            if apply_adversarial and (self.index in defense_configs["party"]):
+            if self.args.apply_adversarial and (self.index in defense_configs["party"]):
                 print(f'Passive Party {self.index}: init Adversarial Trainining Defense -- {self.args.defense_param}')
                 
                 if not 'party' in defense_configs:
@@ -142,13 +137,19 @@ class PassiveParty_LLM(Party_LLM):
 
                 self.adversary_crit = nn.CrossEntropyLoss()
                 self.adversary_lambda = defense_configs['lambda']
-                
 
                 # AD at model head
                 if 'head' in self.ad_position:
                     # prepare adversarial model --  for adversarial training
-                    self.head_adversarial_model = globals()[adversarial_model_name](seq_length, embed_dim,
+                    head_adversarial_model_path = self.args.defense_model_folder + '/head_adversarial_model.pkl'
+                    if os.path.exists(head_adversarial_model_path):
+                        print(f'Find and Load head_adversarial_model model from:{head_adversarial_model_path}')
+                        with open(head_adversarial_model_path, 'rb') as f:
+                            self.head_adversarial_model = pickle.load(f)
+                    else:
+                        self.head_adversarial_model = globals()[adversarial_model_name](seq_length, embed_dim,
                                                     self.adversarial_model_hidden_size ).to(self.args.device)
+                    
                     if self.local_model_optimizer == None:
                         self.local_model_optimizer = torch.optim.Adam(self.head_adversarial_model.parameters(),
                                                                     lr=self.adversarial_model_lr)
@@ -157,16 +158,29 @@ class PassiveParty_LLM(Party_LLM):
                             {'params': self.head_adversarial_model.parameters(), 'lr': self.adversarial_model_lr})
 
                     # prepare imagined adversary --  for adversarial training
-                    self.head_imagined_adversary = globals()[imagined_adversary_model_name](seq_length, embed_dim,
-                                                            self.imagined_adversary_hidden_size).to(device)
+                    head_imagined_adversary_path = self.args.defense_model_folder + '/head_imagined_adversary.pkl'
+                    if os.path.exists(head_imagined_adversary_path):
+                        print(f'Find and Load head_imagined_adversary model from:{head_imagined_adversary_path}')
+                        with open(head_imagined_adversary_path, 'rb') as f:
+                            self.head_imagined_adversary = pickle.load(f)
+                    else:
+                        self.head_imagined_adversary = globals()[imagined_adversary_model_name](seq_length, embed_dim,
+                                                                self.imagined_adversary_hidden_size).to(device)
 
                     self.head_imagined_adversary_optimizer = torch.optim.Adam(list(self.head_imagined_adversary.parameters()),
                                                                         lr=self.imagined_adversary_lr)
                 # AD at model tail
                 if 'tail' in self.ad_position:
                     # prepare adversarial model --  for adversarial training
-                    self.tail_adversarial_model = globals()[adversarial_model_name](seq_length, embed_dim,
-                                                    self.adversarial_model_hidden_size).to(self.args.device)
+                    tail_adversarial_model_path = self.args.defense_model_folder + '/tail_adversarial_model.pkl'
+                    if os.path.exists(tail_adversarial_model_path):
+                        print(f'Find and Load tail_adversarial model from:{tail_adversarial_model_path}')
+                        with open(tail_adversarial_model_path, 'rb') as f:
+                            self.tail_adversarial_model = pickle.load(f)
+                    else:
+                        self.tail_adversarial_model = globals()[adversarial_model_name](seq_length, embed_dim,
+                                                        self.adversarial_model_hidden_size).to(self.args.device)
+                    
                     if self.local_model_tail_optimizer == None:
                         self.local_model_tail_optimizer = torch.optim.Adam(self.tail_adversarial_model.parameters(),
                                                                     lr=self.adversarial_model_lr)
@@ -175,8 +189,15 @@ class PassiveParty_LLM(Party_LLM):
                             {'params': self.tail_adversarial_model.parameters(), 'lr': self.adversarial_model_lr})
 
                     # prepare imagined adversary --  for adversarial training
-                    self.tail_imagined_adversary = globals()[tail_imagined_adversary_model_name](seq_length, embed_dim,self.label_size,
-                                                    self.adversarial_model_hidden_size).to(self.args.device)
+                    tail_imagined_adversary_path = self.args.defense_model_folder + '/tail_imagined_adversary.pkl'
+                    if os.path.exists(tail_imagined_adversary_path):
+                        print(f'Find and Load head_imagined_adversary model from:{tail_imagined_adversary_path}')
+                        with open(tail_imagined_adversary_path, 'rb') as f:
+                            self.tail_imagined_adversary = pickle.load(f)
+                    else:
+                        self.tail_imagined_adversary = globals()[tail_imagined_adversary_model_name](seq_length, embed_dim,self.label_size,
+                                                        self.adversarial_model_hidden_size).to(self.args.device)
+                    
                     self.tail_imagined_adversary_optimizer = torch.optim.Adam(list(self.tail_imagined_adversary.parameters()),
                                                                     lr=self.imagined_adversary_lr)
 
@@ -208,17 +229,8 @@ class PassiveParty_LLM(Party_LLM):
                     'head_mid_model_path'] if 'head_mid_model_path' in self.args.defense_configs else None
                 tail_mid_model_path = self.args.defense_configs[
                     'tail_mid_model_path'] if 'tail_mid_model_path' in self.args.defense_configs else None
-
-                print('init defense: mid on model head')
-                print(self.mid_model_name)
-
+                
                 if "head" in self.mid_position:
-                    # self.head_mid_model = globals()[self.mid_model_name](seq_length, embed_dim, label_size,\
-                    #                                                 mid_lambda=self.mid_lambda,
-                    #                                                 bottleneck_scale=current_bottleneck_scale,
-                    #                                                 std_shift=std_shift_hyperparameter,
-                    #                                                 model_dtype=model_dtype).to(self.args.device)
-
                     if head_mid_model_path != None:
                         print(f'Load head MID model from:{head_mid_model_path}')
                         with open(head_mid_model_path, 'rb') as f:
@@ -243,20 +255,28 @@ class PassiveParty_LLM(Party_LLM):
                             {'params': self.head_mid_model.parameters(), 'lr': self.mid_lr})
                 
                 if "tail" in self.mid_position:
-                    self.tail_mid_model = globals()[self.mid_model_name](seq_length, embed_dim, label_size,\
-                                                                    mid_lambda=self.mid_lambda,
-                                                                    bottleneck_scale=current_bottleneck_scale,
-                                                                    std_shift=std_shift_hyperparameter,
-                                                                    model_dtype=model_dtype).to(
-                        self.args.device)
-
-                    print('mid_position:', self.mid_position)
+                    if tail_mid_model_path != None:
+                        print(f'Load tail MID model from:{tail_mid_model_path}')
+                        with open(tail_mid_model_path, 'rb') as f:
+                            self.tail_mid_model = pickle.load(f)
+                    else:
+                        tail_mid_model_path = self.args.defense_model_folder + '/tail_mid_model.pkl'
+                        if os.path.exists(tail_mid_model_path):
+                            print(f'Find and Load tail MID model from:{tail_mid_model_path}')
+                            with open(head_mtail_mid_model_pathid_model_path, 'rb') as f:
+                                self.tail_mid_model = pickle.load(f)
+                        else:
+                            self.tail_mid_model = globals()[self.mid_model_name](seq_length, embed_dim, label_size,\
+                                                                            mid_lambda=self.mid_lambda,
+                                                                            bottleneck_scale=current_bottleneck_scale,
+                                                                            std_shift=std_shift_hyperparameter,
+                                                                            model_dtype=model_dtype).to(self.args.device)
                     if self.local_model_tail_optimizer == None:
                         self.local_model_tail_optimizer = torch.optim.Adam(self.tail_mid_model.parameters(), lr=self.mid_lr)
                     else:
                         self.local_model_tail_optimizer.add_param_group(
                             {'params': self.tail_mid_model.parameters(), 'lr': self.mid_lr})
-                print(f'self.mid_model_name:{self.mid_model_name}')
+                print(f'mid_position: {self.mid_position}  self.mid_model_name:{self.mid_model_name}')
 
             elif self.args.apply_dp and (self.index in defense_configs["party"]):
                 print(f'Passive Party {self.index}: init DP Defense')
@@ -508,6 +528,7 @@ class PassiveParty_LLM(Party_LLM):
                         pickle.dump(self.all_words, f)
                     np.save(santext_dict_path+'/prob_matrix.npy', self.prob_matrix)
                     
+                    
     def prepare_data(self, args, index):
         if not args.dataset:
             return None
@@ -535,98 +556,12 @@ class PassiveParty_LLM(Party_LLM):
             self.train_dst = CCSBUAlignDataset(args, self.train_data, self.train_label, self.vis_processors['train'],self.text_processors['train'], 'train')
             self.test_dst = CCSBUAlignDataset(args, self.test_data, self.test_label, self.vis_processors['eval'],self.text_processors['eval'],'test')
         elif args.dataset == 'TextVQA' or args.dataset == 'TextVQA-test':
-            if 'minicpm' in self.args.model_type:
-                self.train_dst = TextVQADataset_forMiniCPM(args, self.train_data, self.train_label,self.vis_processors['train'],'train')
-                self.test_dst = TextVQADataset_forMiniCPM(args, self.test_data, self.test_label,self.vis_processors['eval'],'test')
-            else: # videochat
-                self.train_dst = TextVQADataset_forBlip(args, self.train_data, self.train_label,'train')
-                self.test_dst = TextVQADataset_forBlip(args, self.test_data, self.test_label,'test')
-                
+            self.train_dst = TextVQADataset_train(args, self.train_data, self.train_label,self.vis_processors['train'],'train')
+            self.test_dst = TextVQADataset_test(args, self.test_data, self.test_label,self.vis_processors['eval'],'test')
         else:
             self.train_dst = PassiveDataset_LLM(args, self.train_data, self.train_label, 'train')
             self.test_dst = PassiveDataset_LLM(args, self.test_data, self.test_label, 'test')
-    
-    
-    def maybe_autocast(self, dtype=torch.float16):
-        # if on cpu, don't use autocast
-        # if on gpu, use autocast with dtype if provided, otherwise use torch.float16
-        enable_autocast = self.device != torch.device("cpu")
-
-        if enable_autocast:
-            return torch.cuda.amp.autocast(dtype=dtype)
-        else:
-            return contextlib.nullcontext()
-
-    def get_context_emb(self, prompt, img_list):
-        # prompt = get_prompt(conv)
-        if '<VideoHere>' in prompt:
-            prompt_segs = prompt.split('<VideoHere>')
-        else:
-            prompt_segs = prompt.split('<ImageHere>')
-        assert len(prompt_segs) == len(img_list) + 1, "Unmatched numbers of visual placeholders and videos."
-        seg_tokens = [
-            self.args.tokenizer(
-                seg, return_tensors="pt", add_special_tokens=i == 0).input_ids
-            # only add bos to the first seg
-            for i, seg in enumerate(prompt_segs)
-        ]
-        
-        seg_embs = [self.local_model.embed_tokens(seg_t).to(self.local_model.device) for seg_t in seg_tokens]
-
-        mixed_embs = [emb for pair in zip(seg_embs[:-1], img_list) for emb in pair] + [seg_embs[-1]]
             
-        mixed_embs = torch.cat(mixed_embs, dim=1)
-        return mixed_embs
-    
-    def encode_img(self, image):
-        # device = image.device
-
-        with self.maybe_autocast():
-            T = image.shape[1]
-            # use_image = True if T == 1 else False
-            image = image.permute(0, 2, 1, 3, 4) # [B,T,C,H,W] -> [B,C,T,H,W]
-
-            image_embeds = self.ln_vision(self.visual_encoder(image)).to(self.Qformer.device)#.to(device)
-            image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(self.Qformer.device)#.to(device)
-
-            query_tokens = torch.cat([self.query_tokens, self.extra_query_tokens], dim=1)
-            query_tokens = query_tokens.expand(image_embeds.shape[0], -1, -1).to(self.Qformer.device)
-            query_output = self.Qformer.bert(
-                query_embeds=query_tokens,
-                encoder_hidden_states=image_embeds,
-                encoder_attention_mask=image_atts,
-                return_dict=True,
-            )
-
-            inputs_llama = self.llama_proj(query_output.last_hidden_state)
-            atts_llama = torch.ones(inputs_llama.size()[:-1], dtype=torch.long).to(image.device)
-        return inputs_llama, atts_llama
-
-    def pre_generation(self, samples):
-        images = samples['images']
-        transform = T.Compose(
-                [
-                    T.Resize(
-                        (224, 224), interpolation=InterpolationMode.BICUBIC
-                    ),
-                    T.ToTensor(),
-                    T.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
-                ]
-            )
-        
-        img_list = []
-        for img in images:
-            img = transform(img).unsqueeze(0).unsqueeze(0).cuda()
-            image_emb, _ = self.encode_img(img)
-            img_list.append(image_emb)
-        # conv.messages.append([
-        #     conv.roles[0],
-        #     f"<Image><ImageHere></Image>\n"
-        # ])
-        prompt = samples['prompt'][0]
-        embs = self.get_context_emb(prompt, img_list)
-        return embs
-         
     def update_local_pred(self, pred):
         self.pred_received[self.args.k - 1] = pred
 
@@ -1473,16 +1408,6 @@ class PassiveParty_LLM(Party_LLM):
                 # further extention
                 return gradients_list
     
-    def eval(self):
-        for m in self.models.values():
-            if m:
-                m.eval()
-        if self.args.task_type == 'MultiModality':
-            self.visual_encoder.eval()
-            self.ln_vision.eval()
-            self.Qformer.eval()
-            self.llama_proj.eval()
-            
     def are_tensors_connected(self, tensor1, tensor2):
         """
         判断两个 Tensor 是否通过计算图连接。

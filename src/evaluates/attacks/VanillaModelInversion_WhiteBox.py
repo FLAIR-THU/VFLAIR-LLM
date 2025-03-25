@@ -162,7 +162,7 @@ class VanillaModelInversion_WhiteBox(Attacker):
                 attack_test_dataset = TextVQADataset_train(self.args, attack_data, attack_label, vis_processor,'train')
             elif self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
                 attack_test_dataset = GSMDataset_LLM(self.args, attack_data, attack_label, 'test')
-            elif self.args.dataset in ['Alpaca','Alpaca-test']:
+            elif self.args.dataset in ['CodeAlpaca','Alpaca','Alpaca-test']:
                 attack_test_dataset = AlpacaDataset_LLM(self.args, attack_data, attack_label, 'test')
             else:
                 attack_test_dataset = PassiveDataset_LLM(self.args, attack_data, attack_label)
@@ -198,10 +198,6 @@ class VanillaModelInversion_WhiteBox(Attacker):
                         data_inputs[key_name] = [batch_input_dicts[i][key_name] for i in range(len(batch_input_dicts))]         
 
 
-                # print('VMI data_inputs:',data_inputs.keys())
-                # print('data_inputs input_ids:',data_inputs['input_ids'].shape) #1,160
-                # self.top_vfl.parties[0].set_is_first_forward_iter(1)
-                # self.top_vfl.parties[1].set_is_first_forward_iter(1)
                 self.top_vfl.set_is_first_forward_epoch(1)
 
                 # real received intermediate result
@@ -319,11 +315,19 @@ class VanillaModelInversion_WhiteBox(Attacker):
                     clean_sample_origin_id = sample_origin_id.copy()
                     while self.args.tokenizer.pad_token_id in clean_sample_origin_id:
                         clean_sample_origin_id.remove(self.args.tokenizer.pad_token_id) # with no pad
+                    # while self.args.tokenizer.eos_token_id in clean_sample_origin_id:
+                    #     clean_sample_origin_id.remove(self.args.tokenizer.eos_token_id) # with no pad
+
+                    # remove_token_id = self.args.tokenizer("\n", add_special_tokens=False)["input_ids"][0]
+                    # print(remove_token_id)
+                    # while remove_token_id in clean_sample_origin_id:
+                    #     clean_sample_origin_id.remove(remove_token_id) # with no pad
                     
                     suc_cnt = 0
                     for _sample_id in clean_sample_origin_id:
                         if _sample_id in predicted_indexs:
                             suc_cnt+=1
+                            # print('same:',_sample_id, self.args.tokenizer.decode(torch.tensor([_sample_id])))
                     recall = suc_cnt / len(clean_sample_origin_id)
 
                     suc_cnt = 0

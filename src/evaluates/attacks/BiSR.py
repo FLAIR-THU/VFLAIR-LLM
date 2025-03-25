@@ -160,6 +160,8 @@ class BiSR(Attacker):
                     attack_train_dataset = TextVQADataset_train(self.args, train_data, train_label, vis_processor,'train')
                 elif self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
                     attack_train_dataset = GSMDataset_LLM(self.args, train_data, train_label, 'train')
+                elif self.args.dataset in ['CodeAlpaca','Alpaca','Alpaca-test']:
+                    attack_train_dataset = AlpacaDataset_LLM(self.args, train_data, train_label, 'train')
                 else:
                     attack_train_dataset = PassiveDataset_LLM(self.args, train_data, train_label)
 
@@ -400,7 +402,7 @@ class BiSR(Attacker):
                 attack_test_dataset = TextVQADataset_train(self.args, attack_data, attack_label, vis_processor,'train')
             elif self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
                 attack_test_dataset = GSMDataset_LLM(self.args, attack_data, attack_label, 'test')
-            elif self.args.dataset in ['Alpaca','Alpaca-test']:
+            elif self.args.dataset in ['CodeAlpaca','Alpaca','Alpaca-test']:
                 attack_test_dataset = AlpacaDataset_LLM(self.args, attack_data, attack_label, 'test')
             else:
                 attack_test_dataset = PassiveDataset_LLM(self.args, attack_data, attack_label)

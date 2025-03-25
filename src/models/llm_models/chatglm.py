@@ -64,6 +64,7 @@ class ChatGLMModelHead(ChatGLMModelSplitter):
             use_cache: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
+            **kwargs,
     ):
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -73,9 +74,11 @@ class ChatGLMModelHead(ChatGLMModelSplitter):
 
         batch_size, seq_length = input_ids.shape
 
+        
         if inputs_embeds is None:
             inputs_embeds = self.embedding(input_ids)
         self.embedding_output = inputs_embeds # add
+        # print('====== head inputs_embeds:',inputs_embeds[0,:2,:5])
 
         if self.pre_seq_len is not None:
             if past_key_values is None:
@@ -153,6 +156,7 @@ class ChatGLMModelBody(ChatGLMModelSplitter):
 
         # if inputs_embeds is None:
         #     inputs_embeds = self.embedding(input_ids)
+        # print('====== body inputs_embeds:',inputs_embeds[0,:2,:5])
 
         if self.pre_seq_len is not None:
             if past_key_values is None:
@@ -232,7 +236,8 @@ class ChatGLMModelTail(ChatGLMModelSplitter):
 
         # if inputs_embeds is None:
         #     inputs_embeds = self.embedding(input_ids)
-
+        # print('======== tail inputs_embeds:',inputs_embeds[0,:2,:5])
+        
         if self.pre_seq_len is not None:
             if past_key_values is None:
                 past_key_values = self.get_prompt(batch_size=batch_size, device=input_ids.device,
@@ -263,7 +268,6 @@ class ChatGLMModelTail(ChatGLMModelSplitter):
 
         if not return_dict:
             return tuple(v for v in [hidden_states, presents, all_hidden_states, all_self_attentions] if v is not None)
-
         return BaseModelOutputWithPast(
             last_hidden_state=hidden_states,
             past_key_values=presents,
