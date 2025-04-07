@@ -34,6 +34,7 @@ class ActiveParty_LLM(Party_LLM):
         
         # store attributes of model slices
         self.input_tensors = [{} for i in range(args.k-1)]  # client_number * input intermediate type:dict[int,torch.Tensor]
+        self.input_attention_mask = [{} for i in range(args.k-1)]  # client_number * input attention mask type:dict[int,torch.Tensor]
         self.output_tensors = [{} for i in range(args.k-1)]  # client_number * output embeddings type:dict[int,torch.Tensor]
         self.output_attention_mask = [{} for i in range(args.k-1)]  # client_number * output attention mask type:dict[int,torch.Tensor]
 
@@ -104,6 +105,7 @@ class ActiveParty_LLM(Party_LLM):
         # logger.debug(f"model_{model_index} forward")
 
         self.input_tensors[client_id][model_index] = kwargs.get('inputs_embeds')
+        self.input_attention_mask[client_id][model_index] = kwargs.get('attention_mask')
         
         self._tensor_to_device(kwargs , self.models[model_index].device)
         

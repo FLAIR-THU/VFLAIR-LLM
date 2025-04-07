@@ -2272,8 +2272,8 @@ def load_dataset_per_party_llm(args, index):
         X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.05,
                                                             random_state=args.current_seed)
 
-        # X_test = X_test[:100]
-        # y_test = y_test[:100]
+        X_test = X_test[:]
+        y_test = y_test[:]
         
         print('train data:', len(X_train), len(y_train))
         print('test data:', len(X_test), len(y_test))

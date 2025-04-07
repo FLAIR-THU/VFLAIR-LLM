@@ -126,6 +126,8 @@ class PassiveParty_LLM(Party_LLM):
                 embed_dim = self.args.model_embedded_dim  # defense_configs['embed_dim']
                 if self.args.model_architect=='CLS':
                     self.label_size = self.args.num_classes
+                elif self.args.model_architect == 'CLM':
+                    self.label_size = self.full_model_config.vocab_size
                     
                 imagined_adversary_model_name = defense_configs['imagined_adversary']
                 tail_imagined_adversary_model_name = defense_configs['tail_imagined_adversary']  if (
@@ -263,7 +265,7 @@ class PassiveParty_LLM(Party_LLM):
                         tail_mid_model_path = self.args.defense_model_folder + '/tail_mid_model.pkl'
                         if os.path.exists(tail_mid_model_path):
                             print(f'Find and Load tail MID model from:{tail_mid_model_path}')
-                            with open(head_mtail_mid_model_pathid_model_path, 'rb') as f:
+                            with open(tail_mid_model_path, 'rb') as f:
                                 self.tail_mid_model = pickle.load(f)
                         else:
                             self.tail_mid_model = globals()[self.mid_model_name](seq_length, embed_dim, label_size,\

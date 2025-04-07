@@ -39,7 +39,7 @@
             "device_map": "balanced_low_0"
         },
         "0": {
-            "path": "/data/guzx0/Models/vicgallegpt2-alpaca",
+            "path": "/shared/model/vicgallegpt2-alpaca",
                 "head":{
                     "trainable": 0,
                     "embedding_trainable": 0,
@@ -48,7 +48,7 @@
                 }
         },
         "1": {
-                "path": "/data/guzx0/Models/vicgallegpt2-alpaca",
+                "path": "/shared/model/vicgallegpt2-alpaca",
                 "tail":{
                     "trainable": 0,
                     "head_layer_trainable": 0,
@@ -76,7 +76,7 @@
         "parameters": {
           "party": [0],
           "position": ["pred"],
-          "gradient_sparse_rate": 99
+          "gradient_sparse_rate": 95
         }
     
     },

@@ -136,15 +136,16 @@ def evaluate_label_inference_attack(args):
 
         rec_rate , attack_total_time= vfl.evaluate_attack()
         if isinstance(rec_rate, dict):
-            gen_score = rec_rate['gen_score']
-            label_score = rec_rate['label_score']
             exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|"+\
             f"seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|"+\
             f"num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|early_stop_threshold={args.early_stop_threshold}|final_epoch={vfl.final_epoch}|"+\
             f"headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|"+\
             f"local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|"+\
-            f"main_task_acc={main_tack_acc}|gen_score={gen_score}|label_score={label_score}|"+\
-            f"training_time={training_time}|attack_time={attack_total_time}|"
+            f"main_task_acc={main_tack_acc}"
+            for key, value in rec_rate.items():
+                _r = f"|{key}={value}"
+                exp_result = exp_result + _r
+            exp_result = exp_result + f"|training_time={training_time}|attack_time={attack_total_time}|"
         else:
             exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|early_stop_threshold={args.early_stop_threshold}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|"
         
@@ -223,7 +224,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=60, help='random seed')
     parser.add_argument('--prefix', type=str, default="", help='result_file_prefix')
     parser.add_argument('--configs', type=str, default='basic_configs_news', help='configure json file path')
-    parser.add_argument('--save_model', type=int, default=0, help='whether to save the trained model')
+    parser.add_argument('--save_model', type=int, default=1, help='whether to save the trained model')
     parser.add_argument('--save_defense_model', type=bool, default=True, help='whether to save the defense model')
     parser.add_argument('--attack_only', type=int, default=0, help='attack_only')
     

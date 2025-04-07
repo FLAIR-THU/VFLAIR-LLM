@@ -82,6 +82,7 @@ class Party(object):
         
         # store attributes of model slices
         self.input_tensors = {}  # input intermediate type:dict[int,torch.Tensor]
+        self.input_attention_mask = {}  # input attention mask type:dict[int,torch.Tensor]
         self.output_tensors = {}  # output embeddings type:dict[int,torch.Tensor]
         self.output_attention_mask = {}  # output attention mask type:dict[int,torch.Tensor]
 
@@ -524,9 +525,10 @@ class Party(object):
 
     @timer()
     def forward(self, model_index, **kwargs):
-        # logger.debug(f"model_{model_index} forward")
+        # print(f"model_{model_index} forward")
 
         self.input_tensors[model_index] = kwargs.get('inputs_embeds')
+        self.input_attention_mask[model_index] = kwargs.get('attention_mask')
         
         self._tensor_to_device(kwargs , self.models[model_index].device)
 

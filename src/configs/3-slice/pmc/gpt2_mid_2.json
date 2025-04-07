@@ -1,10 +1,10 @@
 {
-    "epochs": 20,
+    "epochs": 40,
     "lr": 1e-5,
     "k": 2,
     "batch_size": 4,
     "test_batch_size": 1,
-    "pipeline": "finetune",
+    "pipeline": "pretrained",
     "model_architect":"CLM",
     "communication":{
         "communication_protocol": "FedSGD",
@@ -68,6 +68,18 @@
         "local_encoders_num": 2,
         "local_tail_encoders_num": 2
     },
+    "defense": {
+        "name": "MID",
+        "parameters": {
+            "party": [0],
+            "mid_model_name":"MIDModel_Linear",
+            "lr": 0.0001,
+            "lambda": 0.5,
+            "mid_position": ["tail"],
+            "current_bottleneck_scale": 1,
+            "seq_length": 256
+        }
+    },
     "attack_list": {
         "0":{
             "name": "ResultReconstruction",
@@ -75,9 +87,10 @@
                 "party": [1],
                 "lr": 0.00001,
                 "epochs": 0,
-                "aux_data_percentage": 0.01,
+                "aux_data_num": 0,
                 "origin_model_path":"/shared/model/gpt2",
                 "batch_size": 4,
+                "attack_seed": 1,
                 "attack_sample_num": 100
             }
         },
@@ -86,10 +99,11 @@
             "parameters": {
                 "party": [1],
                 "lr": 0.00001,
-                "epochs": 100,
-                "aux_data_percentage": 0.01,
+                "epochs": 200,
+                "aux_data_num": 50,
                 "origin_model_path":"/shared/model/gpt2",
                 "batch_size": 4,
+                "attack_seed": 1,
                 "attack_sample_num": 100
             }
         },
@@ -98,10 +112,11 @@
             "parameters": {
                 "party": [1],
                 "lr": 0.00001,
-                "epochs": 100,
-                "aux_data_percentage": 0.03,
+                "epochs": 200,
+                "aux_data_num": 100,
                 "origin_model_path":"/shared/model/gpt2",
                 "batch_size": 4,
+                "attack_seed": 1,
                 "attack_sample_num": 100
             }
         },
@@ -110,10 +125,11 @@
             "parameters": {
                 "party": [1],
                 "lr": 0.00001,
-                "epochs": 100,
-                "batch_size": 4,
-                "aux_data_percentage": 0.05,
+                "epochs": 200,
+                "aux_data_num": 200,
                 "origin_model_path":"/shared/model/gpt2",
+                "batch_size": 4,
+                "attack_seed": 1,
                 "attack_sample_num": 100
             }
         },
@@ -122,10 +138,11 @@
             "parameters": {
                 "party": [1],
                 "lr": 0.00001,
-                "epochs": 100,
-                "batch_size": 4,
-                "aux_data_percentage": 0.08,
+                "epochs": 200,
+                "aux_data_num": 500,
                 "origin_model_path":"/shared/model/gpt2",
+                "batch_size": 4,
+                "attack_seed": 1,
                 "attack_sample_num": 100
             }
         },
@@ -134,10 +151,11 @@
             "parameters": {
                 "party": [1],
                 "lr": 0.00001,
-                "epochs": 100,
-                "batch_size": 4,
-                "aux_data_percentage": 0.08,
+                "epochs": 200,
+                "aux_data_num": 1000,
                 "origin_model_path":"/shared/model/gpt2",
+                "batch_size": 4,
+                "attack_seed": 1,
                 "attack_sample_num": 100
             }
         },
@@ -146,38 +164,14 @@
             "parameters": {
                 "party": [1],
                 "lr": 0.00001,
-                "epochs": 100,
-                "batch_size": 4,
-                "aux_data_percentage": 0.1,
+                "epochs": 200,
+                "aux_data_num": 2000,
                 "origin_model_path":"/shared/model/gpt2",
-                "attack_sample_num": 100
-            }
-        },
-        "7":{
-            "name": "ResultReconstruction",
-            "parameters": {
-                "party": [1],
-                "lr": 0.00001,
-                "epochs": 100,
                 "batch_size": 4,
-                "aux_data_percentage": 0.12,
-                "origin_model_path":"/shared/model/gpt2",
-                "attack_sample_num": 100
-            }
-        },
-        "8":{
-            "name": "ResultReconstruction",
-            "parameters": {
-                "party": [1],
-                "lr": 0.00001,
-                "epochs": 100,
-                "batch_size": 4,
-                "aux_data_percentage": 0.15,
-                "origin_model_path":"/shared/model/gpt2",
+                "attack_seed": 1,
                 "attack_sample_num": 100
             }
         }
-        
     }
     
 }

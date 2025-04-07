@@ -1,0 +1,144 @@
+{
+    "epochs": 10,
+    "lr": 1e-5,
+    "k": 2,
+    "batch_size": 4,
+    "test_batch_size": 1,
+    "early_stop_threshold": 1,
+    "pipeline": "pretrained",
+    "model_architect":"CLM",
+    "communication":{
+        "communication_protocol": "FedSGD",
+        "iteration_per_aggregation": 1
+    },
+    "finetune_configs":{
+        "name":"LoRA",
+        "configs":{
+        }
+    },
+    "dataset":{
+        "dataset_name": "Alpaca",
+        "num_classes": 1,
+        "use_prompt": 1
+    },
+    "tokenizer":{
+        "padding": "max_length",
+        "padding_type": "outside",
+        "pad_token": "default",
+        "truncation": "True",
+        "max_length": 256,
+        "padding_side": "left",
+        "add_special_tokens": 1
+    },
+    "model_list":{
+        "name": "Llama-2-7b-hf",
+        "pretrained": 1,
+        "model_type": "Llama",
+        "max_sequence": 512,
+        "kwargs_model_loading":{
+            "device_map": "balanced_low_0"
+        },
+        "0": {
+            "path": "/shared/project/guzx/Trained_Models/Alpaca/Llama-2-7b-hf/pmc/3-slice/2_2/None_None/seed_60/trained_model",
+            "head":{
+                "trainable": 0
+            },
+            "tail":{
+                "trainable": 0
+            }
+        },
+        "1": {
+                "path": "/shared/project/guzx/Trained_Models/Alpaca/Llama-2-7b-hf/pmc/3-slice/2_2/None_None/seed_60/trained_model",
+                "body":{
+                    "trainable": 0
+            }
+        },
+        "task":{
+            "task_type": "CausalLM",
+            "generation_config_dict":{
+                "do_sample": true,
+                "temperature" : 0.7, 
+                "top_p" : 0.92, 
+                "top_k" : 0,
+                "early_stopping" : true,
+                "max_new_tokens": 128
+            },
+            "max_new_tokens": 128
+        },
+        "vfl_model_slice_num": 3,
+        "local_encoders_num": 2,
+        "local_tail_encoders_num": 2
+    },
+    "defense": {
+        "name": "LaplaceDP",
+        "parameters": {
+            "party": [0],
+            "position": ["pred"],
+            "epsilon": 500
+        }
+    },
+    "attack_list": {
+        "0":{
+            "name": "ResultReconstruction",
+            "parameters": {
+                "party": [1],
+                "lr": 0.00001,
+                "epochs": 0,
+                "attack_seed":1,
+                "use_lora": 1,
+                "lora_configs":{
+                    "r":4,
+                    "lora_alpha":32,
+                    "lora_dropout":0.1,
+                    "task_type":"CAUSAL_LM"
+                },
+                "batch_size": 8,
+                "aux_data_num": 0,
+                "origin_model_path":"/shared/model/Llama-2-7b-hf",
+                "attack_sample_num": 100
+            }
+        },
+        "1":{
+            "name": "ResultReconstruction",
+            "parameters": {
+                "party": [1],
+                "lr": 0.00001,
+                "epochs": 200,
+                "attack_seed":1,
+                "use_lora": 1,
+                "lora_configs":{
+                    "r":4,
+                    "lora_alpha":32,
+                    "lora_dropout":0.1,
+                    "task_type":"CAUSAL_LM"
+                },
+                "batch_size": 8,
+                "aux_data_num": 50,
+                "origin_model_path":"/shared/model/Llama-2-7b-hf",
+                "attack_sample_num": 100
+            }
+        },
+        "2":{
+            "name": "ResultReconstruction",
+            "parameters": {
+                "party": [1],
+                "lr": 0.00001,
+                "epochs": 200,
+                "attack_seed":1,
+                "use_lora": 1,
+                "lora_configs":{
+                    "r":4,
+                    "lora_alpha":32,
+                    "lora_dropout":0.1,
+                    "task_type":"CAUSAL_LM"
+                },
+                "batch_size": 8,
+                "aux_data_num": 500,
+                "origin_model_path":"/shared/model/Llama-2-7b-hf",
+                "attack_sample_num": 100
+            }
+        }
+    }
+    
+    
+}

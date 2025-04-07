@@ -63,18 +63,19 @@ class LlamaModelLoader(LLMModelLoader):
                 print(f'passive_model_head: all trainable')
 
             if args.vfl_model_slice_num == 3:
+                print('self._models[2]:',type(self._models[2]))
                 if not model_trainable_info.model_slice_trainable[2]:
                     model_tail_encoder_trainable_ids = model_trainable_info.encoder_trainable_ids['tail']
-                    for encoder_id in range(len(self._models[2].model.layers)):
+                    for encoder_id in range(len(self._models[2].model.model.layers)):
                         if encoder_id not in model_tail_encoder_trainable_ids: # freeze encoders that's not needed
-                            for param in self._models[2].model.layers[encoder_id].parameters():
+                            for param in self._models[2].model.model.layers[encoder_id].parameters():
                                 param.requires_grad = False
                     model_tail_head_layer_trainable = model_trainable_info.head_layer_trainable
                     if not model_tail_head_layer_trainable: # freeze embeddings that's not needed
                         for param in self._models[2].head_layer.parameters():
                             param.requires_grad = False
-                        for param in self._models[2].model.norm.parameters():
-                            param.requires_grad = False
+                        # for param in self._models[2].model.norm.parameters():
+                        #     param.requires_grad = False
                     print(f'passive_model_tail: encoder_trainable_ids={model_tail_encoder_trainable_ids}; head_layer_trainable={model_tail_head_layer_trainable}', )
                 else:
                     print(f'passive_model_tail: all trainable')

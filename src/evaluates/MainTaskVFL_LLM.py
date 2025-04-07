@@ -183,6 +183,7 @@ def create_main_task(global_model_type: GenerationMixin):
             self.final_state = {}
             self.sample_state = {}
             self.test_sample_state_list = []
+            self.train_sample_state_list = []
 
             self.num_update_per_batch = args.num_update_per_batch
             self.num_batch_per_workset = args.Q  # args.num_batch_per_workset
@@ -364,9 +365,13 @@ def create_main_task(global_model_type: GenerationMixin):
             if self.args.apply_defense == True and self.is_first_forward_iter== 1:
                 if (self.args.apply_dp == True and 'pred' in self.args.dp_add_position) or\
                     (self.args.apply_gs == True and 'pred' in self.args.gs_add_position):
-                    # print('before pred_detach:',pred_detach.shape)
+                    # print('apply_gs:',pred_detach.shape)
+                    # print(pred_detach[0,:2,:5])
+                    
                     pred_detach = torch.stack(self.launch_defense(pred_detach, "pred"))
                     # print('after pred_detach:',pred_detach.shape)
+                    # print(pred_detach[0,:2,:5])
+                    # assert 1>2
             return pred_detach
         
         def apply_defense_on_grad_transmission(self, grad):
@@ -842,6 +847,8 @@ def create_main_task(global_model_type: GenerationMixin):
                                 # print('------')
                                 # Rouge-2 Recall: can be user-defined here
                                 try:
+                                    # from sacrebleu import sentence_bleu 
+                                    # bleu_score = 0.01 * sentence_bleu(candidate_text, [reference_text]).score
                                     rouge_result = rouger.get_scores(candidate_text, reference_text)
                                     score = rouge_result[0]['rouge-2']['r']
                                 except:
@@ -849,7 +856,7 @@ def create_main_task(global_model_type: GenerationMixin):
                                     # print('candidate_text:',candidate_ids.shape,candidate_text)
                                     score = 0
                            
-                                return score
+                                return score #score
                             
                             score = 0
                             for i in range(len(target_word_list)):
@@ -1286,12 +1293,16 @@ def create_main_task(global_model_type: GenerationMixin):
                         self.final_state.update(self.save_element('active_predict_attention_mask_list'))
                         self.sample_state.update(self.save_element('active_predict_list'))
                         self.sample_state.update(self.save_element('active_predict_attention_mask_list'))
+                        self.sample_state.update(self.save_element('active_input_list'))
+                        self.sample_state.update(self.save_element('active_input_attention_mask_list'))
                     
                     else:
                         self.final_state['active_predict_list'].append(self.dict_deepcopy(self.parties[1].output_tensors[0], device = 'cpu'))
                         self.final_state['active_predict_attention_mask_list'].append(self.dict_deepcopy(self.parties[1].output_attention_mask[0], device = 'cpu'))
                         self.sample_state['active_predict_list'].append(self.dict_deepcopy(self.parties[1].output_tensors[0], device = 'cpu'))
                         self.sample_state['active_predict_attention_mask_list'].append(self.dict_deepcopy(self.parties[1].output_attention_mask[0], device = 'cpu'))
+                        self.sample_state['active_input_list'].append(self.dict_deepcopy(self.parties[1].input_tensors[0], device = 'cpu'))
+                        self.sample_state['active_input_attention_mask_list'].append(self.dict_deepcopy(self.parties[1].input_attention_mask[0], device = 'cpu'))
                       
                 self.set_is_first_forward_epoch(0)
 
@@ -1395,7 +1406,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 self.final_state.update(self.save_party_data())
                 
             if self.args.need_test_sample_states:
-                test_sample_list_path = self.args.exp_res_dir+'/test_sample_state_list.pth'
+                test_sample_list_path = self.args.model_folder+'/test_sample_state_list.pth'
                 torch.save(self.test_sample_state_list, test_sample_list_path)
                 print('Save test_sample_state_list:',test_sample_list_path)
                             
@@ -1645,11 +1656,18 @@ def create_main_task(global_model_type: GenerationMixin):
                 else:
                     exp_result = 'Epoch {}% \t train_loss:{:.2f} train_acc:{:.2f}'.format(
                         i_epoch, self.loss, self.train_acc)
+                
                 print(exp_result)
             
+                if self.args.save_model:
+                    if i_epoch % 5 == 0:
+                        prefix = f"/epoch_{i_epoch}/"
+                        self.save_pretrained(prefix = prefix)
+                
             if self.args.save_model:
-                self.save_pretrained()
-            
+                prefix = f"/final/"
+                self.save_pretrained(prefix = prefix)
+                
             if self.args.apply_defense and self.args.save_defense_model:
                 if self.args.apply_mid or self.args.apply_adversarial:
                     self.save_defense_models()
@@ -1787,6 +1805,12 @@ def create_main_task(global_model_type: GenerationMixin):
             elif element_name == "active_predict_attention_mask_list": 
                 return {element_name: [self.dict_deepcopy(self.parties[1].output_attention_mask[0])] }
             
+            elif element_name == "active_input_list": # from the 0'th passive party
+                return {element_name: [self.dict_deepcopy(self.parties[1].input_tensors[0])] }
+            
+            elif element_name == "active_input_attention_mask_list": 
+                return {element_name: [self.dict_deepcopy(self.parties[1].input_attention_mask[0])] }
+            
             elif element_name == "real_generation_result": 
                 return {element_name: self.real_generation_result}
             
@@ -1853,11 +1877,11 @@ def create_main_task(global_model_type: GenerationMixin):
             # torch.save(self.parties[0].mid_model.state_dict(),self.trained_models["model_names"],
             #         file_path)
 
-        def save_pretrained(self,**kwargs):
+        def save_pretrained(self, prefix="", **kwargs):
             """
             save trained llm slices
             """
-            model_folder = self.args.trained_model_folder #get_model_folder(self.args)
+            model_folder = self.args.trained_model_folder + '/' +prefix #get_model_folder(self.args)
             print(f"Save Trained Model/Tokenizer Into: {model_folder}")
             self.args.tokenizer.save_pretrained(model_folder)
             self.parties[0].full_model_config.save_pretrained(model_folder)
