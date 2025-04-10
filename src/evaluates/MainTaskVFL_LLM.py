@@ -596,10 +596,7 @@ def create_main_task(global_model_type: GenerationMixin):
 
                                 party_generation_output = self.generate(**data_input_list[party_id], \
                                         generation_config = self.generation_config)
-                                
                                 party_generation_output = party_generation_output[:,self.seq_length:].detach()
-                                
-                                
                                 
                                 if self.args.apply_inferdpt and (party_id in self.args.defense_configs['party']) and (self.args.decode_model_path != ""):
                                     origin_device = party_generation_output.device
@@ -611,7 +608,6 @@ def create_main_task(global_model_type: GenerationMixin):
                                     
                                     party_generation_output = self.parties[party_id].inferdpt_decode(original_prompt,perturbed_answer)
                                     party_generation_output.to(origin_device) #[bs, newlen]
-                                    
                                 
                             else:  # next token prediction
                                 party_generation_output = self.forward(**data_input_list[party_id])
@@ -993,7 +989,7 @@ def create_main_task(global_model_type: GenerationMixin):
                 if self.args.task_type == "CausalLM":  
                     if isinstance(model_output, torch.Tensor): 
                         predict_label_list = model_output # [bs, max_new_tokens]
-                        target_label_list = list(gt_one_hot_label)
+                        target_label_list = list(gt_one_hot_label) # [bs] list of gold answers
                     else:  
                         generated_token_logits = model_output.logits[:,-1,:] # [bs, vocab_size]
                         predict_label_list = torch.argmax(generated_token_logits, dim=-1) 
@@ -1659,10 +1655,10 @@ def create_main_task(global_model_type: GenerationMixin):
                 
                 print(exp_result)
             
-                if self.args.save_model:
-                    if i_epoch % 5 == 0:
-                        prefix = f"/epoch_{i_epoch}/"
-                        self.save_pretrained(prefix = prefix)
+                # if self.args.save_model:
+                #     if i_epoch % 5 == 0:
+                #         prefix = f"/epoch_{i_epoch}/"
+                #         self.save_pretrained(prefix = prefix)
                 
             if self.args.save_model:
                 prefix = f"/final/"

@@ -1,15 +1,13 @@
 #!/bin/bash
+python main_pipeline_llm.py --prefix "llama_dp" --attack_only 1 --save_model 0 --seed 60 --configs 3-slice/pmc/llama_wo
 
-python main_pipeline_llm.py --prefix "llama_dp" --attack_only 1 --save_model 0 --seed 60 --configs 3-slice/pmc/llama_dp_500_
-python main_pipeline_llm.py --prefix "llama_dp" --attack_only 0 --save_model 0 --seed 60 --configs 3-slice/pmc/llama_dp_100
-python main_pipeline_llm.py --prefix "llama_dp" --attack_only 0 --save_model 0 --seed 60 --configs 3-slice/pmc/llama_dp_70
-python main_pipeline_llm.py --prefix "llama_dp" --attack_only 0 --save_model 0 --seed 60 --configs 3-slice/pmc/llama_dp_50
 
 # Define the attack seeds to iterate over
 attack_seeds=(2 3 4 5)
 
 # Define the config files to process
 configs=(
+  # "3-slice/pmc/llama_wo"
   "3-slice/pmc/llama_dp_500"
   "3-slice/pmc/llama_dp_100"
   "3-slice/pmc/llama_dp_70"
@@ -24,7 +22,9 @@ for seed in "${attack_seeds[@]}"; do
   for config in "${configs[@]}"; do
     config_file="./configs/${config}.json"
     if [ -f "$config_file" ]; then
+      sed -i "s/\"attack_seed\":[0-9]/\"attack_seed\":$seed/g" "$config_file"
       sed -i "s/\"attack_seed\": [0-9]/\"attack_seed\": $seed/g" "$config_file"
+
     else
       echo "Config file not found: $config_file"
       exit 1

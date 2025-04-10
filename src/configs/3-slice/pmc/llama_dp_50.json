@@ -84,7 +84,7 @@
                 "party": [1],
                 "lr": 0.00001,
                 "epochs": 0,
-                "attack_seed":1,
+                "attack_seed":2,
                 "use_lora": 1,
                 "lora_configs":{
                     "r":4,
@@ -104,7 +104,7 @@
                 "party": [1],
                 "lr": 0.00001,
                 "epochs": 200,
-                "attack_seed":1,
+                "attack_seed":2,
                 "use_lora": 1,
                 "lora_configs":{
                     "r":4,
@@ -124,7 +124,7 @@
                 "party": [1],
                 "lr": 0.00001,
                 "epochs": 200,
-                "attack_seed":1,
+                "attack_seed":2,
                 "use_lora": 1,
                 "lora_configs":{
                     "r":4,

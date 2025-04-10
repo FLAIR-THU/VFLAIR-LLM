@@ -257,7 +257,6 @@ class ActiveParty_LLM(Party_LLM):
                 for client_id in range(self.args.k-1):
                     # load grads into parameters
                     logits = torch.cat((self.global_output_dict[client_id].start_logits.unsqueeze(-1), self.global_output_dict[client_id].end_logits.unsqueeze(-1)), dim=-1)
-                    
                     client_global_gradient = self.global_gradient_dict[client_id].to(self.output_tensors[client_id][1].device)
                     weights_grad_a = torch.autograd.grad(logits,
                                                         global_model_params, 
@@ -286,6 +285,9 @@ class ActiveParty_LLM(Party_LLM):
                 self.weights_grad_a_list = []
                 for client_id in range(self.args.k-1):
                     client_global_gradient = self.global_gradient_dict[client_id].to(self.output_tensors[client_id][1].device)
+                    # print(f'client_id={client_id} self.output_tensors[client_id][1]:',type(self.output_tensors[client_id][1]))
+                    # print('global_model_params:',len(global_model_params))
+                    # print('client_global_gradient:',type(client_global_gradient),len(client_global_gradient))
                     weights_grad_a = torch.autograd.grad(self.output_tensors[client_id][1],
                                                             global_model_params, 
                                                             grad_outputs=client_global_gradient, 

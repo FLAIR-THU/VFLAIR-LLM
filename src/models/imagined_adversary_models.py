@@ -2,6 +2,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.autograd import Function
+from torch.nn import TransformerDecoder, TransformerDecoderLayer
+import math
 
 class ImaginedAdversary_MLP3_noflatten(nn.Module):
     '''
@@ -54,7 +56,7 @@ class ImaginedAdversary_MLP3(nn.Module):
     input --- intermediate : bs, seq_length, 768(embed_dim)
     output --- embedding : bs, seq_length, 768(embed_dim)
     '''
-
+    
     def __init__(self, seq_length, embed_dim , hidden_size=80):
         super(ImaginedAdversary_MLP3, self).__init__()
         # print('Adversarial_MLP init:',seq_length, embed_dim)
@@ -98,11 +100,77 @@ class ImaginedAdversary_MLP3(nn.Module):
         x3 = x3.reshape(origin_shape)
 
         return x3
+    
+class ImaginedAdversary_Tail_MLP3_for_generation(nn.Module):
+    def __init__(self, embed_dim, vocab_size, \
+            hidden_dim=200, num_layers=1, num_heads=12,  dropout=0.1, max_seq_len=512):
+        super().__init__()
+        self.embed_dim = embed_dim
+        self.vocab_size = vocab_size
+
+        # Transformer decoder layers
+        decoder_layers = TransformerDecoderLayer(
+            d_model=embed_dim,
+            nhead=num_heads,
+            dim_feedforward=hidden_dim,
+            dropout=dropout,
+            activation='gelu',
+            batch_first=True
+        )
+        self.transformer_decoder = TransformerDecoder(decoder_layers, num_layers)
+        
+        # MLP3 tail (3-layer MLP for output projection)
+        self.mlp_tail = nn.Sequential(
+            nn.Linear(embed_dim, hidden_dim),
+            nn.GELU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.GELU(),
+            nn.Linear(hidden_dim, vocab_size)
+        )
+        
+        # Initialize weights
+        self.init_weights()
+    
+    def init_weights(self):
+        """Initialize weights with reasonable defaults"""
+        for layer in self.mlp_tail:
+            if isinstance(layer, nn.Linear):
+                nn.init.xavier_uniform_(layer.weight)
+                if layer.bias is not None:
+                    layer.bias.data.zero_()
+    
+    def forward(self, x, attention_mask=None):
+        """
+        Args:
+            x: Input tensor of shape [batch_size, seq_len, embed_dim]
+            attention_mask: Optional mask for attention (1 for valid, 0 for masked)
+                           Should include causal mask for autoregressive generation
+        
+        Returns:
+            Output tensor of shape [batch_size, seq_len, vocab_size]
+        """
+       
+        # Pass through transformer decoder
+        # For decoder-only, we use x as both memory and tgt
+        x = self.transformer_decoder(
+            tgt=x,
+            memory=x,
+            tgt_mask=None,
+            memory_mask=None,
+            tgt_key_padding_mask=None,
+            memory_key_padding_mask=None
+        )
+        
+        # Pass through MLP tail
+        output = self.mlp_tail(x)
+        
+        return output
+
 
 class ImaginedAdversary_Tail_MLP3(nn.Module):
     '''
     input --- intermediate : bs, seq_length, 768(embed_dim)
-    output --- embedding : bs, label_size
+    output --- embedding : bs, label_size/vocab_size
     '''
 
     def __init__(self, seq_length, embed_dim, label_size, hidden_size=80):

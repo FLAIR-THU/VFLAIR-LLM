@@ -115,6 +115,7 @@ class PassiveParty_LLM(Party_LLM):
                 
                 # read adversarial defense configs
                 self.ad_position = defense_configs['position']
+                
                 self.adversarial_model_lr = defense_configs['adversarial_model_lr']
                 self.adversarial_model_hidden_size = defense_configs['adversarial_model_hidden_size'] if (
                         'adversarial_model_hidden_size' in defense_configs) else 80
@@ -129,7 +130,9 @@ class PassiveParty_LLM(Party_LLM):
                 elif self.args.model_architect == 'CLM':
                     self.label_size = self.full_model_config.vocab_size
                     
-                imagined_adversary_model_name = defense_configs['imagined_adversary']
+                imagined_adversary_model_name = defense_configs['imagined_adversary']  if (
+                        'imagined_adversary' in defense_configs) else 'ImaginedAdversary_Tail_MLP3'
+                
                 tail_imagined_adversary_model_name = defense_configs['tail_imagined_adversary']  if (
                         'tail_imagined_adversary' in defense_configs) else 'ImaginedAdversary_Tail_MLP3'
 
@@ -197,7 +200,16 @@ class PassiveParty_LLM(Party_LLM):
                         with open(tail_imagined_adversary_path, 'rb') as f:
                             self.tail_imagined_adversary = pickle.load(f)
                     else:
-                        self.tail_imagined_adversary = globals()[tail_imagined_adversary_model_name](seq_length, embed_dim,self.label_size,
+                        if self.args.model_architect == 'CLM':
+                            self.tail_imagined_adversary = globals()[imagined_adversary_model_name](\
+                                embed_dim, self.label_size,
+                                hidden_dim=self.adversarial_model_hidden_size,
+                                num_layers=1,
+                                num_heads=12 
+                            ).to(self.args.device)
+                    
+                        else:
+                            self.tail_imagined_adversary = globals()[tail_imagined_adversary_model_name](seq_length, embed_dim,self.label_size,
                                                         self.adversarial_model_hidden_size).to(self.args.device)
                     
                     self.tail_imagined_adversary_optimizer = torch.optim.Adam(list(self.tail_imagined_adversary.parameters()),
@@ -614,16 +626,6 @@ class PassiveParty_LLM(Party_LLM):
 
         return self.global_gradient
 
-    # def apply_defense_on_global_gradient(self, origin_global_gradient):
-    #     # ######### Defense Applied on Global Gradients ###########
-    #     # if (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"]))\
-    #     #     and ('tail' in self.ad_position):
-    #     #     self.origin_global_gradient = origin_global_gradient.clone()
-    #     #     final_global_gradient = origin_global_gradient #self.tail_adversarial_model(origin_global_gradient)
-    #     #     return final_global_gradient
-    #     # ######### Defense Applied on Global Gradients ###########
-    #     # else:
-    #     return origin_global_gradient
 
     def process_received_result(self,final_output):
         '''
@@ -836,10 +838,19 @@ class PassiveParty_LLM(Party_LLM):
         if self.args.apply_adversarial and (self.index in self.args.defense_configs["party"]) and \
             ("tail" in self.ad_position):
             intermediate_gradient = self.global_gradient.requires_grad_(True) # gradient transmitted from model tail
-            real_label = self.gt_one_hot_label  # bs, seq_len, embed_dim
             adversary_recovered_label = self.tail_imagined_adversary(intermediate_gradient) # bs, seq_len, embed_dim
-            self.tail_adversary_attack_loss = self.adversary_crit(adversary_recovered_label, real_label)
-
+            
+            real_label = self.gt_one_hot_label  # bs, seq_len, embed_dim
+            
+            if self.args.model_architect == 'CLM':
+                # print('adversary_recovered_label:',adversary_recovered_label.shape) # bs, seq_len, vocab_size
+                # print('real_label:',torch.tensor(real_label).shape) # bs, seq_len (token_ids)
+                self.tail_adversary_attack_loss = self.adversary_crit(
+                    adversary_recovered_label.reshape(-1, adversary_recovered_label.size(-1)),  # [bs*seq_len, vocab_size]
+                    torch.tensor(real_label).reshape(-1).to(adversary_recovered_label.device)  # [bs*seq_len]
+                )
+            else:
+                self.tail_adversary_attack_loss = self.adversary_crit(adversary_recovered_label, real_label)
             
             self.global_loss = self.global_loss + self.adversary_lambda * self.tail_mapping_distance.to(self.global_loss.device) - self.tail_adversary_attack_loss.to(self.global_loss.device)
         # ########### Defense on Loss ###############
