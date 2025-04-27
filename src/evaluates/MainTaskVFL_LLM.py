@@ -143,6 +143,8 @@ def create_main_task(global_model_type: GenerationMixin):
             self.parties = args.parties
             self.current_client_id = 0
             self.prepare_defense()
+            
+            self.tokenizer = self.args.tokenizer
 
 
             ### Results 
@@ -838,9 +840,9 @@ def create_main_task(global_model_type: GenerationMixin):
                                 '''
                                 reference_text = self.args.tokenizer.decode(reference_ids,skip_special_tokens=True)
                                 candidate_text = self.args.tokenizer.decode(candidate_ids,skip_special_tokens=True)
-                                # print('reference_text:',reference_text)
-                                # print('candidate_text:',candidate_text)
-                                # print('------')
+                                print('reference_text:',reference_text)
+                                print('candidate_text:',candidate_text)
+                                print('------')
                                 # Rouge-2 Recall: can be user-defined here
                                 try:
                                     # from sacrebleu import sentence_bleu 
@@ -1656,9 +1658,11 @@ def create_main_task(global_model_type: GenerationMixin):
                 print(exp_result)
             
                 # if self.args.save_model:
-                #     if i_epoch % 5 == 0:
-                #         prefix = f"/epoch_{i_epoch}/"
-                #         self.save_pretrained(prefix = prefix)
+                #     prefix = f"/epoch_{i_epoch}/"
+                #     self.save_pretrained(prefix = prefix)
+                # if self.args.apply_defense and self.args.save_defense_model:
+                #     if self.args.apply_mid or self.args.apply_adversarial:
+                #         self.save_defense_models()
                 
             if self.args.save_model:
                 prefix = f"/final/"

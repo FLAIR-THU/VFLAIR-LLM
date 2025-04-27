@@ -39,9 +39,9 @@ class GPT2ModelLoader(LLMModelLoader):
                 if not (i == 2 and args.local_tail_encoders_num == 0):
                     peft_model = self._set_peft(m, args.finetune_detail_configs)
                     self._models.update({i: peft_model})
-        # for _key in self._models.keys():
-        #     print(_key)
-        #     self._models[_key].print_trainable_parameters()
+        for _key in self._models.keys():
+            print(_key)
+            self._models[_key].print_trainable_parameters()
 
         model_trainable_info = args.model_trainable_info[party_idx]
         

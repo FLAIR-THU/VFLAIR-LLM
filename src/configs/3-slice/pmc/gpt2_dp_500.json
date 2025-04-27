@@ -11,7 +11,7 @@
         "iteration_per_aggregation": 1
     },
     "finetune_configs":{
-        "name":"Vanilla",
+        "name":"LoRA",
         "configs":{
         }
     },
@@ -38,7 +38,7 @@
             "device_map": "balanced_low_0"
         },
         "0": {
-            "path": "/shared/project/guzx/Trained_Models/Alpaca/gpt2/pmc/3-slice/2_2/None_None/seed_60/trained_model/final",
+            "path": "/shared/project/guzx/Trained_Models/Alpaca/gpt2/pmc_lora/3-slice/2_2/None_None/seed_60/trained_model/final",
             "head":{
                 "trainable": 0
             },
@@ -47,7 +47,7 @@
             }
         },
         "1": {
-                "path": "/shared/project/guzx/Trained_Models/Alpaca/gpt2/pmc/3-slice/2_2/None_None/seed_60/trained_model/final",
+                "path": "/shared/project/guzx/Trained_Models/Alpaca/gpt2/pmc_lora/3-slice/2_2/None_None/seed_60/trained_model/final",
                 "body":{
                     "trainable": 0
             }

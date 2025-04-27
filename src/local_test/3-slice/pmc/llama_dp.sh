@@ -1,17 +1,14 @@
 #!/bin/bash
-python main_pipeline_llm.py --prefix "llama_dp" --attack_only 1 --save_model 0 --seed 60 --configs 3-slice/pmc/llama_wo
 
 
 # Define the attack seeds to iterate over
-attack_seeds=(2 3 4 5)
+attack_seeds=(10)
 
 # Define the config files to process
 configs=(
-  # "3-slice/pmc/llama_wo"
-  "3-slice/pmc/llama_dp_500"
-  "3-slice/pmc/llama_dp_100"
-  "3-slice/pmc/llama_dp_70"
   "3-slice/pmc/llama_dp_50"
+  # "3-slice/pmc/llama_dp_70"
+
 )
 
 # Loop through each attack seed
@@ -34,8 +31,9 @@ for seed in "${attack_seeds[@]}"; do
   # Then run the commands for each config
   for config in "${configs[@]}"; do
     echo "Processing config: $config"
-    python main_pipeline_llm.py --prefix "llama_dp" --attack_only 1 --save_model 0 --seed 60 --configs "$config"
+    python main_pipeline_llm.py --prefix "llama_dp" --attack_only 1 --save_model 0 --seed 10 --configs "$config"
   done
 done
 
 echo "All runs completed"
+

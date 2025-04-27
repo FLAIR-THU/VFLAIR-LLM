@@ -2,9 +2,16 @@
 copy source codes from transformers, then modify
 code based on transformers=4.37.2
 """
-from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers import GemmaPreTrainedModel
 from transformers.models.gemma.modeling_gemma import *
+from transformers.models.gemma.configuration_gemma import *
+from transformers.modeling_outputs import (
+    BaseModelOutputWithPast,
+    CausalLMOutputWithPast,
+    SequenceClassifierOutputWithPast,
+    TokenClassifierOutput,
+)
+from transformers.modeling_utils import PreTrainedModel
 
 from torch.nn import ModuleList, Parameter
 from typing import Iterable, Optional, Union, List, Tuple, Callable, Dict, Iterator

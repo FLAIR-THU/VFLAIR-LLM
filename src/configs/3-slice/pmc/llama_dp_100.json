@@ -83,28 +83,8 @@
             "parameters": {
                 "party": [1],
                 "lr": 0.00001,
-                "epochs": 0,
-                "attack_seed":2,
-                "use_lora": 1,
-                "lora_configs":{
-                    "r":4,
-                    "lora_alpha":32,
-                    "lora_dropout":0.1,
-                    "task_type":"CAUSAL_LM"
-                },
-                "batch_size": 8,
-                "aux_data_num": 0,
-                "origin_model_path":"/shared/model/Llama-2-7b-hf",
-                "attack_sample_num": 100
-            }
-        },
-        "1":{
-            "name": "ResultReconstruction",
-            "parameters": {
-                "party": [1],
-                "lr": 0.00001,
                 "epochs": 200,
-                "attack_seed":2,
+                "attack_seed":10,
                 "use_lora": 1,
                 "lora_configs":{
                     "r":4,
@@ -117,28 +97,7 @@
                 "origin_model_path":"/shared/model/Llama-2-7b-hf",
                 "attack_sample_num": 100
             }
-        },
-        "2":{
-            "name": "ResultReconstruction",
-            "parameters": {
-                "party": [1],
-                "lr": 0.00001,
-                "epochs": 200,
-                "attack_seed":2,
-                "use_lora": 1,
-                "lora_configs":{
-                    "r":4,
-                    "lora_alpha":32,
-                    "lora_dropout":0.1,
-                    "task_type":"CAUSAL_LM"
-                },
-                "batch_size": 8,
-                "aux_data_num": 500,
-                "origin_model_path":"/shared/model/Llama-2-7b-hf",
-                "attack_sample_num": 100
-            }
         }
     }
-    
     
 }

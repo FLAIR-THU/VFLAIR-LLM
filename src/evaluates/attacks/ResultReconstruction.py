@@ -208,6 +208,11 @@ class ResultReconstruction(Attacker):
             aux_data_loader = DataLoader(aux_dataset, batch_size= self.attack_batch_size ,collate_fn=lambda x:x )
             torch.cuda.empty_cache()
             
+            def move_dict_to_device(d, device):
+                for key in d:
+                    if isinstance(d[key], torch.Tensor):
+                        d[key] = d[key].to(device)
+                return d
             
             print(f'=== Phase1: Begin Model Completion Training on {len(aux_data)} aux data samples ===')
             early_stop = 0
@@ -242,12 +247,14 @@ class ResultReconstruction(Attacker):
                     # self.top_vfl.parties[0].gt_one_hot_label = batch_label
                     # # passive party do local pred
                     # passive_party_pred = self.top_vfl.pred_transmit(use_cache=False)
+                    data_inputs = move_dict_to_device(data_inputs, dummy_model_head.device)
                     passive_party_pred = dummy_model_head(**data_inputs)
                     
                     # passive party inform active party to do global pred
                     active_party_pred = self.top_vfl.global_pred_transmit(passive_party_pred, use_cache=False)
 
                     # dummy final prediction
+                    active_party_pred = move_dict_to_device(active_party_pred, dummy_model_tail.device)
                     dummy_final_pred = dummy_model_tail(**active_party_pred)
                     
                     self.top_vfl._clear_past_key_values()

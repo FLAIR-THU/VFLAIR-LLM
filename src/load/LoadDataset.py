@@ -2213,6 +2213,61 @@ def load_dataset_per_party_llm(args, index):
         print('X:', type(X_train), len(X_train), len(X_test), type(X_train[0]))  #
         print('y', type(y_train), len(y_train), len(y_test), y_train[0])  #
 
+    elif args.dataset == 'Dolly':
+        from utils.dolly_const import (
+                    DEFAULT_INPUT_MODEL,
+                    DEFAULT_SEED,
+                    PROMPT_WITH_INPUT_FORMAT,
+                    PROMPT_NO_INPUT_FORMAT,
+                    END_KEY,
+                    INSTRUCTION_KEY,
+                    RESPONSE_KEY_NL,
+                    DEFAULT_TRAINING_DATASET,
+                )
+        def _add_text(rec):
+            instruction = rec["instruction"]
+            response = ""
+            context = rec.get("context")
+
+            if not instruction:
+                raise ValueError(f"Expected an instruction in: {rec}")
+
+            # if not response:
+            #     raise ValueError(f"Expected a response in: {rec}")
+
+            # For some instructions there is an input that goes along with the instruction, providing context for the
+            # instruction.  For example, the input might be a passage from Wikipedia and the instruction says to extract
+            # some piece of information from it.  The response is that information to extract.  In other cases there is
+            # no input.  For example, the instruction might be open QA such as asking what year some historic figure was
+            # born.
+            if context:
+                rec["text"] = PROMPT_WITH_INPUT_FORMAT.format(instruction=instruction, response=response, input=context)
+            else:
+                rec["text"] = PROMPT_NO_INPUT_FORMAT.format(instruction=instruction, response=response)
+            return rec
+        
+        data_path = DATA_PATH+"/Dolly/"
+        dataset = load_dataset(data_path)["train"]
+        dataset = dataset.map(_add_text)
+        dataset = dataset.shuffle(seed = args.current_seed)
+        # list of dicts: "instruction", "context", "response", "text", "category"
+        
+
+        sources = [ sample["text"] for sample in dataset ] 
+        targets = [ sample["response"] for sample in dataset ] 
+        
+        X_data = sources[:20] # list of instruction text
+        y_data = targets[:20] # list of answer text
+
+        X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.05,
+                                                            random_state=args.current_seed)
+        
+        print('train data:', len(X_train), len(y_train))
+        print('test data:', len(X_test), len(y_test))
+
+        train_dst = (X_train, y_train)
+        test_dst = (X_test, y_test)
+    
     elif args.dataset == 'Alpaca':
         data_path = DATA_PATH+"alpaca/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet"
         list_data_dict = pd.read_parquet(data_path)
@@ -2220,22 +2275,6 @@ def load_dataset_per_party_llm(args, index):
             {key: value for key, value in row.items() if pd.notna(value)} 
             for row in list_data_dict.to_dict(orient="records")
         ]
-        
-        # data_path = DATA_PATH + '/alpaca/alpaca_data.json'
-        # def _make_r_io_base(f, mode: str):
-        #     if not isinstance(f, io.IOBase):
-        #         f = open(f, mode=mode)
-        #     return f
-
-        # def jload(f, mode="r"):
-        #     """Load a .json file into a dictionary."""
-        #     f = _make_r_io_base(f, mode)
-        #     jdict = json.load(f)
-        #     f.close()
-        #     return jdict
-
-        # list_data_dict = jload(data_path)
-     
         DEFAULT_PAD_TOKEN = "[PAD]"
         DEFAULT_EOS_TOKEN = "</s>"
         DEFAULT_BOS_TOKEN = "<s>"
@@ -2262,8 +2301,8 @@ def load_dataset_per_party_llm(args, index):
         sources = [
             prompt_input.format_map(example) if example.get("input", "") != "" else prompt_no_input.format_map(example)
             for example in list_data_dict
-        ]
-        targets = [f"{example['output']}{args.tokenizer.eos_token}" for example in list_data_dict]
+        ] # prompt + instrcuction 
+        targets = [f"{example['output']}{args.tokenizer.eos_token}" for example in list_data_dict] # response
 
 
         X_data = sources[:] # list of instruction text

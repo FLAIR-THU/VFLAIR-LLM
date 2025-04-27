@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# Define the attack seeds to iterate over
-attack_seeds=(2 3 4 5)
 
 # Define the config files to process
 configs=(
@@ -10,6 +8,15 @@ configs=(
   "3-slice/pmc/gpt2_dp_70"
   "3-slice/pmc/gpt2_dp_50"
 )
+# Then run the commands for each config
+for config in "${configs[@]}"; do
+  echo "Processing config: $config"
+  python main_pipeline_llm.py --prefix "pmc_lora" --attack_only 0 --save_model 0 --seed 60 --configs "$config"
+done
+
+
+# Define the attack seeds to iterate over
+attack_seeds=(2 3 4 5)
 
 # Loop through each attack seed
 for seed in "${attack_seeds[@]}"; do
@@ -29,7 +36,7 @@ for seed in "${attack_seeds[@]}"; do
   # Then run the commands for each config
   for config in "${configs[@]}"; do
     echo "Processing config: $config"
-    python main_pipeline_llm.py --prefix "dp" --attack_only 1 --save_model 0 --seed 60 --configs "$config"
+    python main_pipeline_llm.py --prefix "pmc_lora" --attack_only 1 --save_model 0 --seed 60 --configs "$config"
   done
 done
 

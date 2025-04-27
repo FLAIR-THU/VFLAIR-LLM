@@ -109,7 +109,6 @@ class ActiveParty_LLM(Party_LLM):
         
         self._tensor_to_device(kwargs , self.models[model_index].device)
         
-        # print(f"model_{model_index} forward:{kwargs.keys()}")
         resp = self.models[model_index](**kwargs)
 
         if model_index == self.args.vfl_model_slice_num - 1:

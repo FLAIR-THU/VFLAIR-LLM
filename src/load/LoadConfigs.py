@@ -811,8 +811,8 @@ def do_load_basic_configs_llm(config_dict, args):
         
         elif args.defense_name == "TextObfuscator":
             
-            args.defense_param = args.defense_configs['epsilon']
-            args.defense_param_name = 'epsilon'
+            args.defense_param = args.defense_configs['cluster_num']
+            args.defense_param_name = 'cluster_num'
             
             if 'defense_param_name' in args.defense_configs:
                 if args.defense_configs['defense_param_name'] == 'cluster_num':

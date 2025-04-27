@@ -138,6 +138,10 @@ class PassiveParty_LLM(Party_LLM):
 
                 self.imagined_adversary_hidden_size = defense_configs['imagined_adversary_hidden_size'] if (
                         'imagined_adversary_hidden_size' in defense_configs) else 80
+                self.imagined_adversary_num_layer = defense_configs['imagined_adversary_num_layer'] if (
+                        'imagined_adversary_num_layer' in defense_configs) else 1
+                self.imagined_adversary_attack_eta = defense_configs['imagined_adversary_attack_eta'] if (
+                        'imagined_adversary_attack_eta' in defense_configs) else 1
                 self.imagined_adversary_lr = defense_configs['imagined_adversary_lr']
 
                 self.adversary_crit = nn.CrossEntropyLoss()
@@ -203,8 +207,8 @@ class PassiveParty_LLM(Party_LLM):
                         if self.args.model_architect == 'CLM':
                             self.tail_imagined_adversary = globals()[imagined_adversary_model_name](\
                                 embed_dim, self.label_size,
-                                hidden_dim=self.adversarial_model_hidden_size,
-                                num_layers=1,
+                                hidden_dim=self.imagined_adversary_hidden_size,
+                                num_layers=self.imagined_adversary_num_layer,
                                 num_heads=12 
                             ).to(self.args.device)
                     
@@ -548,7 +552,7 @@ class PassiveParty_LLM(Party_LLM):
             return None
         super().prepare_data(args, index)  # Party_llm's prepare_data
 
-        if args.dataset in ['Alpaca','CodeAlpaca','Alpaca-test']:
+        if args.dataset in ['Alpaca','CodeAlpaca','Alpaca-test','Dolly']:
             self.train_dst = AlpacaDataset_LLM(args, self.train_data, self.train_label, 'train')
             self.test_dst = AlpacaDataset_LLM(args, self.test_data, self.test_label, 'test')
         elif args.dataset in ['CNNDailyMail']:
@@ -838,6 +842,8 @@ class PassiveParty_LLM(Party_LLM):
         if self.args.apply_adversarial and (self.index in self.args.defense_configs["party"]) and \
             ("tail" in self.ad_position):
             intermediate_gradient = self.global_gradient.requires_grad_(True) # gradient transmitted from model tail
+            device = next(self.tail_imagined_adversary.parameters()).device
+            intermediate_gradient = intermediate_gradient.to(device)
             adversary_recovered_label = self.tail_imagined_adversary(intermediate_gradient) # bs, seq_len, embed_dim
             
             real_label = self.gt_one_hot_label  # bs, seq_len, embed_dim
@@ -848,7 +854,7 @@ class PassiveParty_LLM(Party_LLM):
                 self.tail_adversary_attack_loss = self.adversary_crit(
                     adversary_recovered_label.reshape(-1, adversary_recovered_label.size(-1)),  # [bs*seq_len, vocab_size]
                     torch.tensor(real_label).reshape(-1).to(adversary_recovered_label.device)  # [bs*seq_len]
-                )
+                ) * self.imagined_adversary_attack_eta
             else:
                 self.tail_adversary_attack_loss = self.adversary_crit(adversary_recovered_label, real_label)
             
@@ -1142,6 +1148,8 @@ class PassiveParty_LLM(Party_LLM):
         if self.args.vfl_model_slice_num == 3 and self.args.apply_mid and \
             (self.index in self.args.defense_configs["party"]) and ("tail" in self.mid_position):
             received_pred = self.resp['inputs_embeds'] 
+            device = next(self.tail_mid_model.parameters()).device
+            received_pred = received_pred.to(device)
             received_pred, self.tail_mid_loss = self.tail_mid_model(received_pred)  # , self.local_attention_mask
             self.resp['inputs_embeds'] = received_pred
             
@@ -1154,6 +1162,8 @@ class PassiveParty_LLM(Party_LLM):
         if self.args.vfl_model_slice_num == 3 and (self.args.apply_adversarial == True and (self.index in self.args.defense_configs["party"])) \
             and ('tail' in self.ad_position):
             origin_received = self.resp['inputs_embeds']
+            device = next(self.tail_adversarial_model.parameters()).device
+            origin_received = origin_received.to(device)
             self.resp['inputs_embeds'] = self.tail_adversarial_model(origin_received)  
             self.tail_mapping_distance = torch.norm(self.resp['inputs_embeds'] - origin_received, p=2) / (
                     self.resp['inputs_embeds'].shape[0] * self.resp['inputs_embeds'].shape[1])

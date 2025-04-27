@@ -1,0 +1,4 @@
+#!/bin/bash
+
+python main_pipeline_llm.py --prefix "pmc_dolly_mid" --attack_only 0 --save_model 1 --seed 60 --configs 3-slice/dolly/llama_mid_0.5
+

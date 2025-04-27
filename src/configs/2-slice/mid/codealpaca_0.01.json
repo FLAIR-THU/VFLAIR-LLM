@@ -74,6 +74,7 @@
             "lambda": 0.01,
             "mid_position": ["head"],
             "current_bottleneck_scale": 1,
+            "std_shift_hyperparameter": 0.5,
             "seq_length": 256
         }
     },

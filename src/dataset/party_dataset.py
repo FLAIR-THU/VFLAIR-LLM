@@ -798,7 +798,6 @@ class MMLUDataset_LLM(Dataset):
         label = torch.tensor(self.labels[item_idx]).squeeze().to(self.args.device)
         return input_dict, label
 
-
 class AlpacaDataset_LLM(Dataset):
     def __init__(self, args, sources, targets, split_name='train'):
         '''
@@ -881,7 +880,6 @@ class AlpacaDataset_LLM(Dataset):
         #     print('label:')
         #     print(self.labels[i].shape, self.args.tokenizer.decode(self.labels[i],skip_special_tokens=True))
         #     print('='*50)
-        # # assert 1>2
 
     def __len__(self):
         return len(self.labels)
