@@ -49,8 +49,8 @@ from utils.basic_functions import get_class_i, get_labeled_data, fetch_data_and_
 from utils.cora_utils import *
 from utils.graph_functions import load_data1, split_graph
 
-# DATA_PATH = '../../../share_dataset/'
-DATA_PATH = '/shared/data/'
+DATA_PATH = '../../../share_dataset/'
+# DATA_PATH = '/shared/data/'
 
 IMAGE_DATA = ['mnist', 'cifar10', 'cifar100', 'cifar20', 'utkface', 'facescrub', 'places365']
 TABULAR_DATA = ['breast_cancer_diagnose', 'diabetes', 'adult_income', 'criteo', 'credit', 'nursery', 'avazu']
@@ -2256,8 +2256,8 @@ def load_dataset_per_party_llm(args, index):
         sources = [ sample["text"] for sample in dataset ] 
         targets = [ sample["response"] for sample in dataset ] 
         
-        X_data = sources[:20] # list of instruction text
-        y_data = targets[:20] # list of answer text
+        X_data = sources[:] # list of instruction text
+        y_data = targets[:] # list of answer text
 
         X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.05,
                                                             random_state=args.current_seed)

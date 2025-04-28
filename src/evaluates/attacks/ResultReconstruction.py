@@ -201,7 +201,7 @@ class ResultReconstruction(Attacker):
                 aux_dataset = TextVQADataset_train(self.args, aux_data, aux_label, vis_processor,'train')
             elif self.args.dataset == 'GMS8K' or self.args.dataset == 'GMS8K-test':
                 aux_dataset = GSMDataset_LLM(self.args, aux_data, aux_label, 'train')
-            elif self.args.dataset in ['CodeAlpaca','Alpaca','Alpaca-test']:
+            elif self.args.dataset in ['CodeAlpaca','Alpaca','Alpaca-test','Dolly']:
                 aux_dataset = AlpacaDataset_LLM(self.args, aux_data, aux_label, 'train')
             else:
                 aux_dataset = PassiveDataset_LLM(self.args, aux_data, aux_label)

@@ -1,5 +1,5 @@
 {
-    "epochs": 20,
+    "epochs": 2,
     "lr": 1e-5,
     "k": 2,
     "batch_size": 4,
@@ -74,7 +74,7 @@
         "parameters": {
             "party": [0],
             "cluster_method": "kmeans",
-            "cluster_num": 200,
+            "cluster_num": 250,
             "lambda": 10,
             "epsilon": 50,
             "w_cluster_away": 0.1,
@@ -125,7 +125,7 @@
                 "party": [1],
                 "loss_type":"cross_entropy",
                 "lr": 0.01,
-                "epochs": 100,
+                "epochs": 400,
                 "batch_size": 1,
                 "target_data":"test",
                 "attack_sample_num": 100
@@ -137,7 +137,7 @@
                 "party": [1],
                 "loss_type":"cross_entropy",
                 "lr": 0.01,
-                "epochs": 100,
+                "epochs": 400,
                 "batch_size": 1,
                 "target_data":"test",
                 "attack_seed": 1,
@@ -169,18 +169,6 @@
               "attack_seed": 1,
               "target_data":"test",
                 "attack_sample_num":100
-            }
-        },
-        "6":{
-            "name": "VanillaModelInversion_WhiteBox",
-            "parameters": {
-                "party": [1],
-                "loss_type":"cross_entropy",
-                "lr": 0.01,
-                "epochs": 400,
-                "batch_size": 1,
-                "target_data":"test",
-                "attack_sample_num": 100
             }
         }
     }

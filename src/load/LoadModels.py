@@ -38,7 +38,7 @@ from .llm_model_loaders.ChatGLMModelLoader import *
 from .llm_model_loaders.MambaModelLoader import *
 from .llm_model_loaders.XLNetModelLoader import *
 from .llm_model_loaders.Qwen2ModelLoader import *
-from .llm_model_loaders.Qwen2VLModelLoader import *
+# from .llm_model_loaders.Qwen2VLModelLoader import *
 from .llm_model_loaders.T5ModelLoader import *
 from .llm_model_loaders.DeepSeekV3ModelLoader import *
 
@@ -68,7 +68,7 @@ Loader_Map = {
     'Mamba': MambaModelLoader,
     'XLNet': XLNetModelLoader,
     'Qwen2': Qwen2ModelLoader,
-    'Qwen2VL': Qwen2VLModelLoader,
+    # 'Qwen2VL': Qwen2VLModelLoader,
     'T5':T5ModelLoader,
     'DeepSeekV3':DeepSeekV3ModelLoader,
 

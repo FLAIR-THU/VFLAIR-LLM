@@ -5,14 +5,14 @@
     "batch_size": 4,
     "test_batch_size": 1,
     "early_stop_threshold": 1,
-    "pipeline": "finetune",
+    "pipeline": "pretrained",
     "model_architect":"CLM",
     "communication":{
         "communication_protocol": "FedSGD",
         "iteration_per_aggregation": 1
     },
     "finetune_configs":{
-        "name":"LoRA",
+        "name":"Vanilla",
         "configs":{
         }
     },
@@ -39,18 +39,18 @@
             "device_map": "balanced_low_0"
         },
         "0": {
-            "path": "/home/DAIR/guzx/Git_FedProject/Models/llama-2-7b",
+            "path": "/home/DAIR/guzx/Git_FedProject/Trained_Models/Dolly/Llama-2-7b-hf/pmc_dolly_mid/3-slice/2_2/MID_Passive_MIDModel_Linear_tail_0.5/seed_60/trained_model/final",
             "head":{
-                "trainable": 1
+                "trainable": 0
             },
             "tail":{
-                "trainable": 1
+                "trainable": 0
             }
         },
         "1": {
-                "path": "/home/DAIR/guzx/Git_FedProject/Models/llama-2-7b",
+                "path": "/home/DAIR/guzx/Git_FedProject/Trained_Models/Dolly/Llama-2-7b-hf/pmc_dolly_mid/3-slice/2_2/MID_Passive_MIDModel_Linear_tail_0.5/seed_60/trained_model/final",
                 "body":{
-                    "trainable": 1
+                    "trainable": 0
             }
         },
         "task":{

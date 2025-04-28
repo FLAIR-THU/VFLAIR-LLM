@@ -1,23 +1,19 @@
 {
-    "epochs": 20,
-    "lr": 1e-5,
+    "epochs": 2,
+    "lr": 1e-6,
     "k": 2,
     "batch_size": 4,
     "test_batch_size": 1,
     "early_stop_threshold": 1,
-    "pipeline": "finetune",
+    "pipeline": "pretrained",
     "model_architect":"CLM",
     "communication":{
         "communication_protocol": "FedSGD",
         "iteration_per_aggregation": 1
     },
     "finetune_configs":{
-        "name":"LoRA",
+        "name":"Vanilla",
         "configs":{
-            "inference_mode":false,  
-            "r":4,  
-            "lora_alpha":32, 
-            "lora_dropout":0.05
         }
     },
     "dataset":{
@@ -40,18 +36,18 @@
         "model_type": "Llama",
         "max_sequence": 512,
         "kwargs_model_loading":{
-            "device_map": "balanced_low_0"
+            "device_map": "auto"
         },
         "0": {
-            "path": "/home/DAIR/guzx/Git_FedProject/Models/codellamaCodeLlama-7b-hf",
+            "path": "/home/DAIR/guzx/Git_FedProject/Trained_Models/CodeAlpaca/codellamaCodeLlama-7b-hf/ob/2-slice/2_0/TextObfuscator_50/seed_65/trained_model/final",
                 "head":{
-                    "trainable": 1
+                    "trainable": 0
                 }
         },
         "1": {
-                "path": "/home/DAIR/guzx/Git_FedProject/Models/codellamaCodeLlama-7b-hf",
+                "path": "/home/DAIR/guzx/Git_FedProject/Trained_Models/CodeAlpaca/codellamaCodeLlama-7b-hf/ob/2-slice/2_0/TextObfuscator_50/seed_65/trained_model/final",
                 "tail":{
-                    "trainable": 1
+                    "trainable": 0
             }
         },
         "task":{
@@ -74,7 +70,7 @@
         "parameters": {
             "party": [0],
             "cluster_method": "kmeans",
-            "cluster_num": 200,
+            "cluster_num": 50,
             "lambda": 10,
             "epsilon": 50,
             "w_cluster_away": 0.1,
@@ -169,18 +165,6 @@
               "attack_seed": 1,
               "target_data":"test",
                 "attack_sample_num":100
-            }
-        },
-        "6":{
-            "name": "VanillaModelInversion_WhiteBox",
-            "parameters": {
-                "party": [1],
-                "loss_type":"cross_entropy",
-                "lr": 0.01,
-                "epochs": 400,
-                "batch_size": 1,
-                "target_data":"test",
-                "attack_sample_num": 100
             }
         }
     }

@@ -3,6 +3,7 @@ copy source codes from transformers, then modify
 code based on transformers=4.37.2
 """
 from transformers.modeling_outputs import CausalLMOutputWithPast
+from transformers.models.bert.modeling_bert import BertConfig
 from transformers.models.bert.modeling_bert import *
 
 from torch.nn import ModuleList, Parameter
