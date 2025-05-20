@@ -1,19 +1,16 @@
 # README_LLM
 
-[VFLAIR-LLM]
-
-
-
 ## Introduction
 
 In VFLAIR-LLM, we additionally provide support for **Large Language Models (LLM)** inference and fine-tuning using private data, where private data can not be exposed directly to LLM due to privacy and regulation constraints. To overcome this challenge, we leverage VFLAIR to split the LLM into Local and Global sub-models to enable local inference/fine-tuning. In addition, we evaluate the risks of exposing intermediate results and implementing defenses. See figure below for VFLAIR-LLM architecture. 
 
 Figure below demonstrates all the main functions supported by VFLAIR-LLM, including model split, LLM models, tasks and datasets, attack and defense strategies.
- ![LLM_overview](usage_guidance/figures/VFLAIR_LLM.png)
+ ![LLM_overview](usage_guidance/figures/VFLAIRLLM_overview.png)
 
 - **SL-LLM Scenario**: In VFLAIR-LLM, we propose a split learning for LLM scenario describing 2 parties jointly train a LLM. The Model Party holds the global part of the model, representing model provider with abundant computational resources. The Data Party holds the local part of LLM, representing companys or institutes with limited resources. In VFLAIR-LLM, two model partition setting is provided. Detailed scenario description, including model forward and backward calculation, is demonstrated in the following figure.
 <div align=center>
 <img src="usage_guidance/figures/2_slice_architect.png" width="40%">                           
+
 
 <img src="usage_guidance/figures/3_slice_architect.png" width="40%">
 </div>
@@ -32,7 +29,7 @@ Figure below demonstrates all the main functions supported by VFLAIR-LLM, includ
   - Figure below describes the LLM model partition method.
 
 <div align=center>
-<img src="usage_guidance/figures/model_partition.png" width="30%">
+<img src="usage_guidance/figures/model_partition.png" width="60%">
 </div>
 
 - **Three Model Architects and corresponding task types**: Currently VFLAIR supported the following model architect. Each model architect can be used in its corresponding downstream tasks and datasets.
@@ -64,7 +61,7 @@ Figure below demonstrates all the main functions supported by VFLAIR-LLM, includ
 
 ## Structure
 <div align=center>
-<img src="usage_guidance/figures/VFLAIR_LLM_code_structure.png" width="30%">
+<img src="usage_guidance/figures/VFLAIR_LLM_code_structure.png" width="80%">
 </div>
 
 VFLAIR-LLM is developed under the VFLAIR framework, sharing the same framework structure as described in [VFLAIR Framework Strcuture][https://github.com/FLAIR-THU/VFLAIR/blob/main/README.md]. The overall strcutrue can be arranged into the following modules:
