@@ -27,11 +27,13 @@ In VFLAIR_LLM, we defaultly provide several dataset that are oftenly used for LL
           - Data can be downloaded from [LambadaDataset](https://huggingface.co/datasets/cimec/lambada). You can also use other Lambada data sources that support the huggingface.dataset module.
        2. Alpaca
           - Data is downloaded from [stanford_alpaca](https://github.com/tatsu-lab/stanford_alpaca) and arranged into  `../../share_dataset/Alpaca/alpaca_data.json`. 
-       3. CodeAlpaca
+       3. Dolly
+          - Data is downloaded from [dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k) and arranged into  `../../share_dataset/Alpaca/Dolly`. 
+       4. CodeAlpaca
           - Data is downloaded from [codealpaca](https://huggingface.co/datasets/HuggingFaceH4/CodeAlpaca_20K) and arranged into  `../../share_dataset/CodeAlpaca-20k/code_alpaca_20k.json`. 
-       4. MATH
+       5. MATH
           - Data is downloaded from [hendrycks/math: The MATH Dataset](https://github.com/hendrycks/math/)and arranged into  `../../share_dataset/MATH/`. 
-       5. GMS8K
+       6. GMS8K
           - Data is downloaded from [GMS8KDataset](https://github.com/openai/grade-school-math) and arranged into  `../../share_dataset/GMS8K/`. 
   3. Multi-Modality(VQA) Datasets
        1. TextVQA
