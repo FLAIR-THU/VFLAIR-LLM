@@ -1,7 +1,5 @@
 # Datasets
 
- ![Datasets](figures/llm_datasets.png)
-
 In VFLAIR_LLM, we defaultly provide several dataset that are oftenly used for LLM benchmark. As the origianl dataset is not provided along with the codebase, all the dataset provided and guidance on how to achieve these datasets are listed below.
 
 ## Default Dataset Usage
