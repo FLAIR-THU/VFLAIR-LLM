@@ -2,11 +2,12 @@
 
 [TOC]
 
-Currently we provide model split for 16 types of LLM in VFLAIR: 
-| Structure | LLMs |
-| Encoder-Only | Bert, Roberta, Albert |
-| Decoder-Only | GPT2, Llama2, Gemma, Falcon, Mamba, Mistral, Qwen2, Baichuan2, ChatGLM2, DeepseekV3, MiniCPM, Qwen2VL |
-| Encoder-Decoder | T5 |
+Currently we provide model split for 16 types of LLM in VFLAIR-LLM: 
+| **Structure type** |                      **Supported LLMs**                      |
+| :----------------: | :----------------------------------------------------------: |
+|  **Encoder-only**  |                        Bert   Roberta   Albert                     |
+|  **Decoder-only**  | GPT2  Llama2 Baichuan2 ChatGLM2 Qwen2 Gemma Falcon  Mamba Mistral DeepseekV3 Qwen2-VL MiniCPM |
+|  **Encoder-Decoder**  | T5 |
 All model split is implemented based on the original code of transformer model classes.
 
 We provide the following tutorial to help users implement model split based on transformer classes if they need to use other types of LLM. Here we use model split for GPT2 as an example.
