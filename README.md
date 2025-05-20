@@ -1,10 +1,9 @@
 # VFLAIR
 ## News
-- [06-23-2024] We released [VFLAIR-LLM](./src/configs/README_LLM.md) and [distributed version](https://github.com/FLAIR-THU/VFLAIR/tree/main/src/framework), a Vertical Federated LLM Framework developed based on VFLAIR! 
-<div align=center>
-<img src="usage_guidance/figures/VFLAIR_LLM.png" width="100%">
-</div>
-VFLAIR-LLM is a comprehensive vertical federated LLM framework that supports easy LLM model partition on various LLM types, multiple LLM tasks/datasets and various attack&defense algorithms. The framework aims to provide a privacy-preserving VFL pipeline for LLM usage. For further details, please refer to `./src/configs/README_LLM.md/`.
+- [06-23-2024] We released [VFLAIR-LLM](./src/README_LLM.md) in the `llm` branch and [distributed version](https://github.com/FLAIR-THU/VFLAIR/tree/main/src/framework), a Split Learning LLM Framework developed based on VFLAIR! 
+ ![Overview](usage_guidance/figures/VFLAIRLLM_overview.png)
+ 
+VFLAIR-LLM is a comprehensive Split Learning of LLM(SL-LLM) framework that supports easy LLM model partition on various LLM types, multiple LLM tasks/datasets and various attack&defense algorithms. The framework aims to provide a privacy-preserving VFL pipeline for LLM usage. For further details, please refer to `./src/README_LLM.md/`.
 
 - [01-16-2024] Our Paper [VFLAIR](https://openreview.net/forum?id=sqRgz88TM3) has been accepted by ICLR2024!
 
