@@ -1,18 +1,18 @@
 {
-    "epochs": 10,
-    "lr": 1e-4,
+    "epochs": 40,
+    "lr": 1e-5,
     "k": 2,
     "batch_size": 4,
     "test_batch_size": 1,
     "early_stop_threshold": 1,
-    "pipeline": "finetune",
+    "pipeline": "pretrained",
     "model_architect":"CLM",
     "communication":{
         "communication_protocol": "FedSGD",
         "iteration_per_aggregation": 1
     },
     "finetune_configs":{
-        "name":"LoRA",
+        "name":"Vanilla",
         "configs":{
             "r":8,
             "lora_alpha":32,
@@ -43,18 +43,18 @@
             "device_map": "balanced_low_0"
         },
         "0": {
-            "path": "/shared/model/Llama-2-7b-hf",
+            "path": "/shared/project/guzx/Trained_Models/Dolly/Llama-2-7b-hf/pmc_dolly_ad/3-slice/2_2/AdversarialTraining_0.1/seed_60/trained_model/final",
             "head":{
-                "trainable": 1
+                "trainable": 0
             },
             "tail":{
-                "trainable": 1
+                "trainable": 0
             }
         },
         "1": {
-                "path": "/shared/model/Llama-2-7b-hf",
+                "path": "/shared/project/guzx/Trained_Models/Dolly/Llama-2-7b-hf/pmc_dolly_ad/3-slice/2_2/AdversarialTraining_0.1/seed_60/trained_model/final",
                 "body":{
-                    "trainable": 1
+                    "trainable": 0
             }
         },
         "task":{
@@ -80,16 +80,18 @@
           "party": [0],
           "position": ["tail"],
           "adversarial_model": "Mapping_MLP3_noflatten",
-          "adversarial_model_lr": 0.001,
-          "adversarial_model_hidden_size": 512,
+          "tail_adversarial_model_path": "/shared/project/guzx/Trained_Models/Dolly/Llama-2-7b-hf/pmc_dolly_ad/3-slice/2_2/AdversarialTraining_0.1/seed_60/defense_model/tail_adversarial_model.pkl",
+          "adversarial_model_lr": 0.0001,
+          "adversarial_model_hidden_size": 1024,
           "imagined_adversary": "ImaginedAdversary_Tail_MLP3_for_generation",
-          "imagined_adversary_lr": 0.001,
-          "imagined_adversary_hidden_size": 512,
+          "tail_imagined_adversary_path":"/shared/project/guzx/Trained_Models/Dolly/Llama-2-7b-hf/pmc_dolly_ad/3-slice/2_2/AdversarialTraining_0.1/seed_60/defense_model/tail_imagined_adversary.pkl",
+          "imagined_adversary_lr": 0.0001,
+          "imagined_adversary_hidden_size": 1024,
           "imagined_adversary_num_layer": 1,
-          "imagined_adversary_num_heads": 8,
-          "imagined_adversary_attack_eta": 10,
-          "at_epsilon": 0.05,
-          "lambda": 5.0,
+          "imagined_adversary_num_heads": 32,
+          "imagined_adversary_attack_eta": 1,
+          "at_epsilon": 0.01,
+          "lambda": 0.1,
           "seq_length":256
         }
     },

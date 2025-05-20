@@ -35,23 +35,17 @@
         "kwargs_model_loading":{
         },
         "0": {
-          "path": "/data/guzx0/Models/textattackbert-base-uncased-SST-2",
+          "path": "/shared/model/textattackbert-base-uncased-SST-2",
 
             "head":{
-                "trainable": 0,
-                "embedding_trainable": 0,
-                "encoder_trainable": 0,
-                "encoder_trainable_ids":[]
+                "trainable": 0
             }
             
         },
         "1": {
-          "path": "/data/guzx0/Models/textattackbert-base-uncased-SST-2",
+          "path": "/shared/model/textattackbert-base-uncased-SST-2",
             "tail":{
-                "trainable": 0,
-                "head_layer_trainable": 0,
-                "encoder_trainable": 0,
-                "encoder_trainable_ids":[]
+                "trainable": 0
             }
         },
         "task":{
@@ -84,20 +78,53 @@
                 "batch_size": 6,
                 "epochs": 100,
               "auxiliary_data_num": 100,
+              "target_data":"test",
                 "attack_sample_num": 100
             }
         },
-      "1":{
+        "1":{
+            "name": "BiSR",
+            "parameters": {
+                "party": [1],
+                "attacker_model_name": "NaMoE",
+                "expert_scales": [0, 10.0, 7.5, 5.0],
+                "expert_epoch": 20,
+                "gate_epoch": 15,
+                "full_epoch": 4,
+                "phase1_lr":0.001,
+                "lr": 0.01,
+                "batch_size": 6,
+                "epochs": 100,
+              "auxiliary_data_num": 100,
+              "target_data":"test",
+              "attack_seed": 1,
+                "attack_sample_num": 100
+            }
+        },
+      "2":{
           "name": "VanillaModelInversion_WhiteBox",
           "parameters": {
               "party": [1],
               "lr": 0.01,
               "epochs": 100,
               "batch_size": 32,
+              "target_data":"test",
               "attack_sample_num": 100
           }
       },
-      "2":{
+      "3":{
+          "name": "VanillaModelInversion_WhiteBox",
+          "parameters": {
+              "party": [1],
+              "lr": 0.01,
+              "epochs": 100,
+              "batch_size": 32,
+              "target_data":"test",
+              "attack_sample_num": 100,
+              "attack_seed": 1
+          }
+      },
+      "4":{
           "name": "WhiteBoxInversion",
           "parameters": {
               "party": [1],
@@ -105,44 +132,22 @@
               "lr": 0.005,
               "epochs": 500,
               "batch_size": 32,
+              "target_data":"test",
               "attack_sample_num": 100
           }
       },
-      "3":{
-            "name": "BiSR",
-            "parameters": {
-                "party": [1],
-                "attacker_model_name": "NaMoE",
-                "expert_scales": [0, 10.0, 7.5, 5.0],
-                "expert_epoch": 20,
-                "gate_epoch": 15,
-                "full_epoch": 4,
-                "phase1_lr":0.001,
-                "lr": 0.01,
-                "batch_size": 6,
-                "epochs": 100,
-              "auxiliary_data_num": 100,
+      "5":{
+          "name": "WhiteBoxInversion",
+          "parameters": {
+              "party": [1],
+              "T": 0.05,
+              "lr": 0.005,
+              "epochs": 500,
+              "batch_size": 32,
+              "target_data":"test",
               "attack_seed": 1,
-                "attack_sample_num": 100
-            }
-        },
-        "4":{
-            "name": "BiSR",
-            "parameters": {
-                "party": [1],
-                "attacker_model_name": "NaMoE",
-                "expert_scales": [0, 10.0, 7.5, 5.0],
-                "expert_epoch": 20,
-                "gate_epoch": 15,
-                "full_epoch": 4,
-                "phase1_lr":0.001,
-                "lr": 0.01,
-                "batch_size": 6,
-                "epochs": 100,
-              "auxiliary_data_num": 100,
-              "attack_seed": 2,
-                "attack_sample_num": 100
-            }
-        }
+              "attack_sample_num": 100
+          }
+      }
   }
 }

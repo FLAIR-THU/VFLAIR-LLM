@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import random
-
+import torch.nn as nn
 DP_CLIP_THRESHOLD_PRED = {'mnist': 40, 'cifar10': 8, 'cifar100': 8, 'nuswide': 3, 'CoLA': 8}
 
 
@@ -609,26 +609,39 @@ def GradientSparsification_for_llm_pred(args, original_object):
     grad_spars_ratio = args.defense_configs['gradient_sparse_rate']
     while grad_spars_ratio > 1.0:
         grad_spars_ratio = grad_spars_ratio / 100.0
-    
+
+        
     if grad_spars_ratio > 0.0:
         with torch.no_grad():
-            # if args.pred_res_a is not None and \
-            #         original_object.shape[0] == args.pred_res_a.shape[0]:
-            #     original_object = original_object + args.pred_res_a
+            
             try:
                 a_thr = torch.quantile(torch.abs(original_object), grad_spars_ratio)
             except:
-                abs_original_object = torch.abs(original_object)
-                n, k = abs_original_object.size(0), 10  # Assuming 'k' value, adjust it as needed
-                a_thr = []
-                for i in range(0, n, k):
-                    a_thr.append(torch.quantile(abs_original_object[i: i + k], grad_spars_ratio))
-                a_thr = torch.stack(a_thr).mean()
-                
+                try:
+                    abs_original_object = torch.abs(original_object)
+                    n, k = abs_original_object.size(0), 10  # Assuming 'k' value, adjust it as needed
+                    a_thr = []
+                    for i in range(0, n, k):
+                        a_thr.append(torch.quantile(abs_original_object[i: i + k], grad_spars_ratio))
+                    a_thr = torch.stack(a_thr).mean()
+                except:
+                    chunk_size = 100000  # Adjust based on your memory constraints
+                    num_chunks = (abs_original_object.numel() + chunk_size - 1) // chunk_size
+                    a_thr = []
+
+                    for i in range(num_chunks):
+                        start = i * chunk_size
+                        end = min((i + 1) * chunk_size, abs_original_object.numel())
+                        chunk = abs_original_object.view(-1)[start:end]
+                        if chunk.numel() > 0:
+                            a_thr.append(torch.quantile(chunk, grad_spars_ratio))
+                    a_thr = torch.stack(a_thr).mean()
+
             args.pred_res_a = torch.where(torch.abs(original_object).double() < a_thr.item(),
                                                     original_object.double(), float(0.)).to(original_object.device).to(original_object.dtype)
             new_object = list( original_object - args.pred_res_a )
-            # print('new_object:',len(new_object),new_object[0].shape,new_object[0].dtype)
+
+            # print(torch.norm(new_object[0]-original_object[0],p=2))
         return new_object
     else:
         return original_object

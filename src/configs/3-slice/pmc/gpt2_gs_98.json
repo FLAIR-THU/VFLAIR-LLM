@@ -38,7 +38,7 @@
             "device_map": "balanced_low_0"
         },
         "0": {
-            "path": "/shared/project/guzx/Trained_Models/Alpaca/gpt2/pmc/3-slice/2_2/None_None/seed_60/trained_model/final",
+            "path": "/shared/project/guzx/Trained_Models/Alpaca/gpt2/ft/3-slice/2_2/None_None/seed_60/trained_model/final",
             "head":{
                 "trainable": 0
             },
@@ -47,7 +47,7 @@
             }
         },
         "1": {
-                "path": "/shared/project/guzx/Trained_Models/Alpaca/gpt2/pmc/3-slice/2_2/None_None/seed_60/trained_model/final",
+                "path": "/shared/project/guzx/Trained_Models/Alpaca/gpt2/ft/3-slice/2_2/None_None/seed_60/trained_model/final",
                 "body":{
                     "trainable": 0
             }
@@ -83,10 +83,10 @@
                 "party": [1],
                 "lr": 0.00001,
                 "epochs": 0,
-                "aux_data_num": 0,
+                "aux_data_num": 50,
                 "origin_model_path":"/shared/model/gpt2",
                 "batch_size": 4,
-                "attack_seed": 4,
+                "attack_seed": 1,
                 "attack_sample_num": 100
             }
         },
@@ -99,7 +99,7 @@
                 "aux_data_num": 50,
                 "origin_model_path":"/shared/model/gpt2",
                 "batch_size": 4,
-                "attack_seed": 4,
+                "attack_seed": 2,
                 "attack_sample_num": 100
             }
         },
@@ -109,10 +109,10 @@
                 "party": [1],
                 "lr": 0.00001,
                 "epochs": 200,
-                "aux_data_num": 500,
+                "aux_data_num": 50,
                 "origin_model_path":"/shared/model/gpt2",
                 "batch_size": 4,
-                "attack_seed": 4,
+                "attack_seed": 3,
                 "attack_sample_num": 100
             }
         }

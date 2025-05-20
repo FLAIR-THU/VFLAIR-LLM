@@ -1,23 +1,19 @@
 {
-    "epochs": 10,
-    "lr": 1e-4,
+    "epochs": 40,
+    "lr": 1e-5,
     "k": 2,
     "batch_size": 4,
     "test_batch_size": 1,
     "early_stop_threshold": 1,
-    "pipeline": "finetune",
+    "pipeline": "pretrained",
     "model_architect":"CLM",
     "communication":{
         "communication_protocol": "FedSGD",
         "iteration_per_aggregation": 1
     },
     "finetune_configs":{
-        "name":"LoRA",
+        "name":"Vanilla",
         "configs":{
-            "r":8,
-            "lora_alpha":32,
-            "lora_dropout":0.1,
-            "task_type":"CAUSAL_LM"
         }
     },
     "dataset":{
@@ -43,18 +39,18 @@
             "device_map": "balanced_low_0"
         },
         "0": {
-            "path": "/shared/model/Llama-2-7b-hf",
+            "path": "/shared/project/guzx/Trained_Models/Dolly/Llama-2-7b-hf/pmc_dolly_lo_r16/3-slice/2_2/None_None/seed_97/trained_model/final",
             "head":{
-                "trainable": 1
+                "trainable": 0
             },
             "tail":{
-                "trainable": 1
+                "trainable": 0
             }
         },
         "1": {
-                "path": "/shared/model/Llama-2-7b-hf",
+                "path": "/shared/project/guzx/Trained_Models/Dolly/Llama-2-7b-hf/pmc_dolly_lo_r16/3-slice/2_2/None_None/seed_97/trained_model/final",
                 "body":{
-                    "trainable": 1
+                    "trainable": 0
             }
         },
         "task":{
@@ -62,7 +58,7 @@
             "generation_config_dict":{
                 "bos_token_id": 1,
                 "do_sample": true,
-                "eos_token_id": 2,
+                "eos_token_id": null,
                 "pad_token_id": 0,
                 "temperature": 0.6,
                 "max_new_tokens": 160,
@@ -75,22 +71,11 @@
         "local_tail_encoders_num": 2
     },
     "defense": {
-        "name": "AdversarialTraining",
-          "parameters": {
-          "party": [0],
-          "position": ["tail"],
-          "adversarial_model": "Mapping_MLP3_noflatten",
-          "adversarial_model_lr": 0.001,
-          "adversarial_model_hidden_size": 512,
-          "imagined_adversary": "ImaginedAdversary_Tail_MLP3_for_generation",
-          "imagined_adversary_lr": 0.001,
-          "imagined_adversary_hidden_size": 512,
-          "imagined_adversary_num_layer": 1,
-          "imagined_adversary_num_heads": 8,
-          "imagined_adversary_attack_eta": 10,
-          "at_epsilon": 0.05,
-          "lambda": 5.0,
-          "seq_length":256
+        "name": "GradientSparsification",
+        "parameters": {
+            "party": [0],
+            "position": ["pred"],
+            "gradient_sparse_rate": 95
         }
     },
     "attack_list": {
@@ -103,7 +88,7 @@
                 "attack_seed":1,
                 "use_lora": 1,
                 "lora_configs":{
-                    "r":4,
+                    "r":16,
                     "lora_alpha":32,
                     "lora_dropout":0.1,
                     "task_type":"CAUSAL_LM"
@@ -123,7 +108,47 @@
                 "attack_seed":2,
                 "use_lora": 1,
                 "lora_configs":{
-                    "r":4,
+                    "r":16,
+                    "lora_alpha":32,
+                    "lora_dropout":0.1,
+                    "task_type":"CAUSAL_LM"
+                },
+                "batch_size": 8,
+                "aux_data_num": 50,
+                "origin_model_path":"/shared/model/Llama-2-7b-hf",
+                "attack_sample_num": 100
+            }
+        },
+        "2":{
+            "name": "ResultReconstruction",
+            "parameters": {
+                "party": [1],
+                "lr": 0.00001,
+                "epochs": 200,
+                "attack_seed":3,
+                "use_lora": 1,
+                "lora_configs":{
+                    "r":16,
+                    "lora_alpha":32,
+                    "lora_dropout":0.1,
+                    "task_type":"CAUSAL_LM"
+                },
+                "batch_size": 8,
+                "aux_data_num": 50,
+                "origin_model_path":"/shared/model/Llama-2-7b-hf",
+                "attack_sample_num": 100
+            }
+        },
+        "3":{
+            "name": "ResultReconstruction",
+            "parameters": {
+                "party": [1],
+                "lr": 0.00001,
+                "epochs": 200,
+                "attack_seed":4,
+                "use_lora": 1,
+                "lora_configs":{
+                    "r":16,
                     "lora_alpha":32,
                     "lora_dropout":0.1,
                     "task_type":"CAUSAL_LM"

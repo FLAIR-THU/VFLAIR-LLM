@@ -1,8 +1,7 @@
 import os
 
-# Trained_Models_Save_Path = "/shared/project/guzx/Trained_Models/"
-
-Trained_Models_Save_Path = "/home/DAIR/guzx/Git_FedProject/Trained_Models/"
+Trained_Models_Save_Path = "/shared/project/guzx/Trained_Models/"
+# Trained_Models_Save_Path = "/home/DAIR/guzx/Git_FedProject/Trained_Models/"
 
 def get_model_folder(args):
     model_folder = Trained_Models_Save_Path+f'{args.dataset}/{args.model_name}/{args.prefix}/{str(args.vfl_model_slice_num)}-slice/{args.split_info}/{args.defense_name}_{args.defense_param}/seed_{args.current_seed}/'

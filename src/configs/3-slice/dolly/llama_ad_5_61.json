@@ -1,6 +1,6 @@
 {
     "epochs": 10,
-    "lr": 1e-4,
+    "lr": 1e-5,
     "k": 2,
     "batch_size": 4,
     "test_batch_size": 1,
@@ -14,7 +14,7 @@
     "finetune_configs":{
         "name":"LoRA",
         "configs":{
-            "r":8,
+            "r":4,
             "lora_alpha":32,
             "lora_dropout":0.1,
             "task_type":"CAUSAL_LM"
@@ -40,7 +40,7 @@
         "model_type": "Llama",
         "max_sequence": 512,
         "kwargs_model_loading":{
-            "device_map": "balanced_low_0"
+            "device_map": "auto"
         },
         "0": {
             "path": "/shared/model/Llama-2-7b-hf",
@@ -80,15 +80,15 @@
           "party": [0],
           "position": ["tail"],
           "adversarial_model": "Mapping_MLP3_noflatten",
-          "adversarial_model_lr": 0.001,
+          "adversarial_model_lr": 0.0001,
           "adversarial_model_hidden_size": 512,
           "imagined_adversary": "ImaginedAdversary_Tail_MLP3_for_generation",
-          "imagined_adversary_lr": 0.001,
+          "imagined_adversary_lr": 0.0001,
           "imagined_adversary_hidden_size": 512,
           "imagined_adversary_num_layer": 1,
           "imagined_adversary_num_heads": 8,
-          "imagined_adversary_attack_eta": 10,
-          "at_epsilon": 0.05,
+          "imagined_adversary_attack_eta": 0.1,
+          "at_epsilon": 0.01,
           "lambda": 5.0,
           "seq_length":256
         }

@@ -596,6 +596,10 @@ def create_main_task(global_model_type: GenerationMixin):
                             if not (self.args.max_new_tokens==1):
                                 self.set_is_first_forward_epoch(1)
 
+                                # original_prompt_ids = data_input_list[party_id]['input_ids']
+                                # prompt = self.args.tokenizer.batch_decode(original_prompt_ids)
+                                # print('Prompt:',prompt)
+                                
                                 party_generation_output = self.generate(**data_input_list[party_id], \
                                         generation_config = self.generation_config)
                                 party_generation_output = party_generation_output[:,self.seq_length:].detach()
@@ -840,9 +844,13 @@ def create_main_task(global_model_type: GenerationMixin):
                                 '''
                                 reference_text = self.args.tokenizer.decode(reference_ids,skip_special_tokens=True)
                                 candidate_text = self.args.tokenizer.decode(candidate_ids,skip_special_tokens=True)
-                                print('reference_text:',reference_text)
-                                print('candidate_text:',candidate_text)
-                                print('------')
+                                # print('reference_text:',reference_text)
+                                # print('candidate_text:',candidate_ids, candidate_text)
+                                # candidate_text = self.args.tokenizer.decode(candidate_ids)
+                                # print('candidate_text:',candidate_text)
+                                # print('------')
+                                # assert 1>2
+                                
                                 # Rouge-2 Recall: can be user-defined here
                                 try:
                                     # from sacrebleu import sentence_bleu 
@@ -1656,7 +1664,8 @@ def create_main_task(global_model_type: GenerationMixin):
                         i_epoch, self.loss, self.train_acc)
                 
                 print(exp_result)
-            
+                # print('self.global_loss:',self.parties[0].origin_global_loss,' self.tail_adversary_attack_loss:',self.parties[0].tail_adversary_attack_loss,' self.tail_mapping_distance:',self.parties[0].tail_mapping_distance)
+
                 # if self.args.save_model:
                 #     prefix = f"/epoch_{i_epoch}/"
                 #     self.save_pretrained(prefix = prefix)

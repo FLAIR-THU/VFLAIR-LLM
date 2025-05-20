@@ -140,8 +140,13 @@ class PassiveParty_LLM(Party_LLM):
                         'imagined_adversary_hidden_size' in defense_configs) else 80
                 self.imagined_adversary_num_layer = defense_configs['imagined_adversary_num_layer'] if (
                         'imagined_adversary_num_layer' in defense_configs) else 1
+                self.imagined_adversary_num_heads = defense_configs['imagined_adversary_num_heads'] if (
+                        'imagined_adversary_num_heads' in defense_configs) else 12                
                 self.imagined_adversary_attack_eta = defense_configs['imagined_adversary_attack_eta'] if (
                         'imagined_adversary_attack_eta' in defense_configs) else 1
+                self.at_epsilon = defense_configs['at_epsilon'] if (
+                        'at_epsilon' in defense_configs) else 1
+                
                 self.imagined_adversary_lr = defense_configs['imagined_adversary_lr']
 
                 self.adversary_crit = nn.CrossEntropyLoss()
@@ -209,7 +214,7 @@ class PassiveParty_LLM(Party_LLM):
                                 embed_dim, self.label_size,
                                 hidden_dim=self.imagined_adversary_hidden_size,
                                 num_layers=self.imagined_adversary_num_layer,
-                                num_heads=12 
+                                num_heads=self.imagined_adversary_num_heads
                             ).to(self.args.device)
                     
                         else:
@@ -849,16 +854,16 @@ class PassiveParty_LLM(Party_LLM):
             real_label = self.gt_one_hot_label  # bs, seq_len, embed_dim
             
             if self.args.model_architect == 'CLM':
-                # print('adversary_recovered_label:',adversary_recovered_label.shape) # bs, seq_len, vocab_size
-                # print('real_label:',torch.tensor(real_label).shape) # bs, seq_len (token_ids)
                 self.tail_adversary_attack_loss = self.adversary_crit(
                     adversary_recovered_label.reshape(-1, adversary_recovered_label.size(-1)),  # [bs*seq_len, vocab_size]
                     torch.tensor(real_label).reshape(-1).to(adversary_recovered_label.device)  # [bs*seq_len]
-                ) * self.imagined_adversary_attack_eta
+                ) 
+                self.origin_global_loss = self.global_loss
             else:
                 self.tail_adversary_attack_loss = self.adversary_crit(adversary_recovered_label, real_label)
             
-            self.global_loss = self.global_loss + self.adversary_lambda * self.tail_mapping_distance.to(self.global_loss.device) - self.tail_adversary_attack_loss.to(self.global_loss.device)
+            self.global_loss = self.global_loss + \
+                self.at_epsilon * (self.adversary_lambda * self.tail_mapping_distance.to(self.global_loss.device) - self.imagined_adversary_attack_eta * self.tail_adversary_attack_loss.to(self.global_loss.device))  
         # ########### Defense on Loss ###############
 
         return 
