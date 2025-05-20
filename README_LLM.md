@@ -41,7 +41,7 @@ Figure below demonstrates all the main functions supported by VFLAIR-LLM, includ
 | ------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | -------------------------------------------- |
 | CLS<br>(Classification)                     | XXXforSequenceClassification<br>e.g. transformer.BertforSequenceClassification | Sequence Classification<br>Regression                        | GLUE Benchmark<br>Yelp                       |
 | TQA<br>(Text-span based Question Answering) | XXXforQuestionAnswering<br/>e.g. transformer.BertforQuestionAnswering | Text-span based Question Answering                           | SQuAD                                        |
-| CLM<br>(Causal LM - generation)             | XXXforCausalLM<br/>e.g. transformer.GPTLMhead                | Next Token Prediction<br>Text Generation<br>Code Generation<br>Math Problem Answering | Lambada/<br>Alpaca/CodeAlpaca/<br>MATH/GMS8K |
+| CLM<br>(Causal LM - generation)             | XXXforCausalLM<br/>e.g. transformer.GPTLMhead                | Next Token Prediction<br>Text Generation<br>Code Generation<br>Math Problem Answering | Lambada/<br>Alpaca/Dolly/CodeAlpaca/<br>MATH/GMS8K |
 | MM<br>(MultiModality - generation)             | /                | Visual Question Answering | TextVQA |
 
 
@@ -51,7 +51,7 @@ Figure below demonstrates all the main functions supported by VFLAIR-LLM, includ
 | :----------------: | :----------------------------------------------------------: |
 |  **Encoder-only**  |                        Bert   Roberta   Albert                     |
 |  **Decoder-only**  | GPT2  Llama2 Baichuan2 ChatGLM2 Qwen2 Gemma Falcon  Mamba Mistral DeepseekV3 Qwen2-VL MiniCPM |
-|  **Encoder-DEcoder**  | T5 |
+|  **Encoder-Decoder**  | T5 |
 
 - **Two Pipelines: Finetune&Inference** : Currently we support the following pipelines for LLM usage
   - Inference: In this pipeline, user can load their own/third-party pretrained LLMs into the framework and do direct inference on the test dataset.
