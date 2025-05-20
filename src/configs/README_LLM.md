@@ -11,7 +11,7 @@ In VFLAIR-LLM, we additionally provide support for **Large Language Models (LLM)
 Figure below demonstrates all the main functions supported by VFLAIR-LLM, including model split, LLM models, tasks and datasets, attack and defense strategies.
  ![LLM_overview](../../usage_guidance/figures/VFLAIR_LLM.png)
 
-- **Vertical Federated LLM Scenario**: In VFLAIR-LLM, we propose a vertical federated LLM scenario describing 2 parties jointly train a LLM. The Active Party holds the global part of the model, representing model provider with abundant computational resources. The Passive Party holds the local part of LLM, representing companys or institutes with limited resources. In VFLAIR-LLM, two model partition setting is provided. Detailed scenario description, including model forward and backward calculation, is demonstrated in the following figure.
+- **SL-LLM Scenario**: In VFLAIR-LLM, we propose a split learning for LLM scenario describing 2 parties jointly train a LLM. The Model Party holds the global part of the model, representing model provider with abundant computational resources. The Data Party holds the local part of LLM, representing companys or institutes with limited resources. In VFLAIR-LLM, two model partition setting is provided. Detailed scenario description, including model forward and backward calculation, is demonstrated in the following figure.
 <div align=center>
 <img src="../../usage_guidance/figures/2_slice_architect.png" width="40%">                           
 
@@ -20,11 +20,11 @@ Figure below demonstrates all the main functions supported by VFLAIR-LLM, includ
 
 - **Model Split for LLM**: 
 
-  - **2-slice Partition**: In this setting, we split a full LLM into Model Head(at passive party) and Model Tail(at active party). Defaultly , the LLM between the first and second layer(encoder or decoder), which can be user-defined through config files.
+  - **Head-Tail(HT) Partition**: In this setting, we split a full LLM into Model Head(at passive party) and Model Tail(at active party). Defaultly , the LLM between the first and second layer(encoder or decoder), which can be user-defined through config files.
 
     - Model Head: Embedding Layer + $n_1$ encoder/decoders
     - Model Tail: the rest $n_{2}$ encoder/decoders + Head Layers for down-stream tasks
-  - **3-slice Partition**: In this setting, we split a full LLM into 3 parts: Model Head(at passive party), Model Body(at active party) and Model Tail(at passive party). 
+  - **Head-Body-Tail(HBT) Partition**: In this setting, we split a full LLM into 3 parts: Model Head(at passive party), Model Body(at active party) and Model Tail(at passive party). 
     - Model Head: Embedding Layer + $n_1$ encoder/decoders
     - Model Body: the middle $n_{2}$ encoder/decoders
     - Model Tail: the rest $n_{3}$ encoder/decoders + Head Layers for down-stream tasks
@@ -35,11 +35,10 @@ Figure below demonstrates all the main functions supported by VFLAIR-LLM, includ
 <img src="../../usage_guidance/figures/model_partition.png" width="30%">
 </div>
 
-- **Four Model Architects and corresponding task types**: Currently VFLAIR supported the following model architect. Each model architect can be used in its corresponding downstream tasks and datasets.
+- **Three Model Architects and corresponding task types**: Currently VFLAIR supported the following model architect. Each model architect can be used in its corresponding downstream tasks and datasets.
   - **CLS models** output probability vectors for the classification, which is used in normal Classification tasks. When the number of classes is reduced to 1, the model only output a single value which can be used in Regression tasks.
   - **TQA model**s output the starting and ending positions of the answer texts, which can be used in Text-span based Question Answering datasets like SQuAD. (Note that different from Generation-based QA tasks, TQA provides a piece of text for the model to find the answer in while GQA is a proper generation task)
-  - **CLM models** output a word vector representing the probability of each token in the next position, which can be used in Next Token Prediction tasks like Lambada. When the model is called recursively to continuously generate the next word, the model can be used for a wider range of generative tasks like Text Generation/Code Generation/Math Problem Solving etc.
-  - **MM models** acts similar to CLM models but accepts multi-modal data as inputs, which can be used in various MM tasks like VQA. 
+  - **CLM models** output a word vector representing the probability of each token in the next position, which can be used in Next Token Prediction tasks like Lambada. When the model is called recursively to continuously generate the next word, the model can be used for a wider range of generative tasks like Text Generation/Code Generation/Math Problem Solving etc. Similar to CLM models, MM models accepts multi-modal data as inputs, which can be used in various Multi Model tasks like VQA. 
 
 | Model Architect                             | Corresponding Transformer Class                              | Task Type                                                    | Dataset                                      |
 | ------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | -------------------------------------------- |
@@ -53,12 +52,13 @@ Figure below demonstrates all the main functions supported by VFLAIR-LLM, includ
 
 | **Structure type** |                      **Supported LLMs**                      |
 | :----------------: | :----------------------------------------------------------: |
-|  **Encoder-only**  |                        Bert   Roberta                        |
-|  **Decoder-only**  | GPT2  Llama   Baichuan   Gemma  Falcon  Mamba   ChatGLM   XLnet   Mistral |
+|  **Encoder-only**  |                        Bert   Roberta   Albert                     |
+|  **Decoder-only**  | GPT2  Llama2 Baichuan2 ChatGLM2 Qwen2 Gemma Falcon  Mamba Mistral DeepseekV3 Qwen2-VL MiniCPM |
+|  **Encoder-DEcoder**  | T5 |
 
-- **Two Pipelines: Finetune&Pretrained** : Currently we support the following pipelines for LLM usage
-  - Inference with pretrained LLM: In this pipeline, user can load their own/third-party pretrained LLMs into the framework and do direct inference on the test dataset.
-  - LLM finetune: In this pipeline, user can finetune their own LLM on a pretrained or raw LLM on a downstream dataset
+- **Two Pipelines: Finetune&Inference** : Currently we support the following pipelines for LLM usage
+  - Inference: In this pipeline, user can load their own/third-party pretrained LLMs into the framework and do direct inference on the test dataset.
+  - Finetune: In this pipeline, user can finetune their own LLM on a pretrained or raw LLM on a downstream dataset
 
 
 
@@ -77,9 +77,9 @@ VFLAIR-LLM is developed under the VFLAIR framework, sharing the same framework s
     Based on the original class 'Party', we rewrite it as Party_LLM() to cater the need of LLM finetuning&inference.
 
     - **Load Dataset** - `./src/dataset/party_dataset`
-      - Generate input(text) into input_ids/attention_mask and token_type_ids with tokenizer
+      - Process and generate dataset. 
     - **Load Model** - `./src/models/llm_model`
-      - In this file , we rewrite the model classes from transformer to implement model split for LLMs. Defaultly we split the model between the 1st and 2ed layer(encoder or decoder), which can be user-defined through config files.
+      - In this file , we rewrite the model classes from transformer to implement model split for LLMs. Detialed model partition method can be user-defined through config files.
 
 - **Train & Evaluate Module**
 
@@ -91,24 +91,30 @@ VFLAIR-LLM is developed under the VFLAIR framework, sharing the same framework s
       - Model Inversion Attacks:
         - VanillaModelInversion - WhiteBox([paper]([Model Inversion Attacks that Exploit Confidence Information and Basic Countermeasures | Proceedings of the 22nd ACM SIGSAC Conference on Computer and Communications Security](https://dl.acm.org/doi/10.1145/2810103.2813677))) 
         - Relaxation-based White Box Inversion([paper]([2004.00053\] Information Leakage in Embedding Models (arxiv.org)](https://arxiv.org/abs/2004.00053)))
+        - Bi-directional Semi-white-box Reconstruction([paper](https://arxiv.org/abs/2409.00960))
       - Label Inference Attacks
         - Batch-level Label Inference ([paper](https://ieeexplore.ieee.org/abstract/document/9833321/))
-        - Norm-based Scoring (NS) ([paper]([[2102.08504\] Label Leakage and Protection in Two-party Split Learning (arxiv.org)](https://arxiv.org/abs/2102.08504)))
+        - Norm-based Scoring (NS) ([paper](https://arxiv.org/abs/2102.08504))
 
     - Defense：
-      - Laplace Differential Privacy([paper]([Privacy Risks of General-Purpose Language Models | IEEE Conference Publication | IEEE Xplore](https://ieeexplore.ieee.org/document/9152761))) 
-      - Adversarial Training - Privacy Preserving Mapping([paper]([Privacy Risks of General-Purpose Language Models | IEEE Conference Publication | IEEE Xplore](https://ieeexplore.ieee.org/document/9152761)))
-      - Gradient Sparsification([paper](https://openreview.net/forum?id=SkhQHMW0W))
+      - Differential Privacy([paper](https://ieeexplore.ieee.org/document/9152761))
+      - Adversarial Training - Privacy Preserving Mapping([paper](https://ieeexplore.ieee.org/document/9152761))
+      - Mutual Information Defense([paper](https://arxiv.org/abs/2301.01142))
+      - Sparsification([paper](https://openreview.net/forum?id=SkhQHMW0W))
+      - TextObfuscator([paper](https://aclanthology.org/2023.findings-acl.337/))
+      - SanText([paper](https://aclanthology.org/2021.findings-acl.337/))
+      - CusText([paper](https://aclanthology.org/2023.findings-acl.355/))
+      - RanText([paper](https://arxiv.org/abs/2310.12214))
+      - Split-and-Denoise([paper](https://arxiv.org/abs/2310.09130))
 
-  - **Communication**: currently we only provide FedSGD for VFL_LLM communication.
+  - **Communication**: currently we only provide FedSGD for SL-LLM communication.
 
 - **Metrics Module**: we provide the following metris for each task type
   - Classification: accuracy 
   - Regression: mse / pearson corr
   - Next Token Prediction: accuracy
-  - Text Generation: bleu score
+  - Text Generation: rouge2/code-bleu...
   - Math Problem Answering: accuracy score
-
 
 
 ## A Quick Start
@@ -129,7 +135,7 @@ python main_pipeline_llm.py --configs Your_Config_File
 
 ## Detailed Tutorial
 
-### How to write a configuration file for VFL_LLM?
+### How to write a configuration file for SL-LLM?
 
 In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can easily implement self-defined promptin
 
@@ -159,7 +165,6 @@ In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can e
         "add_special_tokens": 1
 }
 ```
-
 - "padding": padding method 
   - do_not_pad / max_length / longest
 - “pad_token”: the token used for padding, usually [PAD]
@@ -211,6 +216,9 @@ In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can e
       "dataset_name": "yelp-polarity",
         "num_classes": 5
 }
+"dataset":{
+        "dataset_name": "GMS8K"
+},
 ```
 - "dataset": the dataset for experiments
   - "dataset_name": name of the dataset
@@ -230,7 +238,7 @@ In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can e
     "kwargs_model_loading":{
     },
     "0": {
-      "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
+      "path": "path/textattackbert-base-uncased-SST-2",
 
         "head":{
             "trainable": 1,
@@ -246,7 +254,7 @@ In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can e
         }
     },
     "1": {
-      "path": "/home/DAIR/guzx/Git_FedProject/Models/textattackbert-base-uncased-SST-2",
+      "path": "path/textattackbert-base-uncased-SST-2",
         "body":{
             "trainable": 1,
             "encoder_trainable": 0,
@@ -261,7 +269,7 @@ In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can e
     "local_tail_encoders_num": 3
 }
 ```
-- "0"/"1": mark party id, "0" refers to passive party while 1 refers to active party.
+- "0"/"1": mark party id. In a 2-party setting, "0" refers to data party while 1 refers to model party.
 - "head"/"body"/"tail": mark specifications for each model slice.
   - "trainable": whether this model slice is trainable or frozen during training.
     - Detailed trainable parameter settings can be specified through "head_layer_trainable"/"encoder_trainable" etc. However this is generally not needed.
@@ -294,7 +302,7 @@ In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can e
 }
 ```
 - "name": the name for the attack
-- "party": attacker party id, currently we only support 1
+- "party": attacker party id
 
 #### Defense
 
@@ -313,19 +321,17 @@ In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can e
         }
 }
 ```
-- "lambda": a hyper-parameter for trade-off between privacy and accuracy in adversarial loss function
-- "adversarial_model": adversarial model used by the defense party
-- "imagined_adversary": imagined adversary used by the defense party
+- "name": name of the defense
+- "parameters": parameters used in constructing the defense, including hyper-parameters, defense model path etc.
 
 
 
 
+### How to add New LLMs?
 
-### How to import New LLM models?
+All models on huggingface can be directly loaded into VFLAIR-LLM as we support the same `.from_pretain(YOUR_MODEL)` API in the framework.
 
-All models on huggingface can be directly loaded into VFLAIR as we support the same `.from_pretain(YOUR_MODEL)` API in the framework.
-
-Note that you should identify the type of model pretrained (e.g. CausalLM...) in configuration file first. Models that can be imported with the following API can be used in VFLAIR:
+Note that you should identify the type of model pretrained (e.g. CausalLM...) in configuration file first. Models that can be imported with the following API can be used in VFLAIR-LLM:
 
 - AutoModel.from_pretrained()
 - AutoModelorCausalLM.from_pretrained()
@@ -340,10 +346,10 @@ Note that you should identify the type of model pretrained (e.g. CausalLM...) in
 ```
 python main_pipeline_llm.py --configs Your_Config_File
 ```
+If your LLM is not supported in our current LLM types, Please refer to  `../usage_guidance/How to add a new LLM.md` for more information.
 
 
-
-### How to import New Datasets?
+### How to add New Datasets?
 
 If you need detailed usage guidance for existent datasets and guidance for adding new datasets , Please refer to  `../usage_guidance/Dataset_Usage.md` for more information.
 

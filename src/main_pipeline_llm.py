@@ -160,8 +160,6 @@ def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
         from src.models.llm_models.minicpmv import MiniCPMVModelTail
         from src.models.llm_models.minicpm import MiniCPMTailForCausalLM
         from src.models.llm_models.minigpt4.minigpt4 import MiniGPT4Tail
-
-        # from src.load.llm_model_loaders.minigpt4. import MiniGPTBaseTail #
         MM_MODEL_MAPPING={
             'llama':LlamaTailForCausalLM_forMM, #MiniGPT4Tail, #,
             'minicpm': MiniCPMTailForCausalLM,
@@ -236,9 +234,7 @@ if __name__ == '__main__':
     for seed in seed_list:  
         args.current_seed = seed
         set_seed(seed)
-        print('================= iter seed ', seed, ' =================')
-
-        
+        print('#################### iter random seed:',seed,'####################')
 
         ####### load configs from *.json files #######
         
@@ -255,12 +251,13 @@ if __name__ == '__main__':
         args.dataset = args.dataset_split['dataset_name']
         print('Dataset:',args.dataset)
         
-        print('======= Defense ========')
+        print('================== Defense ==================')
         print('Defense_Name:', args.defense_name)
         print('Defense_Config:', str(args.defense_configs))
         
-        print('===== Total Attack Tested:', args.attack_num, ' ======')
-        print('inversion:', args.inversion_list, args.inversion_index)
+        print('================== Total Attack Tested:', args.attack_num, ' ==================')
+        print('MIA:', args.inversion_list, args.inversion_index)
+        print('LIA:', args.label_inference_list, args.label_inference_index)
 
         # Save record for different defense method
         exp_res_dir, exp_res_path, model_folder, defense_model_folder, trained_model_folder = create_exp_dir_and_file(args)
@@ -269,13 +266,17 @@ if __name__ == '__main__':
         args.model_folder = model_folder
         args.defense_model_folder = defense_model_folder
         args.trained_model_folder = trained_model_folder
+        print('================== Save Result ==================')
         print('Experiment Result Path:',args.exp_res_path)
         print('Save Defense Model Path:',args.defense_model_folder)
+        print('Save Trained Model Path:',args.trained_model_folder)
+        
         print('=================================\n')
 
-        
+        # Load Attack
         args = load_attack_configs(args.configs, args, -1)
-
+        
+        # Load Party with Defense
         args = load_parties_llm(args)
 
         # Build Main Task: inherit generation functions from global model
@@ -285,7 +286,6 @@ if __name__ == '__main__':
         
         args.basic_vfl = None
         args.main_acc_noattack = None
-
         # vanilla
         if args.pipeline == 'pretrained':
             args.basic_vfl, args.main_acc_noattack = evaluate_no_attack_pretrained(args)

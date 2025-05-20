@@ -28,9 +28,9 @@ class GPT2ModelSplitter(GPT2Model, VFLModel):
                 new_layers.append(layer)
         
         self.h = new_layers
+        
         # update config
         self.config.n_layer = len(new_layers)
-        # self.config.n_head = len(new_layers) # n_head = num of attention head
         
         return True
 
@@ -43,10 +43,8 @@ class GPT2ModelHead(GPT2ModelSplitter):
         super().__init__(config)
         self.past_key_values = None
         del self.ln_f
-        # todo: del norm will cause error when load from original model weight
         # del self.norm
 
-    
     def get_input_embeddings(self):
         return self.wte
 
@@ -98,17 +96,6 @@ class GPT2ModelHead(GPT2ModelSplitter):
             past_key_values = tuple([None] * len(self.h))
         else:
             past_length = past_key_values[0][0].size(-2)
-
-        # if self.past_key_values == None:
-        #     if past_key_values is None:
-        #         past_length = 0
-        #         past_key_values = tuple([None] * len(self.h)) 
-        #         # past_key_values = tuple([None] * self.num_encoders_all)
-        #     else:
-        #         past_length = past_key_values[0][0].size(-2)
-        # else:
-        #     past_key_values = self.past_key_values
-        #     past_length = past_key_values[0][0].size(-2)
 
         if position_ids is None:
             position_ids = torch.arange(past_length, input_shape[-1] + past_length, dtype=torch.long, device=device)
@@ -244,7 +231,6 @@ class GPT2ModelHead(GPT2ModelSplitter):
                         hidden_states = hidden_states.to("cuda:" + str(k + 1))
            
         # self.past_key_values = presents
-        self.past_key_values = presents
         
         return {'inputs_embeds':hidden_states,
                 'attention_mask':attention_mask,
@@ -255,11 +241,10 @@ class GPT2ModelBody(GPT2ModelSplitter):
         super().__init__(config)
         self.past_key_values = None
         del self.drop
+        del self.ln_f
+        
         # del self.wte
         # del self.wpe
-        del self.ln_f
-
-        # todo: del norm will cause error when load from original model weight
         # del self.norm
 
     def forward(
@@ -278,7 +263,6 @@ class GPT2ModelBody(GPT2ModelSplitter):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-        # local_past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None,
         **kwargs
     ) -> Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -312,22 +296,11 @@ class GPT2ModelBody(GPT2ModelSplitter):
         else:
             past_length = past_key_values[0][0].size(-2)
 
-        # if self.past_key_values == None:
-        #     if past_key_values is None:
-        #         past_length = 0
-        #         past_key_values = tuple([None] * len(self.h)) 
-        #         # past_key_values = tuple([None] * self.num_encoders_all)
-        #     else:
-        #         past_length = past_key_values[0][0].size(-2)
-        # else:
-        #     past_key_values = self.past_key_values
-        #     past_length = past_key_values[0][0].size(-2)
-    
         if position_ids is None:
             position_ids = torch.arange(past_length, input_shape[-1] + past_length, dtype=torch.long, device=device)
             position_ids = position_ids.unsqueeze(0)
         
-        # GPT2Attention mask. no need to change again , already done in Local GPT
+        # GPT2Attention mask. no need to change again , already done in Model Head
         # if attention_mask is not None:
         #     if batch_size <= 0:
         #         raise ValueError("batch_size has to be defined and > 0")
@@ -364,7 +337,7 @@ class GPT2ModelBody(GPT2ModelSplitter):
         # head_mask has shape n_layer x batch x n_heads x N x N
         head_mask = self.get_head_mask(head_mask, self.config.n_layer)
         
-        ### already done in local gpt ###
+        ### already done in model head ###
         # if inputs_embeds is None:
         #     inputs_embeds = self.wte(input_ids)
         # position_embeds = self.wpe(position_ids)
@@ -453,7 +426,6 @@ class GPT2ModelBody(GPT2ModelSplitter):
                         hidden_states = hidden_states.to("cuda:" + str(k + 1))
 
         # self.past_key_values = presents
-        self.past_key_values = presents
 
         return {'inputs_embeds':hidden_states,
                 'attention_mask':attention_mask}
@@ -465,7 +437,6 @@ class GPT2ModelTail(GPT2ModelSplitter):
         del self.drop
         # del self.wte
         # del self.wpe
-        # todo: del norm will cause error when load from original model weight
         # del self.norm
 
     def forward(
@@ -484,10 +455,8 @@ class GPT2ModelTail(GPT2ModelSplitter):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-        # local_past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None,
         **kwargs
     ) -> Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
-        # print('gpt tail use_cache:',use_cache)
         use_cache = False
         
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -536,7 +505,7 @@ class GPT2ModelTail(GPT2ModelSplitter):
             position_ids = torch.arange(past_length, input_shape[-1] + past_length, dtype=torch.long, device=device)
             position_ids = position_ids.unsqueeze(0)
         
-        # GPT2Attention mask. no need to change again , already done in Local GPT
+        # GPT2Attention mask. no need to change again , already done in model head
         # if attention_mask is not None:
         #     if batch_size <= 0:
         #         raise ValueError("batch_size has to be defined and > 0")
@@ -573,7 +542,7 @@ class GPT2ModelTail(GPT2ModelSplitter):
         # head_mask has shape n_layer x batch x n_heads x N x N
         head_mask = self.get_head_mask(head_mask, self.config.n_layer)
         
-        ### already done in local gpt ###
+        ### already done in model head
         # if inputs_embeds is None:
         #     inputs_embeds = self.wte(input_ids)
         # position_embeds = self.wpe(position_ids)
@@ -646,7 +615,6 @@ class GPT2ModelTail(GPT2ModelSplitter):
 
             hidden_states = outputs[0]
             if use_cache is True:
-                # print('adding presents')
                 presents = presents + (outputs[1],)
 
             if output_attentions:
@@ -674,8 +642,6 @@ class GPT2ModelTail(GPT2ModelSplitter):
             denoise_mod = kwargs['denoise_mod']
             original_embedding = kwargs['original_embedding']
             snd_noise = kwargs['snd_noise']
-            # print('denoise_mod:',type(denoise_mod))
-            # print('original_embedding:',original_embedding.shape,'  snd_noise:',snd_noise.shape)
             hidden_states = denoise_mod(\
                 original_embedding, snd_noise, hidden_states, attention_mask)
         
@@ -838,10 +804,8 @@ class ModelPartitionPipelineGPT2(ModelPartitionPipeline):
             self.all_layer_num = model_head.config.n_layer
             split_range = range(0, self.split_index[0])
             model_head.vfl_split(split_range)
-            # print(list(split_range))
-            # print(f'Model Head:{len(model_head.h)} {do_split}')
 
-        return model_head#.to(self.device)
+        return model_head
 
     def _load_model_tail(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         if self.args.model_architect == 'CLM':
@@ -858,18 +822,13 @@ class ModelPartitionPipelineGPT2(ModelPartitionPipeline):
             else:
                 split_range = range(model_tail.config.n_layer-self.split_index[1],model_tail.config.n_layer)
             model_tail.vfl_split(split_range)
-            # print(list(split_range))
-            # print(f'Model Tail:{len(model_tail.transformer.h)} {do_split}')
-        return model_tail#.to(self.device)
-
+        return model_tail
     def _load_model_body(self, model_name_or_path, do_split=False, **kwargs) -> Union[PreTrainedModel, VFLModel]:
         model_body = GPT2ModelBody.from_pretrained(model_name_or_path, **kwargs)
         if do_split:
             split_range = range(self.split_index[0], model_body.config.n_layer-self.split_index[1])
             model_body.vfl_split(split_range)
             
-            # print(list(split_range))
-            # print(f'Model Body:{len(model_body.h)} {do_split}')
            
         
-        return model_body#.to(self.device)
+        return model_body

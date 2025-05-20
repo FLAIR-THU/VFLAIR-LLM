@@ -19,13 +19,12 @@ import copy
 
 class ActiveParty_LLM(Party_LLM):
     def __init__(self, args, index, need_data=True, need_model=True):
-        print(f'###### initialize ActiveParty_LLM : Party {index} ######')
+        print(f'========== initialize ActiveParty_LLM(Model Party) : Party {index} ==========')
         logger.debug(f'running on cuda{os.getenv("CUDA_VISIBLE_DEVICES").split(",")[torch.cuda.current_device()]}')
 
         super().__init__(args, index, need_data=need_data, need_model=need_model)
         self.name = "server#" + str(index + 1)
         self.criterion = cross_entropy_for_onehot
-        # self.encoder = args.encoder
 
         self.train_index = None  # args.idx_train
         self.test_index = None  # args.idx_test
@@ -57,10 +56,7 @@ class ActiveParty_LLM(Party_LLM):
         self.encoder_hidden_states = None
         self.encoder_attention_mask = None
         self.first_epoch_state = None
-
-    # def prepare_data_loader(self, **kwargs):
-    #     super().prepare_data_loader(self.args.batch_size, self.args.need_auxiliary)
-
+        
     def get_output_tensors(self):
         return convert_to_msg(self.output_tensors)
 
@@ -112,7 +108,7 @@ class ActiveParty_LLM(Party_LLM):
         resp = self.models[model_index](**kwargs)
 
         if model_index == self.args.vfl_model_slice_num - 1:
-            if not self.args.task_type == 'QuestionAnswering':
+            if not self.args.model_architect == 'TQA':
                 self.output_tensors[client_id][model_index] = resp.get('logits')
             else:
                 self.output_tensors[client_id][model_index] = resp.get('start_logits') + resp.get('end_logits') 
@@ -140,14 +136,7 @@ class ActiveParty_LLM(Party_LLM):
                 return convert_pred_to_msg(result, 'test_logit')
         elif self.args.task_type == 'SequenceClassification':  
             return convert_pred_to_msg(result, 'test_logit')
-        
-        # elif self.args.task_type == 'QuestionAnswering': 
-        #     return {
-        #         "requires_grad": True,
-        #         "start_logits": result.start_logits.tolist(),
-        #         "end_logits": result.end_logits.tolist(),
-        #     }
-        elif self.args.task_type == 'QuestionAnswering':  # self.passive_pred_list[0] = [intermediate, attention_mask]
+        elif self.args.task_type == 'QuestionAnswering': 
             return convert_pred_to_msg(result, 'test_logit')
         elif self.args.task_type == 'DevLLMInference':
             return convert_pred_to_msg(result)
@@ -238,9 +227,6 @@ class ActiveParty_LLM(Party_LLM):
         if self.global_model_optimizer != None:
             # trainable layer parameters
             global_model_params = []
-            # for param in self.models[1].parameters():
-            #     if param.requires_grad:
-            #         global_model_params.append(param)
 
             global_model_params_name = []
             for name,param in self.models[1].named_parameters():
@@ -284,9 +270,6 @@ class ActiveParty_LLM(Party_LLM):
                 self.weights_grad_a_list = []
                 for client_id in range(self.args.k-1):
                     client_global_gradient = self.global_gradient_dict[client_id].to(self.output_tensors[client_id][1].device)
-                    # print(f'client_id={client_id} self.output_tensors[client_id][1]:',type(self.output_tensors[client_id][1]))
-                    # print('global_model_params:',len(global_model_params))
-                    # print('client_global_gradient:',type(client_global_gradient),len(client_global_gradient))
                     weights_grad_a = torch.autograd.grad(self.output_tensors[client_id][1],
                                                             global_model_params, 
                                                             grad_outputs=client_global_gradient, 
@@ -313,7 +296,6 @@ class ActiveParty(Party):
         super().__init__(args, index)
         self.criterion = cross_entropy_for_onehot
         self.encoder = args.encoder
-        # print(f"in active party, encoder=None? {self.encoder==None}, {self.encoder}")
         self.train_index = args.idx_train
         self.test_index = args.idx_test
 
@@ -356,7 +338,6 @@ class ActiveParty(Party):
 
         # ########## for active mid model loss (start) ##########
         if self.args.apply_mid == True and (self.index in self.args.defense_configs['party']):
-            # print(f"in active party mid, label={gt_one_hot_label}, global_model.mid_loss_list={self.global_model.mid_loss_list}")
             assert len(pred_list) - 1 == len(self.global_model.mid_loss_list)
             for mid_loss in self.global_model.mid_loss_list:
                 loss = loss + mid_loss

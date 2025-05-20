@@ -37,11 +37,13 @@ PROCESSOR_DICT = {
     'Blip2ImageTrainProcessor':Blip2ImageTrainProcessor,
     'Blip2ImageEvalProcessor':Blip2ImageEvalProcessor,
     'BlipCaptionProcessor': BlipCaptionProcessor,
-
     'MiniCPM_Transform': MiniCPM_Transform,
 
 }
 
+'''
+Model Party(ActiveParty_LLM) and Data Party(PassiveParty_LLM) in ./passive_party.py, ./active_party.py
+'''
 class Party(object):
     def __init__(self, args, index, need_data=True, need_model=True):
         self.name = "party#" + str(index + 1)
@@ -80,12 +82,26 @@ class Party(object):
         self.train_target_list = None
         self.test_target_list = None
         
+        
+        #######  Load tokenizer and model
+        # model head
+        self.local_model = None
+        self.local_model_optimizer = None
+        # model tail
+        self.local_model_tail = None
+        self.local_model_tail_optimizer = None
+        # model body
+        self.global_model = None
+        self.global_model_optimizer = None
+        
         # store attributes of model slices
+        self.local_gradient = None
+        self.local_pred = None
+        self.local_pred_clone = None
         self.input_tensors = {}  # input intermediate type:dict[int,torch.Tensor]
         self.input_attention_mask = {}  # input attention mask type:dict[int,torch.Tensor]
         self.output_tensors = {}  # output embeddings type:dict[int,torch.Tensor]
         self.output_attention_mask = {}  # output attention mask type:dict[int,torch.Tensor]
-
         self.received_grads = {}  #type:dict[int,torch.Tensor]
         self.models = {}  # type:dict[int,PreTrainedModel]
         self.optimizers = {}  # type:dict[int,torch.optim.Optimizer]
@@ -93,33 +109,20 @@ class Party(object):
         self.past_key_values = {}
         self.is_first_forward_iter = 1
 
-        # local model
-        self.local_model = None
-        self.local_model_optimizer = None
-        # local model tail (3-slice scenario)
-        self.local_model_tail = None
-        self.local_model_tail_optimizer = None
-        # global_model
-        self.global_model = None
-        self.global_model_optimizer = None
         
-        # Load tokenizer and model
+        #######  Load tokenizer and model
         self.tokenizer = None
         self.vis_processors = {}
         self.text_processors = {}
         if need_model:
             self.prepare_model(args, index)
 
-        # Load Data
+        ####### Load Data
         if need_data:
             self.prepare_data(args, index)
             self.prepare_data_loader()
             
-        self.local_gradient = None
-        self.local_pred = None
-        self.local_pred_clone = None
-
-        self.origin_pred = None  # for adversarial training
+        
 
         self.cache = Cache()
         self.prev_batches = []
@@ -129,9 +132,8 @@ class Party(object):
         self.input_shape = None
         self.global_pred = None
 
-        self.local_attention_mask = None  # GPT2
-        self.local_sequence_lengths = None  # GPT2 Classification
-        self.local_attention_mask = None  # Llama
+        self.local_attention_mask = None
+        self.local_sequence_lengths = None  
 
         ######### defence
         # for adversarial training
@@ -141,6 +143,7 @@ class Party(object):
         self.head_mapping_distance = None
         self.tail_adversary_loss = None
         self.tail_mapping_distance = None
+        self.origin_pred = None 
 
 
     def set_is_first_forward_iter(self, value):
@@ -191,13 +194,10 @@ class Party(object):
 
     def prepare_tokenizer(self, args, model_path):
         # Load Tokenizer
-        print('---- Load Tokenizer')
-
         self.args.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
         self.args.tokenizer.padding_side = args.padding_side if (args.padding_side in ["left", "right"]) else "left"
         
         if self.args.pad_token == "default":
-            print('default tokenizer.pad_token:',self.args.tokenizer.pad_token)
             if self.args.tokenizer.pad_token is None:
                 self.args.tokenizer.pad_token = args.tokenizer.eos_token  # ({'pad_token': '[PAD]'}) # args.tokenizer.eos_token #
                 self.args.pad_id = args.tokenizer.convert_tokens_to_ids(args.tokenizer.eos_token)  #
@@ -270,7 +270,6 @@ class Party(object):
         return visual_encoder, ln_vision
     
     def prepare_processor(self, args):
-        print('---- Load processor')
         if args.model_type in ['minicpm','minicpmv']:
             vis_proc_cfg = args.vis_processor_config
             txt_proc_cfg = args.text_processor_config 
@@ -400,17 +399,13 @@ class Party(object):
     
     @staticmethod
     def _build_proc_from_cfg(cfg):
-        # print('cfg:',cfg)
         return (
-            # registry.get_processor_class(cfg.name).from_config(cfg)
             PROCESSOR_DICT[cfg['name']].from_config(cfg)
             if cfg is not None
             else None
         )
-
         
     def prepare_optimizer(self,args):
-        print('---- Load optimizer')
         # Optimizer
         self.optimizers = {}
         for i in self.models.keys():
@@ -420,31 +415,31 @@ class Party(object):
             else:
                 optimizer = None
             self.optimizers.update({i: optimizer})
-        print(f'Party {self.index} Optimizer:',self.optimizers.keys())
+        print(f'party {self.index} optimizer:',self.optimizers.keys())
         # scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, end_factor=0.01, total_iters=10)
         # self.lr_schedulers.update({i: scheduler})
 
     def prepare_model(self, args, index):
         # Load Tokenizer
+        print('---- Load Tokenizer ----')
         model_path = args.model_path[index]
         self.prepare_tokenizer(args, model_path)
 
         # Load Model
+        print('---- Load Model ----')
         result = load_models_per_party_llm(args, index)
         self.models=result['models'] 
         self.full_model_config = result['config'] 
         model_tail_key = args.vfl_model_slice_num - 1
         for _key in self.models.keys(): 
-            # update pad token 
             self.models[_key].config.pad_token_id = args.pad_id
-            # update generation_config
-            if int(_key) == int(model_tail_key):
+            if int(_key) == int(model_tail_key): 
                 self.args.generation_config = self.models[_key].generation_config
 
         # Load Preprocessor [for multimodaolity tasks]
         if self.index != self.args.k -1 and self.args.task_type == 'MultiModality':
+            print('---- Load vision processor ----')
             self.prepare_processor(args)
-
 
         self.args.model_config = result['config']
         self.args.model_dtype = result['model_dtype']
@@ -456,11 +451,12 @@ class Party(object):
         self.args.global_encoders_num = self.args.all_encoders_num - args.local_encoders_num - args.local_tail_encoders_num
         print(f'model slices:',self.models.keys())
         if args.vfl_model_slice_num==3:
-            print(f'model partition: 0head-{args.local_encoders_num}/1body-{args.global_encoders_num}/2tail-{args.local_tail_encoders_num}')
+            print(f'0head-{args.local_encoders_num}/1body-{args.global_encoders_num}/2tail-{args.local_tail_encoders_num}')
         else:
-            print(f'model partition: 0head-{args.local_encoders_num}/1tail-{args.global_encoders_num}')
+            print(f'0head-{args.local_encoders_num}/1tail-{args.global_encoders_num}')
 
         # Load Optimizer
+        print('---- Load Optimizer ----')
         self.prepare_optimizer(args)
         
     def _set_peft(self):
@@ -493,7 +489,6 @@ class Party(object):
                 else:
                     model.set_adapter('default')
                 trainable_params = filter(lambda x: x.requires_grad, model.parameters())
-                # 定义优化器和学习率调度器
                 optimizer = torch.optim.AdamW(trainable_params, lr=_train_conf.training_args.learning_rate)
                 scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, end_factor=0.01, total_iters=10)
                 self.optimizers.update({i: optimizer})
@@ -501,15 +496,11 @@ class Party(object):
 
     def label_to_one_hot(self, target, num_classes=10):
         target = target.long()
-        # print('label_to_one_hot:', target, type(target),type(target[0]))
         try:
             _ = target.size()[1]
-            # print("use target itself", target.size())
             onehot_target = target.type(torch.float32).to(self.device)
         except:
             target = torch.unsqueeze(target, 1).to(self.device)
-            # print("use unsqueezed target", target.size(),type(target))
-
             onehot_target = torch.zeros(target.size(0), num_classes, device=self.device)
             onehot_target.scatter_(1, target, 1)
         return onehot_target
@@ -526,14 +517,11 @@ class Party(object):
     @timer()
     def forward(self, model_index, **kwargs):
         # print(f"model_{model_index} forward")
-
         self.input_tensors[model_index] = kwargs.get('inputs_embeds')
         self.input_attention_mask[model_index] = kwargs.get('attention_mask')
-        
         self._tensor_to_device(kwargs , self.models[model_index].device)
 
         resp = self.models[model_index](**kwargs)
-
 
         if model_index == self.args.vfl_model_slice_num - 1:
             self.output_tensors[model_index] = resp.get('logits')
@@ -660,26 +648,15 @@ class Party(object):
         # args.local_model()
         pass
 
-
     def _detach_tensor(self, dict_like: dict):
         return dict_like  # todo: need to check whether used in local mode
-        # for key, value in dict_like.items():
-        #     if isinstance(value, torch.Tensor) and value.requires_grad:
-        #         dict_like[key] = value.detach().clone()
-        #         dict_like[key].requires_grad = True
-        # return dict_like
-
-    # def backward(self, model_index, **kwargs):
-    #     logger.debug(f"model_{model_index} backward")
-    #     self.output_tensors[model_index]['inputs_embeds'].backward(**kwargs)
-
+       
     def optimizer_step(self, model_index):
         logger.debug(f"model_{model_index} optimize")
         self.optimizers[model_index].step()
         self.optimizers[model_index].zero_grad()
 
     def save_pretrained(self,model_folder=None,**kwargs):
-        
         if model_folder is None:
             model_folder = get_model_folder(self.args)
             
