@@ -19,7 +19,7 @@ from evaluates.attacks.ASB import ASB
 from evaluates.attacks.VanillaModelInversion_WhiteBox import VanillaModelInversion_WhiteBox
 from evaluates.attacks.BiSR import BiSR
 
-from evaluates.attacks.DLG_LLM import DLG_LLM
+# from evaluates.attacks.DLG_LLM import DLG_LLM
 
 from evaluates.attacks.VanillaModelInversion_BlackBox import VanillaModelInversion_BlackBox
 from evaluates.attacks.WhiteBoxInversion import WhiteBoxInversion

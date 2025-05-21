@@ -824,15 +824,22 @@ class PassiveParty_LLM(Party_LLM):
     def update_local_gradient(self, gradient):
         self.local_gradient = gradient
 
-    def global_LR_decay(self, i_epoch, is_return=False):
-        eta_0 = self.args.main_lr
-        eta_t = eta_0 / (np.sqrt(i_epoch + 1))
-        if is_return:
-            return eta_t
-        if self.global_model_optimizer != None:
-            for param_group in self.global_model_optimizer.param_groups:
-                param_group['lr'] = eta_t
-
+    def LR_decay(self, i_epoch):
+        # eta_0 = self.args.main_lr
+        # eta_t = eta_0 / (np.sqrt(i_epoch + 1))
+        # if self.local_model_optimizer != None:
+        #     for param_group in self.local_model_optimizer.param_groups:
+        #         param_group['lr'] = eta_t
+        # if self.local_model_tail_optimizer != None:
+        #     for param_group in self.local_model_tail_optimizer.param_groups:
+        #         param_group['lr'] = eta_t
+        
+        if self.lr_schedulers.get(0):
+            self.lr_schedulers[0].step()
+        
+        if self.lr_schedulers.get(2):
+            self.lr_schedulers[2].step()
+            
     @timer()
     def give_pred(self, use_cache=False):
         self.local_data_input['use_cache'] = use_cache

@@ -86,18 +86,12 @@ class Party(object):
         #######  Load tokenizer and model
         # model head
         self.local_model = None
-        self.local_model_optimizer = None
         # model tail
         self.local_model_tail = None
-        self.local_model_tail_optimizer = None
         # model body
         self.global_model = None
-        self.global_model_optimizer = None
         
         # store attributes of model slices
-        self.local_gradient = None
-        self.local_pred = None
-        self.local_pred_clone = None
         self.input_tensors = {}  # input intermediate type:dict[int,torch.Tensor]
         self.input_attention_mask = {}  # input attention mask type:dict[int,torch.Tensor]
         self.output_tensors = {}  # output embeddings type:dict[int,torch.Tensor]
@@ -108,6 +102,13 @@ class Party(object):
         self.lr_schedulers = {}  # type:dict[int,torch.optim.lr_scheduler.LinearLR]
         self.past_key_values = {}
         self.is_first_forward_iter = 1
+
+        self.local_gradient = None
+        self.local_pred = None
+        self.local_pred_clone = None
+        self.local_model_optimizer = None
+        self.local_model_tail_optimizer = None
+        self.global_model_optimizer = None
 
         
         #######  Load tokenizer and model
@@ -416,8 +417,9 @@ class Party(object):
                 optimizer = None
             self.optimizers.update({i: optimizer})
         print(f'party {self.index} optimizer:',self.optimizers.keys())
-        # scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, end_factor=0.01, total_iters=10)
-        # self.lr_schedulers.update({i: scheduler})
+        
+        scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, end_factor=0.01, total_iters=10)
+        self.lr_schedulers.update({i: scheduler})
 
     def prepare_model(self, args, index):
         # Load Tokenizer
@@ -538,15 +540,6 @@ class Party(object):
     def give_current_lr(self):
         return (self.local_model_optimizer.state_dict()['param_groups'][0]['lr'])
 
-    def LR_decay(self, i_epoch):
-        eta_0 = self.args.main_lr
-        eta_t = eta_0 / (np.sqrt(i_epoch + 1))
-        if self.local_model_optimizer != None:
-            for param_group in self.local_model_optimizer.param_groups:
-                param_group['lr'] = eta_t
-        if self.local_model_tail_optimizer != None:
-            for param_group in self.local_model_tail_optimizer.param_groups:
-                param_group['lr'] = eta_t
 
     def obtain_local_data(self, data_input_dict, **kwargs):
         if data_input_dict:
