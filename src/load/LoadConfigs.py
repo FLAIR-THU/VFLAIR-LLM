@@ -17,11 +17,9 @@ ATTRIBUTE_INFERENCE = ['AttributeInference']
 FEATURE_INFERENCE = ['GenerativeRegressionNetwork', 'ResSFL']
 
 # LLM attacks
-INVERSION_LLM = ["VanillaModelInversion_WhiteBox", "VanillaModelInversion_WhiteBox_test","DLG_LLM",\
-"VanillaModelInversion_BlackBox", "WhiteBoxInversion","BiSR",\
-"VanillaModelInversion_WhiteBox_mse","WhiteBoxInversion_mse"]
-LABEL_INFERENCE_LLM = ['ResultReconstruction','BatchLabelReconstruction_LLM','BatchLabelReconstruction_LLM_2slice','DirectLabelScoring_LLM','DirectionbasedScoring_LLM','NormbasedScoring_LLM']
-
+INVERSION_LLM = ["VanillaModelInversion_WhiteBox", "VanillaModelInversion_BlackBox", "WhiteBoxInversion","BiSR"]
+LABEL_INFERENCE_LLM = ['BatchLabelReconstruction_LLM','DirectLabelScoring_LLM','DirectionbasedScoring_LLM','NormbasedScoring_LLM']
+RESULR_RECONSTRUCTION_LLM = ['ModelCompletion_LLM']
 
 
 def load_llm_configs(config_dict):
@@ -898,6 +896,8 @@ def do_load_basic_configs_llm(config_dict, args):
     args.feature_inference_index = []
     args.inversion_list = []
     args.inversion_index = []
+    args.reconstruction_list = []
+    args.reconstruction_index = []
     args.apply_attack = False
     if 'attack_list' in config_dict:
         if len(config_dict['attack_list']) > 0:
@@ -917,6 +917,11 @@ def do_load_basic_configs_llm(config_dict, args):
                         args.inversion_list.append(_name)
                         args.inversion_index.append(ik)
                     
+                    elif _name in RESULR_RECONSTRUCTION_LLM:
+                        args.reconstruction_list.append(_name)
+                        args.reconstruction_index.append(ik)
+                    
+                    
                     args.all_attack_list.append(_name)
                 else:
                     assert 'name' in attack_config_dict[str(ik)], 'missing attack name'
@@ -926,26 +931,24 @@ def do_load_basic_configs_llm(config_dict, args):
         print('===== No Attack ======')
 
 
-    ATTACKS_NEED_FIRST_EPOCH_STATE = ['BatchLabelReconstruction_LLM','BatchLabelReconstruction_LLM_2slice',\
+    ATTACKS_NEED_FIRST_EPOCH_STATE = ['BatchLabelReconstruction_LLM',\
     'DirectLabelScoring_LLM','DirectionbasedScoring_LLM','NormbasedScoring_LLM']
     args.need_first_epoch_state = 0
     if len(list(set(ATTACKS_NEED_FIRST_EPOCH_STATE)&set(args.all_attack_list))) > 0:
         args.need_first_epoch_state = 1
 
-    ATTACKS_NEED_FINAL_EPOCH_STATE = ["VanillaModelInversion_WhiteBox", "VanillaModelInversion_WhiteBox_test",\
-    "VanillaModelInversion_BlackBox", "WhiteBoxInversion","DLG_LLM","BiSR",\
-    "VanillaModelInversion_WhiteBox_mse","WhiteBoxInversion_mse","ResultReconstruction"]
+    ATTACKS_NEED_FINAL_EPOCH_STATE = ["VanillaModelInversion_WhiteBox",\
+    "VanillaModelInversion_BlackBox", "WhiteBoxInversion","DLG_LLM","BiSR","ModelCompletion_LLM"]
     args.need_final_epoch_state = 0
     if len(list(set(ATTACKS_NEED_FINAL_EPOCH_STATE)&set(args.all_attack_list))) > 0:
         args.need_final_epoch_state = 1
     
-    ATTACKS_NEED_TEST_SAMPLE_STATES = ["ResultReconstruction"]
+    ATTACKS_NEED_TEST_SAMPLE_STATES = ["ModelCompletion_LLM"]
     args.need_test_sample_states = 0
     if len(list(set(ATTACKS_NEED_TEST_SAMPLE_STATES)&set(args.all_attack_list))) > 0:
         args.need_test_sample_states = 1
     
-    
-    ATTACKS_NEED_GENERATION_STATE = ["ResultReconstruction"]
+    ATTACKS_NEED_GENERATION_STATE = ["ModelCompletion_LLM"]
     args.need_generation_state = 0
     if len(list(set(ATTACKS_NEED_GENERATION_STATE)&set(args.all_attack_list))) > 0:
         args.need_generation_state = 1
@@ -992,6 +995,8 @@ def load_attack_configs(config_file_name, args, index):
     args.apply_nl = False  # noisy label attack
     args.apply_ns = False  # noisy sample attack
     args.apply_mf = False  # missing feature attack
+    
+    args.apply_mc = False  # model completion attack
 
     # No Attack
     if index == -1:
@@ -1047,6 +1052,11 @@ def load_attack_configs(config_file_name, args, index):
         
         elif args.attack_name in LABEL_INFERENCE_LLM:
             args.attack_type = 'label_inference'
+
+        elif args.attack_name in RESULR_RECONSTRUCTION_LLM:
+            args.attack_type = 'result_reconstruction'
+            if 'modelcompletion' in args.attack_name.casefold():
+                args.apply_mc = True
 
         else:
             assert 0, 'attack type not supported'

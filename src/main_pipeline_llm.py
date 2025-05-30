@@ -153,6 +153,52 @@ def evaluate_label_inference_attack(args):
         append_exp_res(args.exp_res_path, exp_result)
     # return rec_rate
 
+def evaluate_result_reconstruction_attack(args):
+    for index in args.reconstruction_index:
+        torch.cuda.empty_cache()
+        set_seed(args.current_seed)
+
+        args = load_attack_configs(args.configs, args, index)
+        print('======= Test Attack', index, ': ', args.attack_name, ' =======')
+        print('attack configs:', args.attack_configs)
+
+        if args.basic_vfl != None:
+            vfl = args.basic_vfl
+            main_tack_acc = args.main_acc_noattack
+        else:
+            # args.need_auxiliary = 1
+            args = load_parties_llm(args)
+            vfl = MainTaskVFL_LLM(args)
+            vfl.init_communication()
+
+            if args.pipeline == 'finetune':
+                _exp_result, metric_val, training_time = vfl.train_vfl()
+            elif args.pipeline == 'pretrained':
+                _exp_result, metric_val = vfl.inference(need_save_state = args.need_final_epoch_state)
+            main_tack_acc = metric_val
+            print(_exp_result)
+
+        print('=== Begin Attack ===')
+        training_time = vfl.training_time
+
+        rec_rate , attack_total_time= vfl.evaluate_attack()
+        if isinstance(rec_rate, dict):
+            exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|"+\
+            f"seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|"+\
+            f"num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|early_stop_threshold={args.early_stop_threshold}|final_epoch={vfl.final_epoch}|"+\
+            f"headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|"+\
+            f"local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|"+\
+            f"main_task_acc={main_tack_acc}"
+            for key, value in rec_rate.items():
+                _r = f"|{key}={value}"
+                exp_result = exp_result + _r
+            exp_result = exp_result + f"|training_time={training_time}|attack_time={attack_total_time}|"
+        else:
+            exp_result = f"{args.attack_name}|{args.pad_info}|finetune={args.finetune_name}|seed={args.current_seed}|K={args.k}|bs={args.batch_size}|LR={args.main_lr}|num_class={args.num_classes}|Q={args.Q}|epoch={args.main_epochs}|early_stop_threshold={args.early_stop_threshold}|final_epoch={vfl.final_epoch}|headlayer={args.head_layer_trainable}|model_slice_trainable={args.model_slice_trainable}|local_encoders_num={args.local_encoders_num}|local_tail_encoders_num={args.local_tail_encoders_num}|vfl_model_slice_num={args.vfl_model_slice_num}|main_task_acc={main_tack_acc}|rec_rate={rec_rate}|training_time={training_time}|attack_time={attack_total_time}|"
+        
+        print(exp_result)
+        append_exp_res(args.exp_res_path, exp_result)
+        
 
 def get_cls_ancestor(model_type: str = 'qwen2', architecture: str = 'CLM'):
     if architecture == 'MM':

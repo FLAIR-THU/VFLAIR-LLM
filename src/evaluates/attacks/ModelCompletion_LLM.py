@@ -29,7 +29,7 @@ from load.LoadModels import load_llm_slice
 def cross_entropy_for_onehot(pred, target):
     return torch.mean(torch.sum(- target * pred, 1))
 
-class ResultReconstruction(Attacker):
+class ModelCompletion_LLM(Attacker):
     def __init__(self, top_vfl, args):
         super().__init__(args)
         self.args = args
@@ -155,10 +155,6 @@ class ResultReconstruction(Attacker):
             completed_model_head_path = self.args.model_folder+'/completed_model_head/'
             completed_model_tail_path = self.args.model_folder+'/completed_model_tail/'
             
-            # if os.path.exists(completed_model_head_path) and os.path.exists(completed_model_tail_path):
-            #     dummy_model_tail = load_llm_slice(args=self.args,slice_index = 2,model_path=completed_model_head_path).to(self.args.device)
-            #     dummy_model_head = load_llm_slice(args=self.args,slice_index = 0,model_path=completed_model_tail_path).to(self.args.device)
-            # else:
             if self.origin_model_path:
                 dummy_model_tail = load_llm_slice(args=self.args,slice_index = 2,model_path=self.origin_model_path).to(self.args.device)
                 dummy_model_head = load_llm_slice(args=self.args,slice_index = 0,model_path=self.origin_model_path).to(self.args.device)

@@ -29,7 +29,7 @@ from evaluates.attacks.BatchLabelReconstruction_LLM import BatchLabelReconstruct
 # from evaluates.attacks.DirectionbasedScoring_LLM import DirectionbasedScoring_LLM
 from evaluates.attacks.NormbasedScoring_LLM import NormbasedScoring_LLM
 
-from evaluates.attacks.ResultReconstruction import ResultReconstruction
+from evaluates.attacks.ModelCompletion_LLM import ModelCompletion_LLM
 
 
 

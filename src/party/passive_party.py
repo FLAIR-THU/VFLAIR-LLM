@@ -512,7 +512,7 @@ class PassiveParty_LLM(Party_LLM):
                         pickle.dump(self.all_words, f)
                     np.save(santext_dict_path+'/prob_matrix.npy', self.prob_matrix)
                     
-                    
+    
     def prepare_data(self, args, index):
         print('---- Prepare Dataset ----')
         if not args.dataset:

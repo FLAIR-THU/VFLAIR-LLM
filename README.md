@@ -1,188 +1,365 @@
-# VFLAIR
-## News
-- [06-23-2024] We released [VFLAIR-LLM](./src/README_LLM.md) in the `llm` branch and [distributed version](https://github.com/FLAIR-THU/VFLAIR/tree/main/src/framework), a Split Learning LLM Framework developed based on VFLAIR! 
- ![Overview](usage_guidance/figures/VFLAIRLLM_overview.png)
- 
-VFLAIR-LLM is a comprehensive Split Learning of LLM(SL-LLM) framework that supports easy LLM model partition on various LLM types, multiple LLM tasks/datasets and various attack&defense algorithms. The framework aims to provide a privacy-preserving VFL pipeline for LLM usage. For further details, please refer to `./src/README_LLM.md/`.
+# README
 
-- [01-16-2024] Our Paper [VFLAIR](https://openreview.net/forum?id=sqRgz88TM3) has been accepted by ICLR2024!
+## Introduction
 
- ![Overview](usage_guidance/figures/overview.png)
+In VFLAIR-LLM, we additionally provide support for **Large Language Models (LLM)** inference and fine-tuning using private data, where private data can not be exposed directly to LLM due to privacy and regulation constraints. To overcome this challenge, we leverage VFLAIR to split the LLM into Local and Global sub-models to enable local inference/fine-tuning. In addition, we evaluate the risks of exposing intermediate results and implementing defenses. See figure below for VFLAIR-LLM architecture. 
 
-## Basic Introduction
+The code base is developed based on VFLAIR(https://github.com/FLAIR-THU/VFLAIR-LLM), shares its configuration design, party loading module, and basic communication functions, but focuses on LLM-centered datasets and tasks, fine-tuning strategies, and attack and defense evaluations. Figure below demonstrates all the main functions supported by VFLAIR-LLM, including model split, LLM models, tasks and datasets, attack and defense strategies.
+ ![LLM_overview](usage_guidance/figures/VFLAIRLLM_overview.png)
 
-  VFLAIR is a general, extensible and light-weight VFL framework that provides vanilla VFL training and evaluation process simulation alonging with several effective communication improvement methods as well as attack and defense evaluations considering data safety and privacy. Aside from NN serving as local models for VFL systems, tree-based VFL is also supported.
-
-VFLAIR provides simulation of the vanilla VFL process containing forward local model prediction transmits, backward gradient transmits as well as local and global model updates.
+- **SL-LLM Scenario**: In VFLAIR-LLM, we propose a split learning for LLM scenario describing 2 parties jointly train a LLM. The Model Party holds the global part of the model, representing model provider with abundant computational resources. The Data Party holds the local part of LLM, representing companys or institutes with limited resources. In VFLAIR-LLM, two model partition setting is provided. Detailed scenario description, including model forward and backward calculation, is demonstrated in the following figure.
+<div align=center>
+<img src="usage_guidance/figures/2_slice_architect.png" width="40%">                           
 
 
-  * **Communication Library**: multiple communication protocols is provided for improving the effectiveness of VFL training process.
-    * **FedBCD** ([paper](https://ieeexplore.ieee.org/abstract/document/9855231/)) 
-    * **CELU** ([paper](https://arxiv.org/abs/2207.14628)) 
-    * **Quantization** ([paper](https://arxiv.org/abs/2206.08330)) 
-    * **Topk-Sparsification** ([paper](https://arxiv.org/abs/2206.08330)) 
-  * **Attack&Defense Library**: 
-      * Four attack types are included in VFLAIR as examples for training-decoupled attack and training-time attack separately. In each attack type, multiple attack is available for use:
-        * **Label Inference(LI)** 
-          * Batch-level Label Inference ([paper](https://ieeexplore.ieee.org/abstract/document/9833321/))/Direct Label Inference ([paper](https://ieeexplore.ieee.org/abstract/document/9833321/))
-          * Norm-based Scoring (NS) ([paper]([[2102.08504\] Label Leakage and Protection in Two-party Split Learning (arxiv.org)](https://arxiv.org/abs/2102.08504)))/Direction-based Scoring (DS) ([paper]([[2102.08504\] Label Leakage and Protection in Two-party Split Learning (arxiv.org)](https://arxiv.org/abs/2102.08504)))
-          * Passive Model Completion (PMC) ([paper]([Label Inference Attacks Against Vertical Federated Learning | USENIX](https://www.usenix.org/conference/usenixsecurity22/presentation/fu-chong)))/Active Model Completion (AMC) ([paper]([Label Inference Attacks Against Vertical Federated Learning | USENIX](https://www.usenix.org/conference/usenixsecurity22/presentation/fu-chong)))
-        * **Feature Reconstruction(FR)**
-          * Generative Regression Network (GRN)([paper]([[2010.10152\] Feature Inference Attack on Model Predictions in Vertical Federated Learning (arxiv.org)](https://arxiv.org/abs/2010.10152)))
-          * Training-based Back Mapping by model inversion (TBM)([paper]([[2205.04007v1\] ResSFL: A Resistance Transfer Framework for Defending Model Inversion Attack in Split Federated Learning (arxiv.org)](https://arxiv.org/abs/2205.04007v1)))
-        * **Targeted Backdoor(TB)**
-          *  Label replacement Backdoor ([paper](https://ieeexplore.ieee.org/abstract/document/9833321/)) 
-        * **Non-Targeted Backdoor(NTB)**
-          * Noisy-Sample Backdoor (NSB)([paper](https://ieeexplore.ieee.org/abstract/document/9833321/)) 
-          * Missing Feature (MF)([paper]([Liu2021.pdf (neurips2021workshopfl.github.io)](https://neurips2021workshopfl.github.io/NFFL-2021/papers/2021/Liu2021.pdf))) 
-      * Several basic defense methods as well as emerging defense strategies are provided in VFLAIR and can be flexibly applied in VFL training and testing flow. Defense methods provided in VFLAIR is listed below. Detail information of these defenses are included in `/src/configs/README.md`.
-        * **Differentail Privacy (Laplace-DP and Gaussian-DP)** ([paper](https://www.google.com.au/books/edition/Theory_and_Applications_of_Models_of_Com/JHFqCQAAQBAJ?hl=en&gbpv=1&pg=PA1&printsec=frontcover))
-        * **Gradient Sparsification (GS)** ([paper](https://openreview.net/forum?id=SkhQHMW0W))
-        * **Confusional AutoEncoder (CAE) & DiscreteSGD enhanced CAEï¼ˆDCAE)** ([paper](https://ieeexplore.ieee.org/abstract/document/9833321/))
-        * **Mutual Information regularization Defense(MID)** ([paper](https://arxiv.org/abs/2301.01142))
-        * **GradPerturb(GPer)** ([paper]([[2203.02073\] Differentially Private Label Protection in Split Learning (arxiv.org)](https://arxiv.org/abs/2203.02073)))
-        * **Distance Correlation(dCor)** ([paper]([[2203.01451\] Label Leakage and Protection from Forward Embedding in Vertical Federated Learning (arxiv.org)](https://arxiv.org/abs/2203.01451)))
-    * Defense Capability Score ——a comprehensive metric for assessing defense ability is also introduced.
-  * **Dataset Library**: Multiple datasets are provided along with VFLAIR.
-  * **Model Library**: Multiple models are provided along with VFLAIR and can be easily user-defined.
-  * Other Functions
-      * Tree-based VFL is also proved in the code with XGBoost and RandomForest supported. See `./src/configs/README_TREE.md` for detailed description. In adition, we currently support three defense methods against label leakage attack.
-        * **LP-MST** ([paper](https://arxiv.org/abs/2102.06062))
-        * **Grafting-LDP** ([paper](https://arxiv.org/abs/2307.10318))
-        * **ID-LMID** ([paper](https://arxiv.org/abs/2307.10318))
-    *  LLM-based VFL implementation is also provided with Bert, GPT2 and Llama supported. Please refer to `./src/configs/README_LLM.md` for detailed description.
+<img src="usage_guidance/figures/3_slice_architect.png" width="40%">
+</div>
+
+- **Two Model Split Method for LLM**: 
+
+  - **Head-Tail(HT) Partition**: In this setting, we split a full LLM into Model Head(at passive party) and Model Tail(at active party). Defaultly , the LLM between the first and second layer(encoder or decoder), which can be user-defined through config files.
+
+    - Model Head: Embedding Layer + $n_{head}$ encoder/decoders
+    - Model Tail: the rest $n_{tail}$ encoder/decoders + Head Layers for down-stream tasks
+  - **Head-Body-Tail(HBT) Partition**: In this setting, we split a full LLM into 3 parts: Model Head(at passive party), Model Body(at active party) and Model Tail(at passive party). 
+    - Model Head: Embedding Layer + $n_{head}$ encoder/decoders
+    - Model Body: the middle $n_{body}$ encoder/decoders
+    - Model Tail: the rest $n_{tail}$ encoder/decoders + Head Layers for down-stream tasks
+  - For detailed implementation of LLM model split, please refer to [Detailed Tutorial] section for further guidance. Specifc partition point($n_{head}/n_{body}/n_{tail}$) can be user defined through configuration files.
+  - Figure below describes the LLM model partition method.
+
+<div align=center>
+<img src="usage_guidance/figures/model_partition.png" width="60%">
+</div>
+
+- **Three Model Architects and corresponding task types**: Currently VFLAIR supported the following model architect. Each model architect can be used in its corresponding downstream tasks and datasets.
+  - **CLS models** output probability vectors for the classification, which is used in normal Classification tasks. When the number of classes is reduced to 1, the model only output a single value which can be used in Regression tasks.
+  - **TQA model**s output the starting and ending positions of the answer texts, which can be used in Text-span based Question Answering datasets like SQuAD. (Note that different from Generation-based QA tasks, TQA provides a piece of text for the model to find the answer in while GQA is a proper generation task)
+  - **CLM models** output a word vector representing the probability of each token in the next position, which can be used in Next Token Prediction tasks like Lambada. When the model is called recursively to continuously generate the next word, the model can be used for a wider range of generative tasks like Text Generation/Code Generation/Math Problem Solving etc. Similar to CLM models, MM models accepts multi-modal data as inputs, which can be used in various Multi Model tasks like VQA. 
+
+| Model Architect                             | Corresponding Transformer Class                              | Task Type                                                    | Dataset                                      |
+| ------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | -------------------------------------------- |
+| CLS<br>(Classification)                     | XXXforSequenceClassification<br>e.g. transformer.BertforSequenceClassification | Sequence Classification<br>Regression                        | GLUE Benchmark<br>Yelp                       |
+| TQA<br>(Text-span based Question Answering) | XXXforQuestionAnswering<br/>e.g. transformer.BertforQuestionAnswering | Text-span based Question Answering                           | SQuAD                                        |
+| CLM<br>(Causal LM - generation)             | XXXforCausalLM<br/>e.g. transformer.GPTLMhead                | Next Token Prediction<br>Text Generation<br>Code Generation<br>Math Problem Answering | Lambada/<br>Alpaca/Dolly/CodeAlpaca/<br>MATH/GMS8K |
+| MM<br>(MultiModality - generation)             | /                | Visual Question Answering | TextVQA |
 
 
+- **Multiple Model Base**: The following LLMs are supported in VFLAIR.
 
-## Code Structure
+| **Structure type** |                      **Supported LLMs**                      |
+| :----------------: | :----------------------------------------------------------: |
+|  **Encoder-only**  |                        Bert   Roberta   Albert                     |
+|  **Decoder-only**  | GPT2  Llama2 Baichuan2 ChatGLM2 Qwen2 Gemma Falcon  Mamba Mistral DeepseekV3 Qwen2-VL MiniCPM |
+|  **Encoder-Decoder**  | T5 |
 
- ![Framework Structure](usage_guidance/figures/pipeline.png)
-
-The VFLAIR framework is structured around four key functional modules:
-
-- **Config Module:** Used for entering configuration parameters that define a VFL task.
-- **Load Module:** Serves as a converter to translate configurations into actual code behavior. It is responsible for initializing datasets and parties (basic units of a VFL task).
-- **Train & Evaluation Module:** Executes the final VFL training and model evaluation. It also incorporates user-defined attack/defense methods and communication protocols.
-- **Metrics Module:** Converts raw experiment results into higher-level metrics such as DCS for benchmarking.
-
-<!-- 
-```
-VFLAIR
-├── src
-│   ├── evaluates           
-│   |   ├── attacks                    # Attack Simulator,Implementation of attacks
-│   │   |   ├── ...                    # Multiple Attack Implementation
-│   |   ├── defenses                   # Implementation of defenses
-│   │   |   ├── Trained CAE momdels    # Trained encoder-decoder models for CAE and DCAE
-│   │   |   ├── ...                    # Defense Implementation & Functions
-│   |   ├── MainTaskVFL                # Pipeline for BasicVFL & VFL with LI/FR/NTB
-│   |   ├── MainTaskVFLwithBackdoor    # Pipeline for VFL with TB     
-│   |   ├── MainTaskVFLwithNoisySample # Pipeline for VFL with NTB-NSB    
-│   |   ├── MainTaskTVFL               # Pipeline for Tree-based VFL
-│   ├── load                           # Load Configurations into training pipeline
-│   |   ├── LoadConfigs.py             # Load basic parameters   
-│   |   ├── LoadDataset.py             # Load dataset and do data partition
-│   |   ├── LoadModels.py              # Initialize models
-│   |   ├── LoadParty.py               # Initialized parties with data and model
-│   |   ├── LoadTreeConfigs.py         # Load basic parameters   
-│   |   ├── LoadTreeParty.py           # Initialized parties with data and model
-│   ├── configs                        # Customizable configurations    
-│   |   ├── standard_configs           # Standard configurations for NN-based VFL
-│   │   │   ├── ...   
-│   |   ├── active_party_attack        # Standard configurations for active party attack
-│   │   │   ├── ...   
-│   |   ├── passive_party_attack       # Standard configurations for passive party attack
-│   │   │   ├── ...   
-│   |   ├── tree                       # Standard configurations for tree-based VFL 
-│   │   │   ├── ...   
-│   |   ├── README.md                  # Guidance for configuration files 
-│   |   ├── README_TREE.md             # Guidance for testing tree-based VFL
-│   ├── models                         # bottom models & global models     
-│   |   ├── model_parameters           # Some pretrained models
-│   │   ├── ...                        # Implemented bottome models & global models
-│   ├── party                          # party simulators   
-│   |   ├── ...
-│   ├── dataset                        # Dataset preprocessing functions       
-│   |   ├── ...
-│   ├── utils                          # Basic functions and Customized functions for attack&defense
-│   |   ├── ...
-│   ├── exp_result                     # Store experiment results
-│   |   ├── ...
-│   ├── metrics                        # Benchmark and Defense Capability Score (DCS) definition
-│   |   ├── ...
-│   ├── main_pipeline.py               # Main VFL(launch this file for NN based VFL)  
-│   ├── main_tree.py                   # Main Tree-based VFL(launch this file for tree-based VFL)  
-├── usage_guidance                     # Detailed Usage  
-│   ├── figures
-│   |   ├── ...
-│   ├── Add_New_Algorithm.md           # Guidance on how to add user defined attacks and defenses algorithms
-│   ├── Dataset_Usage.md               # Guidance on how to achieve dataset for experiments
-├── README.md
-├── requirements.txt                   # installation requirement, we mainly use pytorch3.8 for experiments
-``` -->
-
-
-## Quick Start
-
-### Zero. Environment Preparation
-
-1. Download code files and install all the necessary requirements.
-
-   ```shell
-     # clone the repository
-     $ git clone <link-to-our-github-repo>
-     
-     # install required packages
-     $ conda create -n VFLAIR python=3.8
-     $ conda activate VFLAIR
-     $ pip install --upgrade pip
-     $ cd VFLAIR
-     $ pip install -r requirements.txt
-     
-     # install cuda related pytorch
-     $ pip install torch==1.10.1+cu113 torchvision==0.11.2+cu113 torchaudio==0.10.1 -f https://download.pytorch.org/whl/cu113/torch_stable.html
-   ```
-
-  2. New datasets, except MNIST, CIAFR10 and CIAFR100, can be put under `../../share_dataset/` folder on your device.
-
-### One. Basic Benchmark Usage: A Quick Example
-
-1. Customize your own configurations.
-   * Create a json file for your own evaluation configuration in `/src/configs` folder. Name it whatever you want, like `my_configs.json`.
-   * `/src/configs/basic_configs.json` is a sample configuration file. You can copy it and modify the contents for your own purpose.
-   * For detail information about configuration parameters, see `/src/configs/README.md` for detail information.
-
-2. Use `cd src` and `python main_pipeline.py --gpu 0 --configs <your_config_file_name>` to start the evaluation process. A quick example can be launched by simplying using `cd src` and `python main_pipeline.py` (a vanilla VFL training and testing process is launched). For more detail descriptions, see Section Two.
-
-### Two. Advanced Usage: Implement Your Own Algorithm
-
-- How to add new attack/defense?
-  - `usage_guidance/Add_New_Evaluation.md`
-- Dataset Usage?
-  - `usage_guidance/Dataset_Usage.md`
-- How to write Configuration files and how to specify hyper-parameters for evaluation?
-  - `src/config/README.md` and `src/config/README_TREE.md`
-- What is Defense Capability Score (DCS)?
-  - Refer to `src/metrics` for details.
+- **Two Pipelines: Finetune&Inference** : Currently we support the following pipelines for LLM usage
+  - Inference: In this pipeline, user can load their own/third-party pretrained LLMs into the framework and do direct inference on the test dataset.
+  - Finetune: In this pipeline, user can finetune their own LLM on a pretrained or raw LLM on a downstream dataset
 
 
 
+## Structure
+<div align=center>
+<img src="usage_guidance/figures/VFLAIR_LLM_code_structure.png" width="80%">
+</div>
 
-## Contributing
+VFLAIR-LLM is developed under the VFLAIR framework, sharing the same framework structure as described in [VFLAIR Framework Strcuture][https://github.com/FLAIR-THU/VFLAIR/blob/main/README.md]. The overall strcutrue can be arranged into the following modules:
 
-We **greatly appreciate** any contribution to VFLAIR! Also, we'll continue to improve our framework and documentation to provide more flexible and convenient usage.
+- **Config Module**
 
-Please feel free to contact us if there's any problem with the code base or documentation!
+  - refer to `./src/config/Readme_LLM.md` for detailed guidance about configuration file format.
 
-## Citation
+- **Load Module**
 
-If you are using VFLAIR for your work, please cite our paper with:
+  - **Load Party** - `./src/party/llm_party`
+
+    Based on the original class 'Party', we rewrite it as Party_LLM() to cater the need of LLM finetuning&inference.
+
+    - **Load Dataset** - `./src/dataset/party_dataset`
+      - Process and generate dataset. 
+    - **Load Model** - `./src/models/llm_model`
+      - In this file , we rewrite the model classes from transformer to implement model split for LLMs. Detialed model partition method can be user-defined through config files.
+
+- **Train & Evaluate Module**
+
+  - **Finetune&Inference Pipelines** - `./src/evaluate/MainTaskVFL_LLM`
+    - Provide Class MainTaskVFL_LLM() to finetune your own LLM or evaluate a pretrained LLM.
+      - LoRA algorithm is also provided for fine-tuning
+  - **Attack&Defense**: 
+    - Attacks：
+      - Model Inversion Attacks:
+        - VanillaModelInversion - WhiteBox([paper]([Model Inversion Attacks that Exploit Confidence Information and Basic Countermeasures | Proceedings of the 22nd ACM SIGSAC Conference on Computer and Communications Security](https://dl.acm.org/doi/10.1145/2810103.2813677))) 
+        - Relaxation-based White Box Inversion([paper]([2004.00053\] Information Leakage in Embedding Models (arxiv.org)](https://arxiv.org/abs/2004.00053)))
+        - Bi-directional Semi-white-box Reconstruction([paper](https://arxiv.org/abs/2409.00960))
+      - Label Inference Attacks
+        - Batch-level Label Inference ([paper](https://ieeexplore.ieee.org/abstract/document/9833321/))
+        - Norm-based Scoring (NS) ([paper](https://arxiv.org/abs/2102.08504))
+
+    - Defense：
+      - Differential Privacy([paper](https://ieeexplore.ieee.org/document/9152761))
+      - Adversarial Training - Privacy Preserving Mapping([paper](https://ieeexplore.ieee.org/document/9152761))
+      - Mutual Information Defense([paper](https://arxiv.org/abs/2301.01142))
+      - Sparsification([paper](https://openreview.net/forum?id=SkhQHMW0W))
+      - TextObfuscator([paper](https://aclanthology.org/2023.findings-acl.337/))
+      - SanText([paper](https://aclanthology.org/2021.findings-acl.337/))
+      - CusText([paper](https://aclanthology.org/2023.findings-acl.355/))
+      - RanText([paper](https://arxiv.org/abs/2310.12214))
+      - Split-and-Denoise([paper](https://arxiv.org/abs/2310.09130))
+
+  - **Communication**: currently we only provide FedSGD for SL-LLM communication.
+
+- **Metrics Module**: we provide the following metris for each task type
+  - Classification: accuracy 
+  - Regression: mse / pearson corr
+  - Next Token Prediction: accuracy
+  - Text Generation: rouge2/code-bleu...
+  - Math Problem Answering: accuracy score
+
+
+## A Quick Start
+
+1. Download your LLM model file into `././LLM_Models/`
+
+- Your can define your model file in the config files
+
+2. Write your configuration file as instructed in `./src/config/Readme_LLM.md` 
+
+3. Launch your task with:
 
 ```
-@article{zou2023vflair,
-  title={VFLAIR: A Research Library and Benchmark for Vertical Federated Learning},
-  author={Zou, Tianyuan and Gu, Zixuan and He, Yu and Takahashi, Hideaki and Liu, Yang and Ye, Guangnan and Zhang, Ya-Qin},
-  journal={arXiv preprint arXiv:2310.09827},
-  year={2023}
+python main_pipeline_llm.py --configs Your_Config_File
+```
+
+
+
+## Detailed Tutorial
+
+### How to write a configuration file for SL-LLM?
+
+In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can easily implement self-defined promptin
+
+#### Basic Parameters
+
+```json
+"epochs": 100,
+"lr": 0.0005,
+"k": 2,
+"batch_size": 1,
+"pipeline": "finetune",
+```
+- "pipeline": finetune/pretrained
+  - whether the pipeline is to finetune a base model/another pretrained model checkpoint or using a pretrained model directly for inference
+
+
+#### Tokenizer
+
+```json
+"tokenizer":{
+        "padding": "max_length",
+        "padding_type": "outside",
+        "pad_token": "[PAD]",
+        "truncation": "longest_first",
+        "max_length": 30,
+        "padding_side": "left",
+        "add_special_tokens": 1
 }
 ```
+- "padding": padding method 
+  - do_not_pad / max_length / longest
+- “pad_token”: the token used for padding, usually [PAD]
+- "padding_type": add [PAD] inside special tokens like [CLS] [SEP] or outside them
+- "max_length": max padding length
+- "add_special_tokens": whether to add special tokens like [CLS] [SEP]
+
+#### Communication Protocol
+
+> Currently only FedSGD is supported for VFLAIR-LLM
+
+```json
+"communication":{
+    "communication_protocol": "FedSGD",
+    "iteration_per_aggregation": 1
+}
+```
+
+### Fine-tune Strategy
+
+```json
+"finetune_configs":{
+        "name":"Vanilla",
+        "configs":{}
+  }
+
+"finetune_configs":{
+        "name":"LoRA",
+        "configs":{
+            "r":4,  
+            "lora_alpha":32, 
+            "lora_dropout":0.1
+        }
+  }
+```
+
+- "name": 'Vanilla'&'LoRA'
+  - name of your finetuning strategy. Currently we provide 2 strategy of 'Vanilla' and 'LoRA'. The LoRA algorithm is implemented with the PEFT([code base]([Mangrulkar, S., Gugger, S., Debut, L., Belkada, Y., Paul, S., & Bossan, B. (2022). *PEFT: State-of-the-art Parameter-Efficient Fine-Tuning methods*. https://github.com/huggingface/peft. https://github.com/huggingface/peft)) framework for easy usasge.
+- "configs": detailed configuration for LoRA algorithms, name of the parameters is the same as in PEFT framwork.
+
+#### Dataset
+```json
+"dataset":{
+    "dataset_name": "SQuAD",
+    "num_classes": 1,
+    "n_shot": 1
+}
+"dataset": {
+      "dataset_name": "yelp-polarity",
+        "num_classes": 5
+}
+"dataset":{
+        "dataset_name": "GMS8K"
+},
+```
+- "dataset": the dataset for experiments
+  - "dataset_name": name of the dataset
+  - "num_classes": number of classes for classification experiments. defaultly set to 1 for other tasks.
+  - "n_shot": Prompt generation method can be user-defined through this parameter. n_shot represents the number of shots needed for prompt generation
+    - e.g n_shot=0[zero-shot]  n_shot=1[one-shot]
+
+#### Model Parameters
+
+> Currently only FedSGD is supported for VFLAIR-LLM
+
+```json
+"model_list":{
+    "name": "textattackbert-base-uncased-SST-2",
+    "model_type": "Bert",
+    "max_sequence": 512,
+    "kwargs_model_loading":{
+    },
+    "0": {
+      "path": "path/textattackbert-base-uncased-SST-2",
+
+        "head":{
+            "trainable": 1,
+            "embedding_trainable": 0,
+            "encoder_trainable": 0,
+            "encoder_trainable_ids":[]
+        },
+        "tail":{
+            "trainable": 1,
+            "head_layer_trainable": 0,
+            "encoder_trainable": 0,
+            "encoder_trainable_ids":[]
+        }
+    },
+    "1": {
+      "path": "path/textattackbert-base-uncased-SST-2",
+        "body":{
+            "trainable": 1,
+            "encoder_trainable": 0,
+            "encoder_trainable_ids":[]
+        }
+    },
+    "task":{
+        "task_type": "SequenceClassification"
+    },
+    "vfl_model_slice_num": 3,
+    "local_encoders_num": 3,
+    "local_tail_encoders_num": 3
+}
+```
+- "0"/"1": mark party id. In a 2-party setting, "0" refers to data party while 1 refers to model party.
+- "head"/"body"/"tail": mark specifications for each model slice.
+  - "trainable": whether this model slice is trainable or frozen during training.
+    - Detailed trainable parameter settings can be specified through "head_layer_trainable"/"encoder_trainable" etc. However this is generally not needed.
+    - "head_layer_trainable": define whether we shall freeze the head layer paramaters or leave it open for finetuning
+    - "encoder_trainable": define whether we shall freeze the encoder/decoder paramaters or leave it open for finetuning. Detailed number of encoder that's trainable is defined in "encoder_trainable_ids".
+    - "embedding_trainable": define whether we shall freeze the embedding layer paramaters or leave it open for finetuning
+- "path": model path
+- "kwargs_model_loading": Other configurations for model loading , specified as same as transformers' `from_pretrained()` function. For example, you can set 'device_map' here.
+- "max_sequence": max length of input acceptable for the model.
+- "task": Definition of task type
+  - "task_type": name of the task type(SequenceClassification...)
+- **model partition params**:
+  - "vfl_model_slice_num": number of partitioned model slices, 2 or 3
+  - "local_encoders_num": number of encoders/decoders allocated to model head
+  - "vfl_model_slice_num": only specified under 3-slice settings to mark the number of encoders/decoders allocated to model tail(at passive party)
+
+#### Attack
+
+```json
+"attack_list": {
+        "0":{
+            "name": "VanillaModelInversion_WhiteBox",
+            "parameters": {
+                "party": [1],
+                "lr": 0.01,
+                "epochs": 100,
+                "batch_size": 32
+            }
+        }
+}
+```
+- "name": the name for the attack
+- "party": attacker party id
+
+#### Defense
+
+```json
+"defense": {
+        "name": "AdversarialTraining",
+        "parameters": {
+            "party": [0],
+            "adversarial_model": "Mapping_MLP3",
+            "adversarial_model_lr": 0.05,
+            "imagined_adversary": "ImaginedAdversary_MLP3",
+            "imagined_adversary_lr": 0.05,
+            "lambda": 0.5,
+            "seq_length": 30,
+            "embed_dim": 768
+        }
+}
+```
+- "name": name of the defense
+- "parameters": parameters used in constructing the defense, including hyper-parameters, defense model path etc.
+
+
+
+
+### How to add New LLMs?
+
+All models on huggingface can be directly loaded into VFLAIR-LLM as we support the same `.from_pretain(YOUR_MODEL)` API in the framework.
+
+Note that you should identify the type of model pretrained (e.g. CausalLM...) in configuration file first. Models that can be imported with the following API can be used in VFLAIR-LLM:
+
+- AutoModel.from_pretrained()
+- AutoModelorCausalLM.from_pretrained()
+- AutoModelorSequenceClassification.from_pretrained()
+- AutoModelforQuestionAnswering.from_pretrained()
+
+1. Download your model in to `../Your_Model_Path/Your_Model_Name`
+2. Add your model path and name pair into `.src/load/Load_Model.py`
+3. Write a proper configuration file according to tutorial
+4. Launch your task with:
+
+```
+python main_pipeline_llm.py --configs Your_Config_File
+```
+If your LLM is not supported in our current LLM types, Please refer to  `../usage_guidance/How to add a new LLM.md` for more information.
+
+
+### How to add New Datasets?
+
+If you need detailed usage guidance for existent datasets and guidance for adding new datasets , Please refer to  `../usage_guidance/Dataset_Usage.md` for more information.
+
+
+
+## Other Details
+
+### Prompt Generation
+
+In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can easily implement self-defined prompting techniques based on our tutorials.
+
+- **Zero-shot& Few-shots**: Number of  shots used can be alter through the config parameter *n-shot* in configuration files .
+- **User-defined Prompting Method**: In `./src/load/Load_Dataset.py`, we provide function `load_dataset_per_party_llm()` for dataset loading and promp generation. Users can easily alter the prompting method here.

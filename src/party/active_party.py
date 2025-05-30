@@ -37,9 +37,12 @@ class ActiveParty_LLM(Party_LLM):
         self.output_tensors = [{} for i in range(args.k-1)]  # client_number * output embeddings type:dict[int,torch.Tensor]
         self.output_attention_mask = [{} for i in range(args.k-1)]  # client_number * output attention mask type:dict[int,torch.Tensor]
 
+        
         self.pred_received = []
         for _ in range(args.k):
             self.pred_received.append([])
+        
+        # store gradients transmitted to data party
 
         self.global_output = None 
         self.global_output_dict = {} 
@@ -84,6 +87,47 @@ class ActiveParty_LLM(Party_LLM):
         resp = self.first_epoch_state['active_model_body'](**intermediate)
         return resp
 
+    def prepare_optimizer(self,args):
+        if args.apply_mc and self.index in args.attack_configs["party"] and \
+            "malicous_optimizer" in args.attack_configs.keys():
+            ###### Malicious Optimizer/Scheduler for MC ######
+            self.optimizers = {}
+            for i in self.models.keys():
+                trainable_params = list(filter(lambda x: x.requires_grad, self.models[i].parameters()))
+                if len(trainable_params) > 0:
+                    from utils.optimizers import MaliciousSGD, MaliciousAdam
+                    MALICIOUS_OPTIMIZERS = {
+                        "MaliciousSGD": MaliciousSGD,
+                        "MaliciousAdam": MaliciousAdam,
+                    }
+                    optimizer = MALICIOUS_OPTIMIZERS[args.attack_configs["malicous_optimizer"]]\
+                        (trainable_params, lr=args.main_lr)
+                    # optimizer = torch.optim.Adam(trainable_params, lr=args.main_lr)
+                else:
+                    optimizer = None
+                self.optimizers.update({i: optimizer})
+            print(f'party {self.index} malicious optimizer {args.attack_configs["malicous_optimizer"]}:',self.optimizers.keys())
+            
+            scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, end_factor=0.01, total_iters=10)
+            self.lr_schedulers.update({i: scheduler})
+            ###### Malicious Optimizer/Scheduler for MC ######
+            
+        else:
+            super().prepare_optimizer(args)  # Party_llm's prepare_model
+            
+    # def prepare_model(self, args, index):
+    #     super().prepare_model(args, index)  # Party_llm's prepare_model
+        # if args.apply_mc and index in args.attack_configs["party"]:
+        #     # load twin model head
+        #     from load.LoadModels import load_llm_slice
+        #     model_path = args.model_path[0]
+        #     print('MC--Load twin model head from:',model_path)
+        #     self.twin_model_head = load_llm_slice(args=args,slice_index=0,model_path=model_path).to(self.args.device)
+        #     trainable_params = list(filter(lambda x: x.requires_grad, self.twin_model_head.parameters()))
+        #     self.twin_model_head_optimizer = torch.optim.Adam(trainable_params, lr=args.main_lr)
+        #     self.twin_model_head_scheduler = torch.optim.lr_scheduler.LinearLR(self.twin_model_head_optimizer, end_factor=0.01, total_iters=10)
+                
+                
     def prepare_data(self, args, index):
         print('Active Party has no data, only global model')
 
@@ -199,6 +243,7 @@ class ActiveParty_LLM(Party_LLM):
                                     grad_outputs=self.global_gradient.to(_device), retain_graph=True)[0].detach().clone()
         if remote:
             return convert_tensor_to_batch_msg(passive_local_gradient, 'test_logit')
+        
         return passive_local_gradient
     
     def global_backward(self):
@@ -227,7 +272,6 @@ class ActiveParty_LLM(Party_LLM):
         if self.global_model_optimizer != None:
             # trainable layer parameters
             global_model_params = []
-
             global_model_params_name = []
             for name,param in self.models[1].named_parameters():
                 if param.requires_grad:
@@ -270,14 +314,16 @@ class ActiveParty_LLM(Party_LLM):
                 self.weights_grad_a_list = []
                 for client_id in range(self.args.k-1):
                     client_global_gradient = self.global_gradient_dict[client_id].to(self.output_tensors[client_id][1].device)
-                    weights_grad_a = torch.autograd.grad(self.output_tensors[client_id][1],
+                    weights_grad_a = torch.autograd.grad(self.output_tensors[client_id][1], # [bs,seqlen,hs]
                                                             global_model_params, 
-                                                            grad_outputs=client_global_gradient, 
+                                                            grad_outputs=client_global_gradient, # [bs,seqlen,hs]
                                                             allow_unused=True,
                                                             retain_graph=True)
+                    # print('self.output_tensors[client_id][1]:',self.output_tensors[client_id][1].shape)
+                    # print('client_global_gradient:',client_global_gradient)
                     self.weights_grad_a_list.append( list(weights_grad_a) )
-            self.weights_grad_a = tuple( cal_avg_grad(self.weights_grad_a_list) )
             
+            self.weights_grad_a = tuple( cal_avg_grad(self.weights_grad_a_list) )
             for w, g in zip(global_model_params, self.weights_grad_a):
                 if w.requires_grad and g!=None:
                     if w.grad != None:
@@ -286,10 +332,13 @@ class ActiveParty_LLM(Party_LLM):
                         w.grad = g.detach()
 
             self.global_model_optimizer.step()
+                
 
     @property
     def device(self):
         return self.models[1].device
+
+
 
 class ActiveParty(Party):
     def __init__(self, args, index):

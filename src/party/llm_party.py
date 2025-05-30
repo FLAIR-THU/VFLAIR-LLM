@@ -438,11 +438,7 @@ class Party(object):
             if int(_key) == int(model_tail_key): 
                 self.args.generation_config = self.models[_key].generation_config
 
-        # Load Preprocessor [for multimodaolity tasks]
-        if self.index != self.args.k -1 and self.args.task_type == 'MultiModality':
-            print('---- Load vision processor ----')
-            self.prepare_processor(args)
-
+        
         self.args.model_config = result['config']
         self.args.model_dtype = result['model_dtype']
         self.args.config = result['config'] # model config
@@ -451,11 +447,16 @@ class Party(object):
         self.args.model_embedded_dim = result['model_embedded_dim'] 
         self.args.all_encoders_num = result['all_encoders_num'] 
         self.args.global_encoders_num = self.args.all_encoders_num - args.local_encoders_num - args.local_tail_encoders_num
-        print(f'model slices:',self.models.keys())
+        print(f'load model slices:',self.models.keys())
         if args.vfl_model_slice_num==3:
-            print(f'0head-{args.local_encoders_num}/1body-{args.global_encoders_num}/2tail-{args.local_tail_encoders_num}')
+            print(f'model split:{args.local_encoders_num}-{args.global_encoders_num}-{args.local_tail_encoders_num}')
         else:
-            print(f'0head-{args.local_encoders_num}/1tail-{args.global_encoders_num}')
+            print(f'model split:{args.local_encoders_num}-{args.global_encoders_num}')
+
+        # Load Preprocessor [for multimodality tasks]
+        if self.index != self.args.k -1 and self.args.task_type == 'MultiModality':
+            print('---- Load vision processor ----')
+            self.prepare_processor(args)
 
         # Load Optimizer
         print('---- Load Optimizer ----')
