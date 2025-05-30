@@ -1,0 +1,295 @@
+import json
+import pickle
+
+import torch
+from loguru import logger
+
+from framework.database.model.Task import Task
+from framework.protos.message_pb2 import Value
+from party.ICommunication import ICommunication
+from utils import timer, get_total_size
+import math
+
+SPLIT_SIZE = 100
+
+def convert_to_tensor(bytes_data):
+    result = pickle.loads(bytes_data)
+    return result
+
+def convert_to_msg(tensor):
+    result = pickle.dumps(tensor)
+    data_value = Value()
+    data_value.bytes = result
+    return data_value
+
+
+@timer()
+def convert_tensor_to_msg(logits):
+    get_total_size({'tensor': logits})
+    data_value = Value()
+    data_value.tensor.data.shape.extend(logits.shape)
+    data_value.tensor.data.value.extend(logits.flatten().tolist())
+    data_value.tensor.data.dtype = str(logits.dtype)
+    data_value.tensor.requires_grad = logits.requires_grad
+
+    return data_value
+
+
+@timer()
+def convert_tensor_to_batch_msg(logits, key=None):
+    total_size = get_total_size({'tensor': logits})
+    batch_size = int(total_size / SPLIT_SIZE) + 1
+    logger.info(f"split tensor data into {batch_size} parts")
+
+    result = []
+    arr = logits.flatten().tolist()
+    for i in range(batch_size):
+        data_value = Value()
+        data_value.tensor.data.shape.extend(logits.shape)
+        start, end = _compute_range(i, len(arr), batch_size)
+        data_value.tensor.data.value.extend(arr[start:end])
+        data_value.tensor.data.dtype = str(logits.dtype)
+        data_value.tensor.requires_grad = logits.requires_grad
+        if key:
+            result.append({key: data_value})
+        else:
+            result.append(data_value)
+    return result
+
+
+def merge_tensor_data(data_list):
+    data_value = []
+    for i, item in enumerate(data_list):
+        data = item.data.named_values['test_logit']
+        data_value.append(data)
+
+    return merge_data(data_value)
+
+
+def merge_tensor_data2(data_list):
+    data_value = Value()
+    for i, data in enumerate(data_list):
+        if i == 0:
+            data_value.tensor.data.shape.extend(data.tensor.data.shape)
+            data_value.tensor.data.dtype = data.tensor.data.dtype
+            data_value.tensor.requires_grad = data.tensor.requires_grad
+
+        data_value.tensor.data.value.extend(data.tensor.data.value)
+
+    return data_value
+
+
+@timer()
+def convert_msg_to_tensor(msg):
+    dtype = getattr(torch, msg.data.dtype.split(".")[1])
+    logits = torch.tensor(msg.data.value, dtype=dtype)
+    logits = logits.view(torch.Size(msg.data.shape))
+    logits.requires_grad = msg.requires_grad
+    return logits
+
+
+@timer()
+def convert_pred_to_msg(pred_list, key=None):
+    total_size = get_total_size(pred_list)
+    batch_size = int(total_size / SPLIT_SIZE) + 1
+    logger.info(f"split data into {batch_size} parts")
+
+    result = []
+    inputs_embeds = pred_list['inputs_embeds'].flatten().tolist()
+    inputs_embeds_len = len(inputs_embeds)
+
+    attention_mask = None
+    if 'attention_mask' in pred_list and pred_list['attention_mask'] is not None:
+        attention_mask = pred_list['attention_mask'].flatten().tolist()
+
+    position_ids = None
+    if 'position_ids' in pred_list:
+        position_ids = pred_list['position_ids'].flatten().tolist()
+
+    for i in range(batch_size):
+        data_value = Value()
+        data_value.hidden_states.inputs_embeds.shape.extend(pred_list['inputs_embeds'].shape)
+
+        start, end = _compute_range(i, inputs_embeds_len, batch_size)
+        data_value.hidden_states.inputs_embeds.value.extend(inputs_embeds[start:end])
+        data_value.hidden_states.inputs_embeds.dtype = str(pred_list['inputs_embeds'].dtype)
+
+        if attention_mask is not None:
+            data_value.hidden_states.attention_mask.shape.extend(pred_list['attention_mask'].shape)
+
+            start, end = _compute_range(i, len(attention_mask), batch_size)
+            data_value.hidden_states.attention_mask.value.extend(attention_mask[start:end])
+            data_value.hidden_states.attention_mask.dtype = str(pred_list['attention_mask'].dtype)
+            if pred_list['attention_mask'].requires_grad:
+                data_value.hidden_states.requires_grads.append('attention_mask')
+
+        if 'position_ids' in pred_list:
+            data_value.hidden_states.position_ids.shape.extend(pred_list['position_ids'].shape)
+            start, end = _compute_range(i, len(position_ids), batch_size)
+            data_value.hidden_states.position_ids.value.extend(position_ids[start:end])
+
+        data_value.hidden_states.output_hidden_states = False
+        use_cache = pred_list.get('use_cache', False)
+        data_value.hidden_states.use_cache = False if use_cache is None else use_cache
+        if pred_list['inputs_embeds'].requires_grad:
+            data_value.hidden_states.requires_grads.append('inputs_embeds')
+        if key:
+            result.append({key: data_value})
+        else:
+            result.append(data_value)
+
+    return result
+
+
+def merge_data(data_list):
+    if len(data_list[0].tensor.data.value) > 0:
+        return merge_tensor_data2(data_list)
+
+    data_value = Value()
+    for i, data in enumerate(data_list):
+        if i == 0:
+            data_value.hidden_states.inputs_embeds.shape.extend(data.hidden_states.inputs_embeds.shape)
+            data_value.hidden_states.inputs_embeds.dtype = data.hidden_states.inputs_embeds.dtype
+
+            data_value.hidden_states.attention_mask.shape.extend(data.hidden_states.attention_mask.shape)
+            data_value.hidden_states.attention_mask.dtype = data.hidden_states.attention_mask.dtype
+
+            data_value.hidden_states.position_ids.shape.extend(data.hidden_states.position_ids.shape)
+
+            data_value.hidden_states.output_hidden_states = data.hidden_states.output_hidden_states
+            data_value.hidden_states.use_cache = data.hidden_states.use_cache
+            data_value.hidden_states.requires_grads.extend(data.hidden_states.requires_grads)
+
+        data_value.hidden_states.inputs_embeds.value.extend(data.hidden_states.inputs_embeds.value)
+        data_value.hidden_states.attention_mask.value.extend(data.hidden_states.attention_mask.value)
+        data_value.hidden_states.position_ids.value.extend(data.hidden_states.position_ids.value)
+    return data_value
+
+
+def _compute_range(i, total, batch):
+    split_size = math.ceil(total / batch)
+    end = (i + 1) * split_size
+    if end > total:
+        end = total
+    start = i * split_size
+    logger.info(f"total: {total}, batch:{batch}, start:{start}, end:{end}")
+    return start, end
+
+
+@timer()
+def convert_msg_to_pred(pred):
+    dtype = getattr(torch, pred.inputs_embeds.dtype.split(".")[1])
+    inputs_embeds = torch.tensor(pred.inputs_embeds.value, dtype=dtype)
+    inputs_embeds = inputs_embeds.view(torch.Size(pred.inputs_embeds.shape))
+    if 'inputs_embeds' in pred.requires_grads:
+        inputs_embeds.requires_grad = True
+
+    attention_mask = None
+    if len(pred.attention_mask.value) > 0:
+        dtype = getattr(torch, pred.attention_mask.dtype.split(".")[1])
+        attention_mask = torch.tensor(pred.attention_mask.value, dtype=dtype)
+        attention_mask = attention_mask.view(torch.Size(pred.attention_mask.shape))
+        if 'attention_mask' in pred.requires_grads:
+            attention_mask.requires_grad = True
+
+    position_ids = None
+    if len(pred.position_ids.value) > 0:
+        position_ids = torch.tensor(pred.position_ids.value)
+        position_ids = position_ids.view(torch.Size(pred.position_ids.shape))
+
+    cache_position = None
+    if len(pred.cache_position.value) > 0:
+        cache_position = torch.tensor(pred.cache_position.value)
+        cache_position = cache_position.view(torch.Size(pred.cache_position.shape))
+
+    new_dict = {
+        "output_hidden_states": pred.output_hidden_states,
+        "inputs_embeds": inputs_embeds,
+        "attention_mask": attention_mask,
+        "position_ids": position_ids
+    }
+    return new_dict
+
+
+class DistributedCommunication(ICommunication):
+    _client = None
+    _job_id = None
+
+    def __init__(self, client, job_id):
+        self._client = client
+        self._job_id = job_id
+
+    def send_pred_message(self, pred_list, parse_result_fn):
+        task = Task()
+        task.run = "aggregate_remote"
+        task.party = "active"
+        task.job_id = self._job_id
+
+        new_pred = convert_pred_to_msg(pred_list[0])
+
+        task.params = {"grad_enabled": torch.is_grad_enabled()}
+
+        result = self._client.send_batch(task, new_pred)
+        if len(result.hidden_states.inputs_embeds.value) > 0:
+            test_logit = result.hidden_states
+        elif len(result.tensor.data.value) > 0:
+            test_logit = result.tensor
+        else:
+            test_logit = json.loads(result.string)
+
+        if parse_result_fn is not None:
+            return parse_result_fn(test_logit)
+        return test_logit
+
+    def send_global_backward_message(self):
+        task = Task()
+        task.run = "global_backward"
+        task.party = "active"
+        task.job_id = self._job_id
+
+        response = self._client.open_and_send(task)
+
+    def send_global_loss_and_gradients(self, gradients):
+        task = Task()
+        task.run = "receive_loss_and_gradients_remote"
+        task.party = "active"
+        task.job_id = self._job_id
+
+        gradients = convert_tensor_to_batch_msg(gradients)
+
+        response = self._client.send_batch(task, gradients)
+
+    def send_cal_passive_local_gradient_message(self, index):
+        task = Task()
+        task.run = "cal_passive_local_gradient"
+        task.party = "active"
+        task.job_id = self._job_id
+        task.params = index
+
+        response = self._client.send_batch(task, [None])
+        return convert_msg_to_tensor(response.tensor)
+
+    def send_global_lr_decay(self, i_epoch):
+        task = Task()
+        task.run = "global_LR_decay"
+        task.party = "active"
+        task.job_id = self._job_id
+        task.params = str(i_epoch)
+
+        response = self._client.open_and_send(task)
+
+    def send_global_model_train_message(self):
+        task = Task()
+        task.run = "train"
+        task.party = "active"
+        task.job_id = self._job_id
+
+        response = self._client.open_and_send(task)
+
+    def send_save_model_body_message(self):
+        task = Task()
+        task.run = "save_model_body"
+        task.party = "active"
+        task.job_id = self._job_id
+
+        self._client.open_and_send(task)
