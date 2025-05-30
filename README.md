@@ -68,7 +68,7 @@ VFLAIR-LLM is developed under the VFLAIR framework, sharing the same framework s
 
 - **Config Module**
 
-  - refer to `./src/config/Readme_LLM.md` for detailed guidance about configuration file format.
+  - refer to section "How to write a configuration file for VFLAIR-LLM?" for detailed guidance about configuration file format.
 
 - **Load Module**
 
@@ -123,7 +123,7 @@ VFLAIR-LLM is developed under the VFLAIR framework, sharing the same framework s
 
 - Your can define your model file in the config files
 
-2. Write your configuration file as instructed in `./src/config/Readme_LLM.md` 
+2. Write your configuration file as instructed in `./src/config/README.md` 
 
 3. Launch your task with:
 
@@ -135,7 +135,7 @@ python main_pipeline_llm.py --configs Your_Config_File
 
 ## Detailed Tutorial
 
-### How to write a configuration file for SL-LLM?
+### How to write a configuration file for VFLAIR-LLM?
 
 In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can easily implement self-defined promptin
 
@@ -183,7 +183,7 @@ In VFLAIR-LLM, we provide some basic prompt generation methods. Also, user can e
 }
 ```
 
-### Fine-tune Strategy
+#### Fine-tune Strategy
 
 ```json
 "finetune_configs":{
