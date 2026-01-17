@@ -416,10 +416,13 @@ class Party(object):
             else:
                 optimizer = None
             self.optimizers.update({i: optimizer})
+
+            if self.optimizers[i] != None:
+                scheduler = torch.optim.lr_scheduler.LinearLR(self.optimizers[i], end_factor=0.01, total_iters=10)
+            else:
+                scheduler = None
+            self.lr_schedulers.update({i: scheduler})
         print(f'party {self.index} optimizer:',self.optimizers.keys())
-        
-        scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, end_factor=0.01, total_iters=10)
-        self.lr_schedulers.update({i: scheduler})
 
     def prepare_model(self, args, index):
         # Load Tokenizer

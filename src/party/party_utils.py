@@ -1,6 +1,6 @@
 import os
 
-Trained_Models_Save_Path = "/shared/project/guzx/Trained_Models/"
+Trained_Models_Save_Path = "/data_real/guzx/Trained_Models"
 # Trained_Models_Save_Path = "/home/DAIR/guzx/Git_FedProject/Trained_Models/"
 
 def get_model_folder(args):

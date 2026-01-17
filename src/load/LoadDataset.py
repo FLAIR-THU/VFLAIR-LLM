@@ -51,6 +51,7 @@ from utils.graph_functions import load_data1, split_graph
 
 # DATA_PATH = '../../../share_dataset/'
 DATA_PATH = '/shared/data/'
+DATA_PATH = '/data_real/guzx/share_dataset/' # special
 
 IMAGE_DATA = ['mnist', 'cifar10', 'cifar100', 'cifar20', 'utkface', 'facescrub', 'places365']
 TABULAR_DATA = ['breast_cancer_diagnose', 'diabetes', 'adult_income', 'criteo', 'credit', 'nursery', 'avazu']
@@ -2275,14 +2276,14 @@ def load_dataset_per_party_llm(args, index):
             {key: value for key, value in row.items() if pd.notna(value)} 
             for row in list_data_dict.to_dict(orient="records")
         ]
-        DEFAULT_PAD_TOKEN = "[PAD]"
-        DEFAULT_EOS_TOKEN = "</s>"
-        DEFAULT_BOS_TOKEN = "<s>"
-        DEFAULT_UNK_TOKEN = "<unk>"
-        IGNORE_INDEX = -100
-        args.tokenizer.eos_token = DEFAULT_EOS_TOKEN
-        args.tokenizer.pad_token = DEFAULT_PAD_TOKEN
-        args.tokenizer.bos_token = DEFAULT_BOS_TOKEN
+        # DEFAULT_PAD_TOKEN = "[PAD]"
+        # DEFAULT_EOS_TOKEN = "</s>"
+        # DEFAULT_BOS_TOKEN = "<s>"
+        # DEFAULT_UNK_TOKEN = "<unk>"
+        # IGNORE_INDEX = -100
+        # args.tokenizer.eos_token = DEFAULT_EOS_TOKEN
+        # args.tokenizer.pad_token = DEFAULT_PAD_TOKEN
+        # args.tokenizer.bos_token = DEFAULT_BOS_TOKEN
 
         PROMPT_DICT = {
             "prompt_input": (
@@ -2343,14 +2344,14 @@ def load_dataset_per_party_llm(args, index):
 
         # list_data_dict = jload(data_path)
      
-        DEFAULT_PAD_TOKEN = "[PAD]"
-        DEFAULT_EOS_TOKEN = "</s>"
-        DEFAULT_BOS_TOKEN = "<s>"
-        DEFAULT_UNK_TOKEN = "<unk>"
-        IGNORE_INDEX = -100
-        args.tokenizer.eos_token = DEFAULT_EOS_TOKEN
-        args.tokenizer.pad_token = DEFAULT_PAD_TOKEN
-        args.tokenizer.bos_token = DEFAULT_BOS_TOKEN
+        # DEFAULT_PAD_TOKEN = "[PAD]"
+        # DEFAULT_EOS_TOKEN = "</s>"
+        # DEFAULT_BOS_TOKEN = "<s>"
+        # DEFAULT_UNK_TOKEN = "<unk>"
+        # IGNORE_INDEX = -100
+        # args.tokenizer.eos_token = DEFAULT_EOS_TOKEN
+        # args.tokenizer.pad_token = DEFAULT_PAD_TOKEN
+        # args.tokenizer.bos_token = DEFAULT_BOS_TOKEN
 
         PROMPT_DICT = {
             "prompt_input": (
